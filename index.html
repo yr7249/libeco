@@ -152,6 +152,20 @@
   function getToken(){return localStorage.getItem("supa_token")||"";}
 
   async function checkAuth(){
+    // URL 해시에서 토큰 처리 (이메일 인증 후 리다이렉트)
+    const hash = window.location.hash;
+    if(hash && hash.includes("access_token")){
+      const params = new URLSearchParams(hash.substring(1));
+      const accessToken = params.get("access_token");
+      const refreshToken = params.get("refresh_token");
+      if(accessToken){
+        setToken(accessToken);
+        if(refreshToken) localStorage.setItem("supa_refresh", refreshToken);
+        history.replaceState(null, "", location.pathname);
+        // 승인 여부 확인 후 진행
+      }
+    }
+
     const token=getToken();
     if(!token){location.href="login.html";return;}
     try{
