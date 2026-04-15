@@ -114,7 +114,7 @@
     <!-- 가입신청 -->
     <div class="form-section" id="section-signup">
       <div class="form-title">가입신청</div>
-      <div class="form-desc">사내 이메일(@libeco.kr)로만 가입할 수 있습니다. 관리자 승인 후 이용 가능합니다.</div>
+      <div class="form-desc">사내 이메일(@libeco.kr)로만 가입할 수 있습니다. 이메일 인증 또는 관리자 승인 후 이용 가능합니다.</div>
 
       <div class="field">
         <label>이메일</label>
@@ -291,7 +291,7 @@
         })
       });
 
-      showMsg("signup-msg","success","가입 신청이 완료됐습니다! 관리자 승인 후 로그인 가능합니다.");
+      showMsg("signup-msg","success","가입 신청이 완료됐습니다! 이메일 인증 링크를 확인하거나, 관리자 승인 후 로그인 가능합니다.");
     }catch(e){
       showMsg("signup-msg","error",e.message);
     }
