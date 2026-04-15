@@ -2124,7 +2124,7 @@
     try {
       await fetch(SUPA_URL + "/rest/v1/" + SUPA_TABLE + "?id=eq." + item._supa_id, {
         method: "DELETE",
-        headers: { "apikey": SUPA_KEY, "Authorization": "Bearer " + SUPA_KEY }
+        headers: { "apikey": SUPA_KEY, "Authorization": "Bearer " + (localStorage.getItem("supa_token") || SUPA_KEY) }
       });
     } catch(e){ console.warn("Supabase delete failed:", e); }
   }

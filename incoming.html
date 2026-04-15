@@ -867,7 +867,7 @@
         if(r._supa_id) obj.id = r._supa_id;
         return obj;
       });
-      await fetch(SUPA_URL+"/rest/v1/"+SUPA_TABLE, { method:"POST", headers:{ "apikey":SUPA_KEY, "Authorization":"Bearer "+SUPA_KEY, "Content-Type":"application/json", "Prefer":"resolution=merge-duplicates,return=representation" }, body:JSON.stringify(payload) });
+      await fetch(SUPA_URL+"/rest/v1/"+SUPA_TABLE, { method:"POST", headers:{ "apikey":SUPA_KEY, "Authorization":"Bearer "+(localStorage.getItem("supa_token")||SUPA_KEY), "Content-Type":"application/json", "Prefer":"resolution=merge-duplicates,return=representation" }, body:JSON.stringify(payload) });
     }catch(e){ console.warn("Supabase save failed:", e); }
   }
 
@@ -1200,7 +1200,7 @@
     // Supabase에서도 삭제
     if(item._supa_id){
       try{
-        await fetch(SUPA_URL+"/rest/v1/"+SUPA_TABLE+"?id=eq."+item._supa_id, { method:"DELETE", headers:{ "apikey":SUPA_KEY, "Authorization":"Bearer "+SUPA_KEY } });
+        await fetch(SUPA_URL+"/rest/v1/"+SUPA_TABLE+"?id=eq."+item._supa_id, { method:"DELETE", headers:{ "apikey":SUPA_KEY, "Authorization":"Bearer "+(localStorage.getItem("supa_token")||SUPA_KEY) } });
       }catch(e){ console.warn("Supabase delete failed:", e); }
     }
   }
