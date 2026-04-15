@@ -330,7 +330,48 @@
     }
   });
 
+  // URL 해시에서 토큰 처리 (이메일 인증 후 리다이렉트)
+  async function handleHashToken(){
+    const hash = window.location.hash;
+    if(!hash) return false;
+    const params = new URLSearchParams(hash.substring(1));
+    const accessToken = params.get("access_token");
+    const refreshToken = params.get("refresh_token");
+    const type = params.get("type");
+    if(!accessToken) return false;
+
+    // 토큰 저장
+    setToken(accessToken);
+    if(refreshToken) localStorage.setItem("supa_refresh", refreshToken);
+
+    if(type === "signup" || type === "email"){
+      // 승인 여부 확인
+      try{
+        const res = await fetch(SUPA_URL+"/auth/v1/user",{
+          headers:{"apikey":SUPA_KEY,"Authorization":"Bearer "+accessToken}
+        });
+        const u = await res.json();
+        const pr = await fetch(SUPA_URL+"/rest/v1/profiles?id=eq."+u.id+"&select=approved",{
+          headers:{"apikey":SUPA_KEY,"Authorization":"Bearer "+accessToken}
+        });
+        const profiles = await pr.json();
+        if(profiles && profiles[0] && profiles[0].approved){
+          location.href = "index.html";
+        } else {
+          // 해시 제거하고 로그인 페이지 유지
+          history.replaceState(null, "", location.pathname);
+          showMsg("login-msg","success","이메일 인증이 완료됐습니다! 로그인해주세요.");
+          switchTab("login");
+        }
+      }catch(e){
+        history.replaceState(null, "", location.pathname);
+      }
+    }
+    return true;
+  }
+
   checkSession();
+  handleHashToken();
 </script>
 </body>
 </html>
