@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LLNL POC PROJECT</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#ffffff;
+      --surface:#ffffff;
+      --surface2:#f1f5f9;
+      --border:rgba(15,23,42,.12);
+      --text:#0f172a;
+      --text2:#334155;
+      --accent:#166534;
+      --accent-strong:#14532d;
+      --accent-wash:rgba(22,101,52,.12);
+      --accent-wash2:rgba(22,101,52,.08);
+      --glow:0 10px 26px rgba(15,23,42,.10);
+      --hs:#16a34a;
+      --font-heading:'Outfit',sans-serif;
+      --font-mono:'IBM Plex Mono',monospace;
+    }
+    body{font-family:var(--font-heading);color:var(--text);background:var(--bg);min-height:100vh;line-height:1.6;font-weight:600}
+    .container{max-width:1200px;margin:0 auto;padding:0 24px}
+
+    /* ── Site top bar ── */
+    .site-topbar{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:0 24px;height:50px;
+      background:#fff;
+      border-bottom:1px solid rgba(15,23,42,.12);
+      box-shadow:0 1px 4px rgba(0,0,0,.08);
+      position:sticky;top:0;z-index:10;
+    }
+    .site-topbar-left{display:flex;align-items:center;gap:14px}
+    .site-topbar-right{display:flex;align-items:center;gap:10px}
+    .topbar-badge{
+      font-family:var(--font-mono);font-size:.68rem;font-weight:700;
+      color:var(--text2);background:var(--surface2);
+      border:1px solid var(--border);border-radius:6px;
+      padding:3px 9px;letter-spacing:.04em;
+    }
+
+    /* ── Hero ── */
+    .home-wrap{padding:0 0 72px}
+    .home-hero{
+      background:#0f172a;
+      padding:32px 48px 30px;
+      position:relative;overflow:hidden;
+      margin-bottom:36px;
+    }
+    .home-hero::before{
+      content:'';position:absolute;inset:0;
+      background:radial-gradient(ellipse at 85% 40%,rgba(22,101,52,.40) 0%,transparent 60%),
+                 radial-gradient(ellipse at 10% 80%,rgba(14,165,233,.18) 0%,transparent 50%);
+    }
+    .home-hero::after{
+      content:'';position:absolute;bottom:-1px;left:0;right:0;height:40px;
+      background:linear-gradient(to bottom,transparent,var(--bg));z-index:1;
+    }
+    .hero-inner{position:relative;z-index:2;max-width:680px}
+    .hero-eyebrow{
+      display:inline-flex;align-items:center;gap:7px;
+      font-family:var(--font-mono);font-size:.7rem;font-weight:700;letter-spacing:.08em;
+      color:#86efac;background:rgba(22,163,74,.15);border:1px solid rgba(22,163,74,.28);
+      padding:4px 12px;border-radius:99px;margin-bottom:18px;
+    }
+    .hero-eyebrow::before{content:'';width:6px;height:6px;border-radius:50%;background:#22c55e;box-shadow:0 0 8px #22c55e;flex-shrink:0}
+    .hero-title{font-size:clamp(1.3rem,2.2vw,1.8rem);font-weight:800;color:#f8fafc;letter-spacing:.06em;line-height:1.15;margin-bottom:8px}
+    .hero-desc{font-size:.84rem;color:rgba(248,250,252,.5);line-height:1.5;letter-spacing:.01em}
+
+    /* ── Section label ── */
+    .svc-section{margin-bottom:8px}
+    .svc-section-hdr{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+    .svc-section-label{font-family:var(--font-mono);font-size:.7rem;font-weight:800;color:var(--text2);letter-spacing:.1em;text-transform:uppercase;white-space:nowrap}
+    .svc-section-line{flex:1;height:1px;background:var(--border)}
+
+    /* ── Service grid: 3 columns ── */
+    .svc-grid{
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:14px;
+    }
+    @media(max-width:768px){.svc-grid{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:480px){.svc-grid{grid-template-columns:1fr}}
+
+    /* ── Service card ── */
+    .svc-card{
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:16px;padding:22px 22px 18px;
+      display:flex;flex-direction:column;gap:10px;
+      position:relative;overflow:hidden;
+      min-height:180px;
+      transition:transform .18s,border-color .18s,box-shadow .18s;
+      text-decoration:none;color:inherit;
+    }
+    .svc-card.live{cursor:pointer}
+    .svc-card.live:hover{
+      transform:translateY(-4px);
+      border-color:rgba(22,101,52,.35);
+      box-shadow:0 10px 32px rgba(15,23,42,.11);
+    }
+    .svc-card.soon{background:rgba(248,250,252,.6);opacity:.5;cursor:default;pointer-events:none}
+    .svc-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+    .svc-icon{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0}
+    .svc-status{
+      font-family:var(--font-mono);font-size:.63rem;font-weight:700;
+      padding:3px 8px;border-radius:99px;letter-spacing:.04em;white-space:nowrap;margin-top:2px;
+    }
+    .status-live{background:rgba(22,163,74,.12);color:#15803d;border:1px solid rgba(22,163,74,.28)}
+    .status-soon{background:rgba(148,163,184,.1);color:#94a3b8;border:1px solid rgba(148,163,184,.2)}
+    .svc-title{font-size:1rem;font-weight:800;color:var(--text);letter-spacing:-.01em}
+    .svc-desc{font-size:.81rem;color:var(--text2);line-height:1.55;flex:1}
+    .svc-foot{
+      margin-top:auto;padding-top:10px;border-top:1px solid var(--border);
+      display:flex;align-items:center;justify-content:space-between;
+      font-family:var(--font-mono);font-size:.64rem;color:var(--text2);
+    }
+    .svc-arr{
+      position:absolute;bottom:18px;right:20px;
+      font-size:1.1rem;color:var(--text2);opacity:.2;
+      transition:opacity .18s,transform .18s;pointer-events:none;
+    }
+    .svc-card.live:hover .svc-arr{opacity:.75;transform:translateX(4px)}
+
+    /* ── Site footer ── */
+    .site-footer{
+      margin-top:64px;padding:20px 0;
+      border-top:1px solid var(--border);
+      display:flex;align-items:center;justify-content:space-between;
+      flex-wrap:wrap;gap:10px;
+    }
+    .footer-left{display:flex;align-items:center;gap:10px}
+    .footer-copy{font-family:var(--font-mono);font-size:.68rem;color:var(--text2)}
+    .footer-links{display:flex;gap:16px}
+    .footer-link{font-family:var(--font-mono);font-size:.68rem;color:var(--text2);text-decoration:none}
+    .footer-link:hover{color:var(--accent)}
+    .user-info{font-family:var(--font-mono);font-size:.72rem;color:var(--text2)}
+    .btn-logout{padding:5px 12px;border:1px solid var(--border);border-radius:7px;background:#fff;cursor:pointer;font-size:.75rem;font-weight:600;font-family:var(--font-heading);transition:background .12s}
+    .btn-logout:hover{background:#fee2e2;border-color:#fca5a5;color:#dc2626}
+  </style>
+</head>
+<body>
+<script>
+  const SUPA_URL="https://mepjsjsldwbbjrodrdfo.supabase.co";
+  const SUPA_KEY="sb_publishable_VzxsEtLs499S5RKYHHn0XQ__Rupl8jo";
+  function getToken(){return localStorage.getItem("supa_token")||"";}
+
+  async function checkAuth(){
+    const token=getToken();
+    if(!token){location.href="login.html";return;}
+    try{
+      const res=await fetch(SUPA_URL+"/auth/v1/user",{headers:{"apikey":SUPA_KEY,"Authorization":"Bearer "+token}});
+      if(!res.ok){location.href="login.html";return;}
+      const u=await res.json();
+      const pr=await fetch(SUPA_URL+"/rest/v1/profiles?id=eq."+u.id+"&select=name,department,position,approved",{
+        headers:{"apikey":SUPA_KEY,"Authorization":"Bearer "+token}
+      });
+      const profiles=await pr.json();
+      if(!profiles||!profiles[0]||!profiles[0].approved){location.href="login.html";return;}
+      const p=profiles[0];
+      document.getElementById("user-info").textContent=p.name+" · "+p.department+" "+p.position;
+    }catch(e){location.href="login.html";}
+  }
+
+  function logout(){
+    localStorage.removeItem("supa_token");
+    localStorage.removeItem("supa_refresh");
+    location.href="login.html";
+  }
+
+  checkAuth();
+</script>
+  <div class="home-wrap">
+
+    <!-- ── Top bar ── -->
+    <div class="site-topbar">
+      <div class="site-topbar-left">
+        <span style="color:#16a34a;font-weight:800;font-size:.95rem;letter-spacing:-.02em;font-family:inherit">LIBECO E&amp;C</span>
+      </div>
+      <div class="site-topbar-right">
+        <span class="topbar-badge">LLNL POC</span>
+        <span class="user-info" id="user-info"></span>
+        <button class="btn-logout" onclick="logout()">로그아웃</button>
+      </div>
+    </div>
+
+    <!-- ── Hero ── -->
+    <div class="home-hero">
+      <div class="hero-inner">
+        <div class="hero-eyebrow">LIVE PROJECT</div>
+        <div class="hero-title">LLNL POC Project</div>
+        <div class="hero-desc">과냉각 액체수소 연료시스템 검증</div>
+      </div>
+    </div>
+
+    <div class="container">
+      <!-- ── Contents grid ── -->
+      <div class="svc-section">
+        <div class="svc-section-hdr">
+          <span class="svc-section-label">콘텐츠</span>
+          <div class="svc-section-line"></div>
+        </div>
+        <!-- 3x2 grid: row1: 구성도 / 시험장비 / 구매리스트 -->
+        <!--            row2: 입고관리 / 시험절차서 / 기타공유사항 -->
+        <div class="svc-grid" role="navigation">
+
+          <!-- 1행-1: 구성도 (LIVE) -->
+          <a class="svc-card live" href="diagram.html" aria-label="구성도 열기">
+            <div class="svc-card-head">
+              <div class="svc-icon" style="background:rgba(14,165,233,.1)">📐</div>
+              <span class="svc-status status-live">LIVE</span>
+            </div>
+            <div class="svc-title">구성도</div>
+            <div class="svc-desc">시스템 P&amp;ID</div>
+            <div class="svc-foot"><span>Updated 2026.04.08</span><span style="color:#0ea5e9;font-weight:700">SCHEMATIC</span></div>
+            <span class="svc-arr">→</span>
+          </a>
+
+          <!-- 1행-2: 시험장비 (준비중) -->
+          <div class="svc-card soon">
+            <div class="svc-card-head">
+              <div class="svc-icon" style="background:rgba(148,163,184,.1)">🔬</div>
+              <span class="svc-status status-soon">SOON</span>
+            </div>
+            <div class="svc-title">시험장비</div>
+            <div class="svc-desc">Total equipments list</div>
+            <div class="svc-foot"><span>—</span><span>EQUIPMENT</span></div>
+          </div>
+
+          <!-- 1행-3: 구매리스트 (LIVE) -->
+          <a class="svc-card live" href="purchase.html" aria-label="구매리스트 열기">
+            <div class="svc-card-head">
+              <div class="svc-icon" style="background:rgba(22,101,52,.1)">📋</div>
+              <span class="svc-status status-live">LIVE</span>
+            </div>
+            <div class="svc-title">구매리스트</div>
+            <div class="svc-desc">구매 필요내역</div>
+            <div class="svc-foot"><span>Updated 2026.04.08</span><span style="color:var(--accent);font-weight:700">PURCHASE</span></div>
+            <span class="svc-arr">→</span>
+          </a>
+
+          <!-- 2행-1: 입고관리 (LIVE) -->
+          <a class="svc-card live" href="incoming.html" aria-label="입고관리 열기">
+            <div class="svc-card-head">
+              <div class="svc-icon" style="background:rgba(168,85,247,.1)">📦</div>
+              <span class="svc-status status-live">LIVE</span>
+            </div>
+            <div class="svc-title">입고관리</div>
+            <div class="svc-desc">장비 일정관리</div>
+            <div class="svc-foot"><span>Updated 2026.04.08</span><span style="color:#a855f7;font-weight:700">INCOMING</span></div>
+            <span class="svc-arr">→</span>
+          </a>
+
+          <!-- 2행-2: 시험절차서 (준비중) -->
+          <div class="svc-card soon">
+            <div class="svc-card-head">
+              <div class="svc-icon" style="background:rgba(148,163,184,.1)">📖</div>
+              <span class="svc-status status-soon">SOON</span>
+            </div>
+            <div class="svc-title">시험절차서</div>
+            <div class="svc-desc">시험 단계별 절차 문서</div>
+            <div class="svc-foot"><span>—</span><span>PROCEDURE</span></div>
+          </div>
+
+          <!-- 2행-3: 기타공유사항 (준비중) -->
+          <div class="svc-card soon">
+            <div class="svc-card-head">
+              <div class="svc-icon" style="background:rgba(148,163,184,.1)">💬</div>
+              <span class="svc-status status-soon">SOON</span>
+            </div>
+            <div class="svc-title">기타 공유사항</div>
+            <div class="svc-desc">팀 공지 및 공유 자료</div>
+            <div class="svc-foot"><span>—</span><span>SHARED</span></div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ── Footer ── -->
+      <footer class="site-footer">
+        <div class="footer-left">
+          <span style="color:#16a34a;font-weight:800;font-size:.85rem;letter-spacing:-.02em;font-family:inherit;opacity:.6">LIBECO E&amp;C</span>
+          <span class="footer-copy">© 2026 LIBECO E&amp;C · All Rights Reserved</span>
+        </div>
+        <div class="footer-links">
+          <a class="footer-link" href="purchase.html">구매리스트</a>
+          <a class="footer-link" href="diagram.html">구성도</a>
+          <a class="footer-link" href="incoming.html">입고관리</a>
+        </div>
+      </footer>
+    </div>
+  </div>
+</body>
+</html>

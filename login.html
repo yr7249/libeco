@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LLNL POC · 로그인</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#f8fafc;--surface:#ffffff;--border:rgba(15,23,42,.12);
+      --text:#0f172a;--text2:#334155;
+      --accent:#166534;--accent-strong:#14532d;
+      --font-heading:'Outfit',sans-serif;--font-mono:'IBM Plex Mono',monospace;
+    }
+    body{font-family:var(--font-heading);color:var(--text);background:var(--bg);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+
+    .login-wrap{width:100%;max-width:440px}
+
+    .login-logo{text-align:center;margin-bottom:32px}
+    .login-logo-text{color:var(--accent);font-weight:800;font-size:1.2rem;letter-spacing:-.02em}
+    .login-logo-sub{font-family:var(--font-mono);font-size:.68rem;color:var(--text2);margin-top:4px;letter-spacing:.06em}
+
+    .login-card{
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:20px;padding:36px 32px;
+      box-shadow:0 4px 24px rgba(15,23,42,.08);
+    }
+
+    .tab-row{display:flex;border-bottom:1px solid var(--border);margin-bottom:28px}
+    .tab{flex:1;padding:10px;text-align:center;font-size:.88rem;font-weight:700;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;transition:all .15s}
+    .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+    .form-section{display:none}
+    .form-section.active{display:block}
+
+    .form-title{font-size:1.1rem;font-weight:800;margin-bottom:6px}
+    .form-desc{font-size:.82rem;color:var(--text2);margin-bottom:24px;line-height:1.5}
+
+    .field{margin-bottom:16px}
+    .field label{display:block;font-size:.8rem;font-weight:700;color:var(--text2);margin-bottom:6px}
+    .field input,.field select{
+      width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;
+      font-family:var(--font-heading);font-size:.9rem;color:var(--text);
+      background:#fff;outline:none;transition:border-color .15s;
+    }
+    .field input:focus,.field select:focus{border-color:rgba(22,101,52,.55);box-shadow:0 0 0 3px rgba(22,101,52,.1)}
+    .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+    .btn-submit{
+      width:100%;padding:12px;border:none;border-radius:10px;
+      background:var(--accent);color:#fff;font-family:var(--font-heading);
+      font-size:.95rem;font-weight:700;cursor:pointer;margin-top:8px;
+      transition:background .15s,transform .1s;
+    }
+    .btn-submit:hover{background:var(--accent-strong);transform:translateY(-1px)}
+    .btn-submit:disabled{opacity:.5;cursor:not-allowed;transform:none}
+
+    .divider{display:flex;align-items:center;gap:12px;margin:20px 0}
+    .divider-line{flex:1;height:1px;background:var(--border)}
+    .divider-text{font-size:.75rem;color:var(--text2);font-family:var(--font-mono)}
+
+    .msg{margin-top:14px;padding:10px 14px;border-radius:8px;font-size:.83rem;font-weight:600;display:none}
+    .msg.success{background:rgba(22,163,74,.1);color:#15803d;border:1px solid rgba(22,163,74,.25)}
+    .msg.error{background:rgba(239,68,68,.1);color:#dc2626;border:1px solid rgba(239,68,68,.25)}
+    .msg.pending{background:rgba(245,158,11,.1);color:#d97706;border:1px solid rgba(245,158,11,.25)}
+    .msg.show{display:block}
+
+    .forgot-link{text-align:right;margin-top:-8px;margin-bottom:16px}
+    .forgot-link a{font-size:.78rem;color:var(--accent);cursor:pointer;text-decoration:none}
+    .forgot-link a:hover{text-decoration:underline}
+
+    .domain-hint{font-size:.74rem;color:var(--text2);margin-top:4px;font-family:var(--font-mono)}
+  </style>
+</head>
+<body>
+
+<div class="login-wrap">
+  <div class="login-logo">
+    <div class="login-logo-text">LIBECO E&amp;C</div>
+    <div class="login-logo-sub">LLNL POC PROJECT</div>
+  </div>
+
+  <div class="login-card">
+    <div class="tab-row">
+      <div class="tab active" id="tab-login" onclick="switchTab('login')">로그인</div>
+      <div class="tab" id="tab-signup" onclick="switchTab('signup')">가입신청</div>
+    </div>
+
+    <!-- 로그인 -->
+    <div class="form-section active" id="section-login">
+      <div class="form-title">로그인</div>
+      <div class="form-desc">사내 이메일과 비밀번호를 입력하세요.</div>
+
+      <div class="field">
+        <label>이메일</label>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="flex:1;display:flex;align-items:center;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:#fff" id="login-email-wrap">
+            <input type="text" id="login-email" placeholder="아이디" autocomplete="email"
+              style="flex:1;padding:10px 12px;border:none;font-family:var(--font-heading);font-size:.9rem;color:var(--text);outline:none;background:transparent">
+          </div>
+          <span style="font-family:var(--font-mono);font-size:.85rem;color:var(--text2);white-space:nowrap;flex-shrink:0">@libeco.kr</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>비밀번호</label>
+        <input type="password" id="login-pw" placeholder="8자 이상" autocomplete="current-password">
+      </div>
+      <div class="forgot-link"><a onclick="switchTab('reset')">비밀번호를 잊으셨나요?</a></div>
+      <button class="btn-submit" id="btn-login" onclick="doLogin()">로그인</button>
+      <div class="msg" id="login-msg"></div>
+    </div>
+
+    <!-- 가입신청 -->
+    <div class="form-section" id="section-signup">
+      <div class="form-title">가입신청</div>
+      <div class="form-desc">사내 이메일(@libeco.kr)로만 가입할 수 있습니다. 관리자 승인 후 이용 가능합니다.</div>
+
+      <div class="field">
+        <label>이메일</label>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="flex:1;display:flex;align-items:center;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:#fff">
+            <input type="text" id="signup-email" placeholder="아이디"
+              style="flex:1;padding:10px 12px;border:none;font-family:var(--font-heading);font-size:.9rem;color:var(--text);outline:none;background:transparent">
+          </div>
+          <span style="font-family:var(--font-mono);font-size:.85rem;color:var(--text2);white-space:nowrap;flex-shrink:0">@libeco.kr</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>비밀번호</label>
+        <input type="password" id="signup-pw" placeholder="8자 이상">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>이름</label>
+          <input type="text" id="signup-name" placeholder="홍길동">
+        </div>
+        <div class="field">
+          <label>연락처</label>
+          <input type="tel" id="signup-phone" placeholder="010-0000-0000">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>소속</label>
+          <input type="text" id="signup-dept" placeholder="">
+        </div>
+        <div class="field">
+          <label>직급</label>
+          <input type="text" id="signup-pos" placeholder="">
+        </div>
+      </div>
+      <button class="btn-submit" id="btn-signup" onclick="doSignup()">가입 신청</button>
+      <div class="msg" id="signup-msg"></div>
+    </div>
+
+    <!-- 비밀번호 재설정 -->
+    <div class="form-section" id="section-reset">
+      <div class="form-title">비밀번호 재설정</div>
+      <div class="form-desc">가입한 이메일로 재설정 링크를 보내드립니다.</div>
+
+      <div class="field">
+        <label>이메일</label>
+        <input type="email" id="reset-email" placeholder="yr@libeco.kr">
+      </div>
+      <button class="btn-submit" id="btn-reset" onclick="doReset()">재설정 링크 보내기</button>
+      <div class="msg" id="reset-msg"></div>
+      <div style="text-align:center;margin-top:16px">
+        <a onclick="switchTab('login')" style="font-size:.8rem;color:var(--accent);cursor:pointer">← 로그인으로 돌아가기</a>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  const SUPA_URL = "https://mepjsjsldwbbjrodrdfo.supabase.co";
+  const SUPA_KEY = "sb_publishable_VzxsEtLs499S5RKYHHn0XQ__Rupl8jo";
+
+  // 이미 로그인된 경우 홈으로
+  async function checkSession(){
+    const res = await fetch(SUPA_URL+"/auth/v1/user", {
+      headers:{"apikey":SUPA_KEY,"Authorization":"Bearer "+getToken()}
+    });
+    if(res.ok){
+      const u = await res.json();
+      if(u.id) {
+        // 승인 여부 확인
+        const pr = await fetch(SUPA_URL+"/rest/v1/profiles?id=eq."+u.id+"&select=approved", {
+          headers:{"apikey":SUPA_KEY,"Authorization":"Bearer "+getToken()}
+        });
+        const profiles = await pr.json();
+        if(profiles && profiles[0] && profiles[0].approved){
+          location.href = "index.html";
+        }
+      }
+    }
+  }
+
+  function getToken(){ return localStorage.getItem("supa_token")||""; }
+  function setToken(t){ localStorage.setItem("supa_token",t); }
+
+  function switchTab(tab){
+    document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+    document.querySelectorAll(".form-section").forEach(s=>s.classList.remove("active"));
+    if(tab==="login"){ document.getElementById("tab-login").classList.add("active"); document.getElementById("section-login").classList.add("active"); }
+    else if(tab==="signup"){ document.getElementById("tab-signup").classList.add("active"); document.getElementById("section-signup").classList.add("active"); }
+    else if(tab==="reset"){ document.getElementById("section-reset").classList.add("active"); }
+  }
+
+  function showMsg(id, type, text){
+    const el=document.getElementById(id);
+    el.className="msg "+type+" show";
+    el.textContent=text;
+  }
+
+  async function doLogin(){
+    const email=document.getElementById("login-email").value.trim()+"@libeco.kr";
+    const pw=document.getElementById("login-pw").value;
+    if(!email||!pw){ showMsg("login-msg","error","이메일과 비밀번호를 입력해주세요."); return; }
+    const btn=document.getElementById("btn-login");
+    btn.disabled=true; btn.textContent="로그인 중...";
+    try{
+      const res = await fetch(SUPA_URL+"/auth/v1/token?grant_type=password",{
+        method:"POST",
+        headers:{"apikey":SUPA_KEY,"Content-Type":"application/json"},
+        body:JSON.stringify({email,password:pw})
+      });
+      const data = await res.json();
+      if(!res.ok) throw new Error(data.error_description||data.msg||"로그인 실패");
+      setToken(data.access_token);
+      localStorage.setItem("supa_refresh",data.refresh_token);
+
+      // 승인 여부 확인
+      const pr = await fetch(SUPA_URL+"/rest/v1/profiles?id=eq."+data.user.id+"&select=approved,name", {
+        headers:{"apikey":SUPA_KEY,"Authorization":"Bearer "+data.access_token}
+      });
+      const profiles = await pr.json();
+      if(!profiles || !profiles[0]){
+        showMsg("login-msg","error","프로필 정보를 찾을 수 없습니다. 관리자에게 문의하세요.");
+      } else if(!profiles[0].approved){
+        showMsg("login-msg","pending","승인 대기 중입니다. 관리자 승인 후 이용 가능합니다.");
+        localStorage.removeItem("supa_token");
+      } else {
+        location.href="index.html";
+      }
+    }catch(e){
+      showMsg("login-msg","error",e.message);
+    }
+    btn.disabled=false; btn.textContent="로그인";
+  }
+
+  async function doSignup(){
+    const email=document.getElementById("signup-email").value.trim()+"@libeco.kr";
+    const pw=document.getElementById("signup-pw").value;
+    const name=document.getElementById("signup-name").value.trim();
+    const phone=document.getElementById("signup-phone").value.trim();
+    const dept=document.getElementById("signup-dept").value.trim();
+    const pos=document.getElementById("signup-pos").value.trim();
+
+    if(!document.getElementById("signup-email").value.trim()||!pw||!name||!dept||!pos){ showMsg("signup-msg","error","모든 항목을 입력해주세요."); return; }
+    if(pw.length<8){ showMsg("signup-msg","error","비밀번호는 8자 이상이어야 합니다."); return; }
+
+    const btn=document.getElementById("btn-signup");
+    btn.disabled=true; btn.textContent="신청 중...";
+    try{
+      // 1. Auth 가입
+      const res = await fetch(SUPA_URL+"/auth/v1/signup",{
+        method:"POST",
+        headers:{"apikey":SUPA_KEY,"Content-Type":"application/json"},
+        body:JSON.stringify({email,password:pw})
+      });
+      const data = await res.json();
+      if(!res.ok) throw new Error(data.error_description||data.msg||"가입 실패");
+
+      // 2. 프로필 저장
+      await fetch(SUPA_URL+"/rest/v1/profiles",{
+        method:"POST",
+        headers:{
+          "apikey":SUPA_KEY,
+          "Authorization":"Bearer "+data.access_token,
+          "Content-Type":"application/json",
+          "Prefer":"return=minimal"
+        },
+        body:JSON.stringify({
+          id:data.user.id,
+          email,name,phone,
+          department:dept,
+          position:pos,
+          approved:false
+        })
+      });
+
+      showMsg("signup-msg","success","가입 신청이 완료됐습니다! 관리자 승인 후 로그인 가능합니다.");
+    }catch(e){
+      showMsg("signup-msg","error",e.message);
+    }
+    btn.disabled=false; btn.textContent="가입 신청";
+  }
+
+  async function doReset(){
+    const email=document.getElementById("reset-email").value.trim();
+    if(!email){ showMsg("reset-msg","error","이메일을 입력해주세요."); return; }
+    const btn=document.getElementById("btn-reset");
+    btn.disabled=true; btn.textContent="전송 중...";
+    try{
+      const res = await fetch(SUPA_URL+"/auth/v1/recover",{
+        method:"POST",
+        headers:{"apikey":SUPA_KEY,"Content-Type":"application/json"},
+        body:JSON.stringify({email, redirectTo:"https://good-yr.github.io/libeco/index.html"})
+      });
+      if(!res.ok) throw new Error("전송 실패");
+      showMsg("reset-msg","success","재설정 링크를 이메일로 보냈습니다!");
+    }catch(e){
+      showMsg("reset-msg","error",e.message);
+    }
+    btn.disabled=false; btn.textContent="재설정 링크 보내기";
+  }
+
+  // 엔터키
+  document.addEventListener("keydown",e=>{
+    if(e.key==="Enter"){
+      const active=document.querySelector(".form-section.active").id;
+      if(active==="section-login") doLogin();
+      else if(active==="section-signup") doSignup();
+      else if(active==="section-reset") doReset();
+    }
+  });
+
+  checkSession();
+</script>
+</body>
+</html>

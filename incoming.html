@@ -1,0 +1,1235 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LLNL POC — 입고관리</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      /* Light theme (high readability) + green-yellow accent */
+      --bg:#ffffff;
+      --surface:#ffffff;
+      --surface2:#f1f5f9;
+      --border:rgba(15,23,42,.12);
+
+      --text:#0f172a;
+      --text2:#334155; /* secondary text still readable */
+
+      /* Only for "real emphasis" */
+      --accent:#166534;        /* deep green */
+      --accent-strong:#14532d; /* deeper green */
+      --accent-wash:rgba(22,101,52,.12);
+      --accent-wash2:rgba(22,101,52,.08);
+
+      --glow:0 10px 26px rgba(15,23,42,.10);
+      --hs:#16a34a;
+      --font-heading:'Outfit',sans-serif;--font-mono:'IBM Plex Mono',monospace;
+    }
+    body{
+      font-family:var(--font-heading);color:var(--text);background:var(--bg);
+      min-height:100vh;line-height:1.6;
+      background-image:none;
+      font-weight:600;
+    }
+    .container{max-width:1440px;margin:0 auto;padding:0 24px;position:relative;z-index:1}
+
+    .hex-deco{position:fixed;pointer-events:none;z-index:0;opacity:.03}
+    .hex-deco svg{width:300px;height:300px}
+    .hex-deco.top-right{top:-60px;right:-60px}
+    .hex-deco.bottom-left{bottom:-60px;left:-60px}
+
+    .header{
+      padding:32px 0 20px;
+      border-bottom:1px solid var(--border);
+      position:relative;overflow:hidden;
+    }
+    .header::after{
+      content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
+      background:linear-gradient(90deg,transparent,var(--accent),transparent);
+    }
+    .header-inner{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:14px}
+    .header-left{display:flex;align-items:center;gap:14px}
+    .h2-icon{width:42px;height:42px;flex-shrink:0}
+    .header h1{font-size:clamp(1.4rem,2.6vw,2.1rem);font-weight:800;letter-spacing:-.02em;color:var(--text)}
+    .header h1 span{color:var(--accent)}
+    .header-sub{font-size:.92rem;color:var(--text2);margin-top:4px;font-weight:400}
+
+    .header-right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .btn{
+      appearance:none;border:1px solid rgba(15,23,42,.14);
+      background:rgba(255,255,255,.90);color:var(--text);
+      padding:8px 12px;border-radius:10px;cursor:pointer;
+      font-size:.82rem;font-weight:600;
+      transition:transform .15s ease,border-color .15s ease,background .15s ease,box-shadow .15s ease;
+      display:inline-flex;align-items:center;gap:6px;white-space:nowrap;
+    }
+    .btn:hover:not(:disabled){transform:translateY(-1px);border-color:rgba(22,101,52,.45);box-shadow:var(--glow)}
+    .btn:disabled{opacity:.4;cursor:not-allowed}
+    .btn-primary{background:var(--accent);border-color:var(--accent-strong);color:#ffffff}
+    .btn-muted{background:rgba(15,23,42,.04);border-color:rgba(15,23,42,.12);color:var(--text)}
+    .btn-success{background:rgba(22,163,74,.12);border-color:rgba(22,163,74,.35);color:#14532d}
+    .btn-warn{background:rgba(245,158,11,.14);border-color:rgba(245,158,11,.4)}
+
+    .kpi-row{
+      display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;
+      padding:24px 0 18px;
+    }
+    .kpi-card{
+      background:var(--surface);
+      border:1px solid var(--border);border-radius:14px;
+      padding:18px 20px;position:relative;overflow:hidden;
+    }
+    .kpi-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:14px 0 0 14px}
+    .kpi-card:nth-child(1)::before{background:var(--accent)}
+    .kpi-card:nth-child(2)::before{background:var(--hs)}
+    .kpi-card:nth-child(3)::before{background:#8b5cf6}
+    .kpi-card:nth-child(4)::before{background:#ef4444}
+    .kpi-label{font-size:.78rem;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+    .kpi-value{font-family:var(--font-mono);font-size:1.6rem;font-weight:700;color:var(--text)}
+    .kpi-sub{font-size:.75rem;color:var(--text2);margin-top:6px;font-family:var(--font-mono)}
+
+    .section-title{
+      font-size:1.05rem;font-weight:800;color:var(--text);margin:16px 0 10px;
+      display:flex;align-items:center;gap:10px;
+    }
+    .section-title::before{content:'';width:3px;height:20px;background:var(--accent);border-radius:2px}
+
+    .table-controls{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px}
+    .filter-bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:0}
+    .search-input{
+      background:rgba(255,255,255,.96);border:1px solid var(--border);border-radius:10px;
+      padding:10px 16px 10px 40px;color:var(--text);font-size:.88rem;width:min(360px,100%);
+      font-family:var(--font-heading);transition:border-color .3s;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.868-3.834zm-5.242.156a5 5 0 1 1 0-10 5 5 0 0 1 0 10z'/%3E%3C/svg%3E");
+      background-repeat:no-repeat;background-position:14px center;
+    }
+    .search-input::placeholder{color:rgba(51,65,85,.75)}
+    .search-input:focus{outline:none;border-color:rgba(22,101,52,.55);box-shadow:0 0 0 4px rgba(22,101,52,.14)}
+    .item-count{font-size:.82rem;color:var(--text2);font-family:var(--font-mono)}
+
+    .tab-btn{
+      padding:7px 14px;border:1px solid var(--border);border-radius:999px;
+      background:rgba(255,255,255,.86);color:var(--text2);cursor:pointer;font-size:.8rem;font-weight:800;
+      transition:background .15s,border-color .15s,color .15s;
+    }
+    .tab-btn:hover{border-color:rgba(22,101,52,.35);color:var(--text)}
+    .tab-btn.active{background:var(--accent-wash);border-color:rgba(22,101,52,.55);color:var(--accent-strong)}
+    .tab-btn.need-only{border-color:rgba(249,115,22,.45);color:#fb923c}
+    .tab-btn.need-only.on{background:rgba(249,115,22,.18);border-color:rgba(249,115,22,.60);color:#fed7aa}
+
+    .table-wrap{
+      background:var(--surface);
+      border:1px solid var(--border);
+    }
+    .table-scroll{overflow-x:auto}
+    table{width:100%;border-collapse:collapse;min-width:1100px}
+    thead{position:sticky;top:0;z-index:2}
+    thead th{
+      background:#166534;padding:6px 8px;text-align:left;
+      font-size:.72rem;color:#fff;text-transform:uppercase;letter-spacing:.06em;
+      font-weight:750;border-bottom:1px solid var(--border);white-space:nowrap;
+    }
+    tbody tr{border-bottom:1px solid rgba(255,255,255,.03);transition:background .3s}
+    tbody tr:nth-child(even){background:rgba(15,23,42,.018)}
+    tbody tr:hover{background:rgba(22,101,52,.08)}
+    /* 구매수량 0: 배경 없이, 글씨만 조금 흐리게 */
+    tbody tr.row-no-need td{color:rgba(51,65,85,.62)}
+    tbody tr.row-no-need{background:transparent;box-shadow:none}
+    tbody tr.row-no-need:hover{background:transparent;box-shadow:none}
+    tbody tr.row-no-need .status-pill{opacity:1}
+    tbody tr.row-no-need .cat-badge{opacity:1}
+
+    /* 구매수량 1 이상: td:first-child 배경 그라디언트로 | 바 */
+    tbody tr.row-need{background:transparent}
+    tbody tr.row-need td:first-child{
+      background:linear-gradient(to right,rgba(22,101,52,.65) 4px,transparent 4px) !important
+    }
+    tbody tr.row-need:hover td:first-child{
+      background:linear-gradient(to right,rgba(22,101,52,.85) 4px,transparent 4px) !important
+    }
+    /* 구매중/타항목포함: 회색 | 바 */
+    tbody tr.row-grey-bar{background:transparent}
+    tbody tr.row-grey-bar td:first-child{
+      background:linear-gradient(to right,rgba(148,163,184,.6) 4px,transparent 4px) !important
+    }
+    tbody tr.row-grey-bar:hover td{background:rgba(15,23,42,.04) !important}
+
+    tbody td{padding:0;font-size:.84rem;color:var(--text);vertical-align:middle}
+    /* 장비명 칸 글씨 크게 */
+    tbody td:nth-child(3) .cell-inner{font-size:.94rem}
+    .cell-inner{
+      display:block;padding:6px 8px;min-height:28px;outline:none;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:text;
+      font-weight:650;
+    }
+    tbody tr.row-no-need .cell-inner{font-weight:600}
+    .cell-inner:hover{background:rgba(15,23,42,.03)}
+    .cell-inner:focus{
+      background:rgba(255,255,255,.96);box-shadow:inset 0 0 0 2px rgba(22,101,52,.55);
+      white-space:normal;overflow:visible;border-radius:6px;
+    }
+
+    /* Group divider: use thick line instead of background fill */
+    .group-row td{
+      background:#fffbeb;
+      color:#111827;
+      padding:6px 10px;
+      letter-spacing:.01em;
+      font-weight:950;
+      border-top:2px solid #9ca3af;
+      line-height:1.2;
+    }
+    .group-row td .group-meta{
+      color:var(--accent);
+      font-weight:800;
+      font-size:.74rem;
+      margin-left:8px;
+    }
+
+    /* Keep table text consistent (screen + print feels natural) */
+
+    /* Center-align all headers */
+    thead th{text-align:center}
+    td.mono .cell-inner{font-family:var(--font-mono);font-size:inherit;font-weight:600}
+
+    /* Hover: keep subtle, and never tint group header row */
+    tbody tr:hover td{background:rgba(22,101,52,.08)}
+    tbody tr.group-row:hover td{background:transparent !important}
+
+    /* Center all cells; monetary (align-right) stays right */
+    tbody td .cell-inner{text-align:center}
+    td.align-right .cell-inner{text-align:right;font-variant-numeric:tabular-nums}
+
+    .cat-badge{
+      display:inline-flex;align-items:center;gap:5px;padding:3px 10px;
+      border-radius:6px;font-size:.72rem;font-weight:600;font-family:var(--font-mono);
+    }
+    .status-pill{
+      display:inline-block;padding:3px 10px;border-radius:20px;
+      font-size:.72rem;font-weight:600;white-space:nowrap;
+    }
+    .status-secured{background:rgba(16,185,129,.15);color:#34d399}
+    .status-purchase{background:rgba(59,130,246,.15);color:#60a5fa}
+    .status-included{background:rgba(245,158,11,.15);color:#fbbf24}
+    .status-review{background:rgba(234,179,8,.15);color:#facc15}
+    .status-buying{background:rgba(148,163,184,.15);color:#94a3b8}
+
+    /* 체크 강조: 품의용 */
+    tbody tr.row-checked td .cell-inner{color:#ef4444 !important;font-weight:700}
+    tbody tr.row-checked td{background:rgba(239,68,68,.12) !important;border-top:1px solid rgba(239,68,68,.55) !important;border-bottom:1px solid rgba(239,68,68,.55) !important}
+    tbody tr.row-checked td:first-child{border-left:2px solid #ef4444 !important}
+    tbody tr.row-checked td:last-child{border-right:2px solid #ef4444 !important}
+    tbody tr.row-checked:hover td{background:rgba(239,68,68,.20) !important}
+    /* 연속 checked 행: 내부 경계 제거 → 가장 바깥 테두리만 */
+    tbody tr.row-checked + tr.row-checked td{border-top:none !important}
+    tbody tr.row-checked:has(+ tr.row-checked) td{border-bottom:none !important}
+    /* 드래그/체크 플로팅 버튼 (표 밖) */
+    #float-drag{
+      position:fixed;display:none;z-index:9000;
+      cursor:grab;color:rgba(100,116,139,.85);font-size:16px;
+      user-select:none;padding:4px 6px;border-radius:6px;
+      background:rgba(255,255,255,.96);border:1px solid rgba(15,23,42,.18);
+      box-shadow:0 2px 8px rgba(0,0,0,.18);line-height:1;
+      transform:translateY(-50%);
+    }
+    #float-drag:hover{color:var(--accent);border-color:rgba(22,101,52,.5);background:#fff}
+    #float-check{
+      position:fixed;display:none;z-index:9000;
+      cursor:pointer;font-size:11px;font-weight:700;
+      padding:4px 8px;border-radius:6px;
+      background:rgba(255,255,255,.96);border:1px solid rgba(15,23,42,.18);
+      box-shadow:0 2px 8px rgba(0,0,0,.18);line-height:1;
+      transform:translateY(-50%);white-space:nowrap;
+    }
+    #float-check:hover{border-color:rgba(239,68,68,.5);color:#ef4444;background:#fff}
+    #float-check.checked{background:#ef4444;border-color:#dc2626;color:#fff}
+    tbody tr.row-dragging{opacity:.45;background:rgba(22,101,52,.08) !important}
+    tbody tr.drag-over-top td{border-top:2px solid var(--accent) !important}
+    tbody tr.drag-over-bot td{border-bottom:2px solid var(--accent) !important}
+    /* 월별 합계 */
+    .monthly-summary{margin-top:14px;padding:14px 0}
+
+    .hint{font-size:.78rem;color:var(--text2);margin-top:8px}
+
+    .footer{
+      text-align:center;padding:9px 0;border-top:1px solid var(--border);
+      font-size:.78rem;color:var(--text2);position:relative;margin-top:5px;
+    }
+    .footer::before{
+      content:'';position:absolute;top:0;left:0;right:0;height:1px;
+      background:linear-gradient(90deg,transparent,var(--accent),transparent);
+    }
+    .footer span{color:var(--accent)}
+
+    @page { size: A4 landscape; margin: 6mm; }
+    @media print{
+      /* Print should match screen as much as possible */
+      html, body{font-size:9pt !important; line-height:1.25 !important;}
+      body{background:var(--bg) !important;background-image:none !important;color:var(--text)}
+      *{ -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      /* Hide all chrome: topbars, nav panel, fixed overlays, inactive views */
+      .hex-deco,.header-right,.table-controls,.filter-bar,.hint,.toolbar,
+      #ctx-menu,.nav-panel,
+      .view:not(.active){display:none !important}
+      .pg-topbar,.site-topbar{display:flex !important;box-shadow:none !important;border-bottom:1.5px solid #111827 !important;padding:3px 0 5px !important;margin-bottom:4px;position:static !important}
+      .pg-topbar-r,.site-topbar-right,.pg-btn,.pg-badge,.pg-vdiv{display:none !important}
+      .pg-ci-logo,.site-logo-img{height:22px !important}
+      #view-diagram{position:static !important;height:auto !important;background:#fff !important;display:none}
+      #view-diagram.active{display:block !important}
+      #view-diagram .dgm-toolbar{display:none !important}
+      #view-diagram .dgm-wrap{position:static !important;overflow:visible !important;height:auto !important;cursor:default !important}
+      #dgm-canvas{position:static !important;transform:none !important}
+      #dgm-canvas img{max-width:100% !important;height:auto !important}
+      /* Reset sticky/fixed positioning so content flows for print */
+      #view-equip{overflow:visible !important}
+      .container{max-width:100%;padding:0 6mm}
+      .header{padding:0 0 10px;border-bottom:2px solid #111827}
+      .header h1,.header h1 span{color:#111827}
+      .kpi-row{display:none !important}
+      .kpi-card{border:1px solid #e5e7eb;box-shadow:none}
+      thead{position:static}
+      thead th{background:#166534 !important;color:#fff !important}
+      .table-scroll{overflow:visible}
+      /* smaller base font in print + keep same (nowrap + autofit) behavior */
+      table{min-width:0;font-size:8pt !important;table-layout:fixed}
+      thead th{font-size:7pt !important;}
+      thead th, tbody td{white-space:nowrap}
+      thead th{padding:4px 5px}
+      /* Reset all cell borders — only explicit rules below should show */
+      table, thead, tbody{outline:none !important; box-shadow:none !important;}
+      table{border-spacing:0 !important;}
+      th, td{
+        border:none !important;
+        outline:none !important;
+        box-shadow:none !important;
+      }
+      /* Group row: thick top divider only */
+      .group-row td{border-top:2px solid #9ca3af !important;}
+      /* Row markers: background gradient carries over to print via print-color-adjust:exact */
+      /* Checked rows: red border */
+      tbody tr.row-checked td{
+        border-top:1px solid rgba(239,68,68,.5) !important;
+        border-bottom:1px solid rgba(239,68,68,.5) !important;
+      }
+      tbody tr.row-checked td:first-child{border-left:2px solid #ef4444 !important;}
+      tbody tr.row-checked td:last-child{border-right:2px solid #ef4444 !important;}
+      /* 연속 checked 행: 내부 경계 제거 → 가장 바깥 테두리만 */
+      tbody tr.row-checked + tr.row-checked td{border-top:none !important;}
+      tbody tr.row-checked:has(+ tr.row-checked) td{border-bottom:none !important;}
+      tbody tr.group-row td{padding:4px 6px !important; line-height:1.15 !important;}
+      tr.group-row-pb{break-before:page !important;page-break-before:always !important;}
+      tbody tr.group-row td .group-meta{font-size:6.5pt !important;}
+      .cell-inner{
+        padding:2px 4px;min-height:auto;
+        white-space:nowrap;overflow:hidden;text-overflow:clip;
+        word-break:normal;
+      }
+      /* Keep the same color cues as screen (group tint + need/no-need markers) */
+      .footer{border-top:1px solid #e5e7eb;color:#4b5563}
+      tbody tr.row-checked td .cell-inner{color:#ef4444 !important}
+      tbody tr.row-checked{background:rgba(239,68,68,.07) !important}
+      #float-check,#float-drag{display:none !important}
+      body.report-print-mode .cell-inner{cursor:default !important}
+      body.report-print-mode .cell-inner:focus{box-shadow:none !important;background:transparent !important;border-radius:0}
+    }
+
+    .toolbar{
+      display:flex;align-items:center;gap:8px;padding:10px 0;
+      border-bottom:1px solid var(--border);flex-wrap:wrap;
+    }
+    .toolbar-sep{flex:1}
+
+    .header-budget{display:flex;flex-direction:column;align-items:flex-end;justify-content:flex-end}
+    .header-budget .budget-label{font-size:.75rem;color:var(--text2);text-transform:uppercase;letter-spacing:.08em}
+    .header-budget .budget-amount{
+      font-family:var(--font-mono);font-size:clamp(1.1rem,1.8vw,1.5rem);font-weight:700;
+      color:var(--accent);text-shadow:0 0 20px rgba(56,189,248,.35);
+    }
+
+    td.cat-col{width:60px;text-align:center}
+    td.cat-col .cell-inner{
+      font-family:var(--font-mono);font-size:.72rem;font-weight:600;
+      border-radius:6px;text-align:center;
+      padding:3px 10px;min-height:unset;
+      display:inline-flex;align-items:center;justify-content:center;
+    }
+
+    @media(max-width:768px){
+      .header-inner{flex-direction:column;align-items:flex-start}
+      .kpi-row{grid-template-columns:1fr 1fr}
+    }
+    @media(max-width:480px){
+      .kpi-row{grid-template-columns:1fr}
+    }
+
+    /* Context menu */
+    #ctx-menu{
+      display:none;position:fixed;z-index:9999;
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:8px;padding:4px 0;min-width:150px;
+      box-shadow:0 8px 24px rgba(0,0,0,.4);
+    }
+    #ctx-menu button{
+      display:block;width:100%;padding:8px 16px;
+      background:none;border:none;color:var(--text);
+      font-size:.82rem;text-align:left;cursor:pointer;
+    }
+    #ctx-menu button:hover{background:rgba(56,189,248,.12);color:var(--accent)}
+    #ctx-menu hr{border:none;border-top:1px solid var(--border);margin:4px 0}
+
+    /* ── Home (개인용 홈페이지 느낌) ───────────────────────── */
+    .view{display:none}
+    .view.active{display:block}
+    /* Topbars stay at top while scrolling */
+    #view-home .site-topbar{position:sticky;top:0;z-index:10}
+    #view-equip .pg-topbar{position:sticky;top:0;z-index:10;width:100vw;margin-left:calc((100% - 100vw) / 2)}
+
+    /* ══════════════════════════════════════════
+       HOME PAGE
+    ══════════════════════════════════════════ */
+    .home-wrap{padding:0 0 72px}
+
+    /* ── Site top bar ── */
+    .site-topbar{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:0 14px;height:50px;
+      background:#fff;
+      border-bottom:1px solid rgba(15,23,42,.12);
+      box-shadow:0 1px 4px rgba(0,0,0,.08);
+    }
+    .site-topbar-left{display:flex;align-items:center;gap:14px}
+    .site-logo-img{height:28px;object-fit:contain;flex-shrink:0;mix-blend-mode:multiply}
+    .site-topbar-right{display:flex;align-items:center;gap:10px}
+    .topbar-badge{
+      font-family:var(--font-mono);font-size:.68rem;font-weight:700;
+      color:var(--text2);background:var(--surface2);
+      border:1px solid var(--border);border-radius:6px;
+      padding:3px 9px;letter-spacing:.04em;
+    }
+
+    /* ── Hero ── */
+    .home-hero{
+      background:#0f172a;
+      border-radius:0 0 24px 24px;
+      padding:32px 48px 30px;
+      position:relative;overflow:hidden;
+      margin-bottom:36px;
+    }
+    .home-hero::before{
+      content:'';position:absolute;inset:0;
+      background:radial-gradient(ellipse at 85% 40%,rgba(22,101,52,.40) 0%,transparent 60%),
+                 radial-gradient(ellipse at 10% 80%,rgba(14,165,233,.18) 0%,transparent 50%);
+    }
+    .home-hero::after{
+      content:'';position:absolute;
+      bottom:-1px;left:0;right:0;height:40px;
+      background:linear-gradient(to bottom,transparent,var(--bg));
+      z-index:1;
+    }
+    .hero-inner{position:relative;z-index:2;max-width:680px}
+    .hero-eyebrow{
+      display:inline-flex;align-items:center;gap:7px;
+      font-family:var(--font-mono);font-size:.7rem;font-weight:700;letter-spacing:.08em;
+      color:#86efac;
+      background:rgba(22,163,74,.15);border:1px solid rgba(22,163,74,.28);
+      padding:4px 12px;border-radius:99px;margin-bottom:18px;
+    }
+    .hero-eyebrow::before{content:'';width:6px;height:6px;border-radius:50%;background:#22c55e;box-shadow:0 0 8px #22c55e;flex-shrink:0}
+    .hero-title{
+      font-size:clamp(1.3rem,2.2vw,1.8rem);font-weight:800;
+      color:#f8fafc;letter-spacing:.06em;line-height:1.15;
+      margin-bottom:8px;
+    }
+    .hero-desc{font-size:.84rem;color:rgba(248,250,252,.5);line-height:1.5;letter-spacing:.01em}
+    .hero-stats{display:flex;gap:0;flex-wrap:wrap}
+    .hero-stat{
+      padding:0 28px 0 0;margin-right:28px;
+      border-right:1px solid rgba(248,250,252,.1);
+    }
+    .hero-stat:last-child{border-right:none;padding-right:0;margin-right:0}
+    .hero-stat-val{font-family:var(--font-mono);font-size:1.55rem;font-weight:700;color:#f8fafc;line-height:1}
+    .hero-stat-lbl{font-family:var(--font-mono);font-size:.65rem;color:rgba(248,250,252,.4);letter-spacing:.07em;margin-top:5px}
+
+    /* ── Section label ── */
+    .svc-section{margin-bottom:8px}
+    .svc-section-hdr{
+      display:flex;align-items:center;gap:12px;
+      margin-bottom:18px;
+    }
+    .svc-section-label{
+      font-family:var(--font-mono);font-size:.7rem;font-weight:800;
+      color:var(--text2);letter-spacing:.1em;text-transform:uppercase;
+      white-space:nowrap;
+    }
+    .svc-section-line{flex:1;height:1px;background:var(--border)}
+
+    /* ── Service grid ── */
+    .svc-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(250px,1fr));
+      gap:14px;
+    }
+
+    /* ── Service card ── */
+    .svc-card{
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:16px;padding:22px 22px 18px;
+      display:flex;flex-direction:column;gap:10px;
+      position:relative;overflow:hidden;
+      min-height:180px;
+      transition:transform .18s,border-color .18s,box-shadow .18s;
+    }
+    .svc-card.live{cursor:pointer}
+    .svc-card.live:hover{
+      transform:translateY(-4px);
+      border-color:rgba(22,101,52,.35);
+      box-shadow:0 10px 32px rgba(15,23,42,.11);
+    }
+    .svc-card.soon{background:rgba(248,250,252,.6);opacity:.65;cursor:default}
+    .svc-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+    .svc-icon{
+      width:42px;height:42px;border-radius:12px;
+      display:flex;align-items:center;justify-content:center;
+      font-size:1.2rem;flex-shrink:0;
+    }
+    .svc-status{
+      font-family:var(--font-mono);font-size:.63rem;font-weight:700;
+      padding:3px 8px;border-radius:99px;letter-spacing:.04em;white-space:nowrap;
+      margin-top:2px;
+    }
+    .status-live{background:rgba(22,163,74,.12);color:#15803d;border:1px solid rgba(22,163,74,.28)}
+    .status-soon{background:rgba(148,163,184,.1);color:#94a3b8;border:1px solid rgba(148,163,184,.2)}
+    .svc-title{font-size:1rem;font-weight:800;color:var(--text);letter-spacing:-.01em}
+    .svc-desc{font-size:.81rem;color:var(--text2);line-height:1.55;flex:1}
+    .svc-foot{
+      margin-top:auto;padding-top:10px;
+      border-top:1px solid var(--border);
+      display:flex;align-items:center;justify-content:space-between;
+      font-family:var(--font-mono);font-size:.64rem;color:var(--text2);
+    }
+    .svc-arr{
+      position:absolute;bottom:18px;right:20px;
+      font-size:1.1rem;color:var(--text2);opacity:.2;
+      transition:opacity .18s,transform .18s;pointer-events:none;
+    }
+    .svc-card.live:hover .svc-arr{opacity:.75;transform:translateX(4px)}
+
+    /* ── Site footer ── */
+    .site-footer{
+      margin-top:64px;padding:20px 0;
+      border-top:1px solid var(--border);
+      display:flex;align-items:center;justify-content:space-between;
+      flex-wrap:wrap;gap:10px;
+    }
+    .footer-left{display:flex;align-items:center;gap:10px}
+    .footer-copy{font-family:var(--font-mono);font-size:.68rem;color:var(--text2)}
+    .footer-links{display:flex;gap:16px}
+    .footer-link{font-family:var(--font-mono);font-size:.68rem;color:var(--text2);cursor:pointer;text-decoration:none}
+    .footer-link:hover{color:var(--accent)}
+
+    /* ── Sitemap / 이동 panel ── */
+    .nav-panel{
+      position:fixed;top:54px;right:16px;z-index:9998;
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:16px;padding:10px;
+      box-shadow:0 8px 32px rgba(15,23,42,.14);
+      min-width:240px;display:none;
+    }
+    .nav-panel.open{display:block;animation:navFadeIn .15s ease}
+    @keyframes navFadeIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+    .nav-panel-title{font-family:var(--font-mono);font-size:.65rem;color:var(--text2);font-weight:700;letter-spacing:.1em;padding:4px 10px 8px;text-transform:uppercase}
+    .nav-item{
+      display:flex;align-items:center;gap:10px;
+      padding:9px 12px;border-radius:10px;
+      cursor:pointer;text-decoration:none;color:var(--text);
+      transition:background .12s;
+    }
+    .nav-item:hover{background:var(--accent-wash2)}
+    .nav-item.active{background:var(--accent-wash);color:var(--accent-strong)}
+    .nav-item.disabled{opacity:.45;cursor:default;pointer-events:none}
+    .nav-icon{font-size:.9rem;width:22px;text-align:center;flex-shrink:0}
+    .nav-label{font-size:.83rem;font-weight:700}
+    .nav-sub{font-size:.67rem;color:var(--text2);font-weight:500;margin-top:1px;font-family:var(--font-mono)}
+    .nav-soon-tag{font-family:var(--font-mono);font-size:.6rem;color:#94a3b8;background:rgba(148,163,184,.12);border:1px solid rgba(148,163,184,.2);padding:1px 6px;border-radius:4px;margin-left:auto}
+    .nav-sep{height:1px;background:var(--border);margin:6px 2px}
+
+
+    /* ══ Shared Page Topbar ══ */
+    .pg-topbar{display:flex;align-items:center;justify-content:space-between;padding:0 14px;height:50px;background:#fff;border-bottom:1px solid rgba(15,23,42,.12);box-shadow:0 1px 4px rgba(0,0,0,.08);flex-shrink:0;gap:8px}
+    .pg-topbar-l,.pg-topbar-r{display:flex;align-items:center;gap:5px;flex-shrink:0}
+    .pg-topbar-l{flex:1;min-width:0;overflow:hidden}
+    .pg-ci-logo{height:28px;object-fit:contain;mix-blend-mode:multiply;flex-shrink:0}
+    .pg-vdiv{width:1px;height:22px;background:rgba(15,23,42,.12);margin:0 3px;flex-shrink:0}
+    .pg-title{font-size:.88rem;font-weight:800;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .pg-title span{color:#166534}
+    .pg-badge{font-family:'IBM Plex Mono',monospace;font-size:.66rem;background:rgba(22,101,52,.1);color:#166534;padding:2px 7px;border-radius:5px;font-weight:600;flex-shrink:0}
+    .pg-btn{padding:5px 11px;border-radius:7px;border:1px solid rgba(15,23,42,.12);background:#fff;cursor:pointer;font-size:.75rem;font-weight:600;font-family:'Outfit',sans-serif;display:inline-flex;align-items:center;gap:4px;transition:background .12s,border-color .12s,color .12s;white-space:nowrap;flex-shrink:0}
+    .pg-btn:hover{background:rgba(22,101,52,.1);border-color:#166534}
+    .pg-btn-export{background:rgba(22,101,52,.08);border-color:rgba(22,101,52,.3);color:#166534}
+    .pg-btn-export:hover{background:rgba(22,101,52,.15)!important}
+    .pg-btn-nav{position:relative;background:rgba(15,23,42,.04)}
+    @media print{.pg-topbar,.pg-btn{display:none!important}}
+
+    /* ══════════════ DIAGRAM VIEW ══════════════ */
+    #view-diagram{position:fixed;inset:0;z-index:500;display:none;flex-direction:column;background:#1e1e1e;font-family:'Outfit',sans-serif}
+    #view-diagram.active{display:flex}
+    #view-diagram .dgm-hdr{display:flex;align-items:center;justify-content:space-between;padding:8px 16px;background:#fff;border-bottom:1px solid rgba(15,23,42,.12);box-shadow:0 1px 4px rgba(0,0,0,.08);flex-shrink:0;gap:10px}
+    #view-diagram .dgm-hdr-left{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    #view-diagram .dgm-hdr h1{font-size:.9rem;font-weight:800;color:#0f172a}
+    #view-diagram .dgm-hdr h1 span{color:#166534}
+    #view-diagram .dgm-badge{font-family:'IBM Plex Mono',monospace;font-size:.68rem;background:rgba(22,101,52,.1);color:#166534;padding:2px 7px;border-radius:5px;font-weight:600}
+    #view-diagram .dgm-hdr-right{display:flex;gap:5px;flex-shrink:0;align-items:center}
+    #view-diagram .dgm-zoom-lbl{font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:#334155;min-width:44px;text-align:center}
+    #view-diagram .dgm-toolbar{display:flex;align-items:center;gap:4px;padding:6px 14px;background:#fff;border-bottom:1px solid rgba(15,23,42,.12);flex-shrink:0;flex-wrap:wrap}
+    #view-diagram .dgm-sep{width:1px;height:22px;background:rgba(15,23,42,.12);margin:0 4px;flex-shrink:0}
+    #view-diagram .dgm-tlabel{font-size:.72rem;color:#334155;font-weight:600;white-space:nowrap}
+    #view-diagram .dgm-btn{padding:5px 11px;border-radius:7px;border:1px solid rgba(15,23,42,.12);background:#fff;cursor:pointer;font-size:.75rem;font-weight:600;font-family:'Outfit',sans-serif;display:inline-flex;align-items:center;gap:4px;transition:background .12s,border-color .12s,color .12s;white-space:nowrap;flex-shrink:0}
+    #view-diagram .dgm-btn:hover{background:rgba(22,101,52,.1);border-color:#166534}
+    #view-diagram .dgm-btn.active{background:#0f172a;border-color:#0f172a;color:#fff}
+    #view-diagram .dgm-btn.draw-active{background:#2563eb;border-color:#1d4ed8;color:#fff}
+    #view-diagram .dgm-btn.edit-active{background:#7c3aed;border-color:#6d28d9;color:#fff}
+    #view-diagram .dgm-btn.dgm-btn-export{background:rgba(22,101,52,.08);border-color:rgba(22,101,52,.3);color:#166534}
+    #view-diagram .dgm-btn.dgm-btn-export:hover{background:rgba(22,101,52,.15)}
+    #view-diagram .dgm-swatch{width:22px;height:22px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:border-color .12s,transform .12s;flex-shrink:0}
+    #view-diagram .dgm-swatch:hover{transform:scale(1.15)}
+    #view-diagram .dgm-swatch.sel{border-color:#0f172a;transform:scale(1.2)}
+    #view-diagram .dgm-wbtn{padding:4px 10px;border-radius:6px;border:1px solid rgba(15,23,42,.12);background:#fff;cursor:pointer;font-size:.7rem;font-weight:700;font-family:'IBM Plex Mono',monospace;transition:background .12s;flex-shrink:0}
+    #view-diagram .dgm-wbtn:hover{background:#f1f5f9}
+    #view-diagram .dgm-wbtn.sel{background:#0f172a;color:#fff;border-color:#0f172a}
+    #view-diagram .dgm-dbtn{padding:4px 10px;border-radius:6px;border:1px solid rgba(15,23,42,.12);background:#fff;cursor:pointer;font-size:.65rem;font-weight:700;font-family:'IBM Plex Mono',monospace;transition:background .12s;flex-shrink:0;letter-spacing:.05em}
+    #view-diagram .dgm-dbtn:hover{background:#f1f5f9}
+    #view-diagram .dgm-dbtn.sel{background:#0f172a;color:#fff;border-color:#0f172a}
+    #view-diagram .dgm-wrap{flex:1;overflow:hidden;position:relative;cursor:grab}
+    #view-diagram .dgm-wrap.drag-mode{cursor:grabbing}
+    #view-diagram .dgm-wrap.draw-mode{cursor:crosshair}
+    #view-diagram .dgm-wrap.edit-mode{cursor:default}
+    #dgm-canvas{position:absolute;transform-origin:0 0}
+    #dgm-canvas img{display:block;max-width:none;user-select:none;-webkit-user-drag:none}
+    #dgm-overlay{position:absolute;top:0;left:0;pointer-events:none;overflow:visible}
+    #dgm-overlay.draw-mode,#dgm-overlay.edit-mode{pointer-events:all}
+    #dgm-btn-del-sel{display:none}
+    #dgm-btn-del-sel.show{display:inline-flex}
+    #dgm-sep-del-sel{display:none}
+    #dgm-hint{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);background:rgba(15,23,42,.82);color:#f8fafc;font-family:'IBM Plex Mono',monospace;font-size:.72rem;padding:6px 14px;border-radius:20px;pointer-events:none;opacity:0;transition:opacity .25s;white-space:nowrap}
+    #dgm-hint.show{opacity:1}
+    @media print{
+      #view-diagram .dgm-hdr,#view-diagram .dgm-toolbar{display:none!important}
+      #view-diagram{position:static;height:auto}
+      #view-diagram .dgm-wrap{overflow:visible;height:auto;position:static;cursor:default}
+      #dgm-canvas{position:static!important;transform:none!important}
+      #dgm-canvas img{width:100%;height:auto}
+    }
+
+    /* ══════════════ INCOMING VIEW ══════════════ */
+    #view-incoming .pg-topbar{position:sticky;top:0;z-index:10;width:100vw;margin-left:calc((100% - 100vw) / 2)}
+    .inc-status{
+      display:inline-flex;align-items:center;justify-content:center;
+      padding:3px 11px;border-radius:7px;font-size:.75rem;font-weight:700;
+      cursor:pointer;white-space:nowrap;transition:opacity .15s;
+      border:1px solid transparent;user-select:none;
+    }
+    .inc-s-review  {background:#f1f5f9;color:#64748b;border-color:#cbd5e1}
+    .inc-s-planned {background:#fef9c3;color:#d97706;border-color:#fde68a}
+    .inc-s-ordered {background:#dcfce7;color:#16a34a;border-color:#86efac}
+    .inc-s-shipping{background:#ccfbf1;color:#0d9488;border-color:#5eead4}
+    .inc-s-done    {background:#dbeafe;color:#2563eb;border-color:#93c5fd}
+    /* progress bar stepper */
+    .inc-stepper{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:4px 2px;min-width:80px}
+    .inc-prog-bar{width:72px;height:4px;background:#e2e8f0;border-radius:3px}
+    .inc-prog-fill{height:100%;border-radius:3px;transition:width .3s,background .3s}
+    #inc-status-drop{
+      position:fixed;z-index:9999;background:var(--surface);
+      border:1px solid var(--border);border-radius:10px;padding:4px 0;
+      box-shadow:0 8px 24px rgba(0,0,0,.15);display:none;min-width:120px;
+    }
+    #inc-status-drop button{
+      display:block;width:100%;padding:8px 14px;background:none;border:none;
+      cursor:pointer;font-size:.82rem;font-weight:600;text-align:left;
+      font-family:var(--font-heading);transition:background .1s;color:var(--text);
+    }
+    #inc-status-drop button:hover{background:var(--accent-wash2)}
+    .inc-date-cell .cell-inner{cursor:pointer;font-family:var(--font-mono);font-size:.8rem}
+    .inc-date-cell .cell-inner:hover{background:rgba(22,101,52,.07)}
+        #inc-ctx-menu{
+      position:fixed;z-index:9999;background:var(--surface);
+      border:1px solid var(--border);border-radius:10px;padding:4px 0;
+      box-shadow:0 8px 24px rgba(0,0,0,.15);display:none;min-width:130px;
+    }
+    #inc-ctx-menu button{
+      display:block;width:100%;padding:8px 14px;background:none;border:none;
+      cursor:pointer;font-size:.82rem;font-weight:600;text-align:left;
+      font-family:var(--font-heading);transition:background .1s;color:var(--text);
+    }
+    #inc-ctx-menu button:hover{background:var(--accent-wash2)}
+    #inc-ctx-menu hr{border:none;border-top:1px solid var(--border);margin:4px 0}
+    #inc-date-wrap{
+      position:fixed;z-index:9998;background:var(--surface);
+      border:1px solid var(--border);border-radius:12px;padding:10px;
+      box-shadow:0 8px 24px rgba(0,0,0,.15);display:none;
+    }
+    #inc-date-wrap input[type=date]{
+      font-family:var(--font-heading);font-size:.9rem;
+      border:1px solid rgba(22,101,52,.4);border-radius:8px;
+      padding:6px 10px;color:var(--text);background:#fff;
+      cursor:pointer;outline:none;
+    }
+    .inc-row-late td{background:rgba(239,68,68,.10) !important;border-top:1px solid rgba(239,68,68,.25) !important;border-bottom:1px solid rgba(239,68,68,.25) !important}
+    .inc-row-late td:first-child{box-shadow:inset 3px 0 0 #ef4444}
+    .inc-row-late:hover td{background:rgba(239,68,68,.18) !important}
+    .inc-row-late td:not(:first-child):not(:nth-child(8)) .cell-inner,.inc-row-late td:not(:first-child):not(:nth-child(8)){color:#dc2626 !important;font-weight:700}
+    .inc-late-val{color:#dc2626 !important;font-weight:800}
+    .inc-stepper{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:4px 2px}
+    .inc-step-track{display:flex;align-items:center}
+    .inc-step-dot{width:8px;height:8px;border-radius:50%;border:1.5px solid #cbd5e1;background:#fff;flex-shrink:0;transition:all .2s}
+    .inc-step-dot.active{border-color:currentColor;background:currentColor;transform:scale(1.3)}
+    .inc-step-dot.done{border-color:currentColor;background:currentColor}
+    .inc-step-line{height:2px;width:14px;background:#e2e8f0;flex-shrink:0;transition:background .2s}
+    .inc-step-line.done{background:currentColor}
+    .inc-step-label{font-size:.7rem;font-weight:700;white-space:nowrap}
+    .inc-alert{
+      display:flex;align-items:center;gap:8px;
+      background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);
+      border-radius:10px;padding:9px 14px;margin:10px 0 4px;
+      color:#dc2626;font-size:.84rem;font-weight:700;
+    }
+    @media print{
+      #view-incoming .pg-topbar-r,#view-incoming .inc-alert{display:none !important}
+    }
+</head>
+<body class="report-print-mode">
+<script>(function(){const SUPA_URL="https://mepjsjsldwbbjrodrdfo.supabase.co";const SUPA_KEY="sb_publishable_VzxsEtLs499S5RKYHHn0XQ__Rupl8jo";const token=localStorage.getItem("supa_token")||"";if(!token){location.href="login.html";return;}fetch(SUPA_URL+"/auth/v1/user",{headers:{"apikey":SUPA_KEY,"Authorization":"Bearer "+token}}).then(r=>r.ok?r.json():Promise.reject()).then(u=>fetch(SUPA_URL+"/rest/v1/profiles?id=eq."+u.id+"&select=approved",{headers:{"apikey":SUPA_KEY,"Authorization":"Bearer "+token}})).then(r=>r.json()).then(p=>{if(!p||!p[0]||!p[0].approved)location.href="login.html";}).catch(()=>location.href="login.html");})()</script>
+
+  <!-- Nav panel -->
+  <div class="nav-panel" id="navPanel">
+    <div class="nav-panel-title">페이지 이동</div>
+    <a class="nav-item" href="index.html">
+      <span class="nav-icon">🏠</span>
+      <div><div class="nav-label">홈</div><div class="nav-sub">메인 화면</div></div>
+    </a>
+    <div class="nav-sep"></div>
+    <a class="nav-item" href="purchase.html">
+      <span class="nav-icon">📋</span>
+      <div><div class="nav-label">구매리스트</div><div class="nav-sub">구매 필요내역</div></div>
+    </a>
+    <a class="nav-item" href="diagram.html">
+      <span class="nav-icon">📐</span>
+      <div><div class="nav-label">구성도</div><div class="nav-sub">P&amp;ID Schematic</div></div>
+    </a>
+    <div class="nav-sep"></div>
+    <div class="nav-item disabled"><span class="nav-icon">🔬</span><div><div class="nav-label">시험장비</div><div class="nav-sub">준비중</div></div><span class="nav-soon-tag">SOON</span></div>
+    <div class="nav-item active"><span class="nav-icon">📦</span><div><div class="nav-label">입고관리</div><div class="nav-sub">장비 일정관리</div></div></div>
+    <div class="nav-item disabled"><span class="nav-icon">📖</span><div><div class="nav-label">시험절차서</div><div class="nav-sub">준비중</div></div><span class="nav-soon-tag">SOON</span></div>
+    <div class="nav-item disabled"><span class="nav-icon">💬</span><div><div class="nav-label">기타 공유사항</div><div class="nav-sub">준비중</div></div><span class="nav-soon-tag">SOON</span></div>
+  </div>
+
+  <!-- Incoming context menu -->
+  <div id="inc-ctx-menu" style="display:none;">
+    <button id="inc-ctx-above">위에 행 추가</button>
+    <button id="inc-ctx-below">아래에 행 추가</button>
+    <hr>
+    <button id="inc-ctx-del" style="color:#f87171">행 삭제</button>
+  </div>
+
+  <div class="container">
+<div class="pg-topbar">
+      <div class="pg-topbar-l">
+        <span class="pg-ci-logo" style="color:#16a34a;font-weight:800;font-size:.95rem;letter-spacing:-.02em;font-family:inherit">LIBECO E&amp;C</span>
+        <div class="pg-vdiv"></div>
+        <button class="pg-btn" id="inc-home-btn">🏠 홈</button>
+        <button class="pg-btn" id="inc-back-btn">← 이전</button>
+        <div class="pg-vdiv"></div>
+        <span class="pg-title">LLNL POC <span>입고관리</span></span>
+        <span class="pg-badge">INCOMING</span>
+      </div>
+      <div class="pg-topbar-r">
+        <button class="pg-btn" id="inc-undoBtn" title="Ctrl+Z" disabled="">↩ 취소</button>
+        <button class="pg-btn" id="inc-redoBtn" title="Ctrl+Y" disabled="">↪ 다시</button>
+        <div class="pg-vdiv"></div>
+        <button class="pg-btn pg-btn-export" id="inc-export-work">✏️ 작업용 내보내기</button>
+        <button class="pg-btn pg-btn-export" id="inc-export-report">📄 보고용 내보내기</button>
+        <button class="pg-btn" onclick="window.print()">🖨 인쇄</button>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="header">
+        <div class="header-inner">
+          <div class="header-left">
+            <svg class="h2-icon" viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect width="42" height="42" rx="10" fill="rgba(168,85,247,.12)"></rect>
+              <path d="M10 14h22M10 21h22M10 28h14" stroke="#a855f7" stroke-width="2" stroke-linecap="round"></path>
+              <circle cx="32" cy="28" r="6" fill="rgba(168,85,247,.15)" stroke="#a855f7" stroke-width="1.5"></circle>
+              <path d="M30 28l1.5 1.5L34 26" stroke="#a855f7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+            <div>
+              <h1>LLNL POC <span>입고관리</span></h1>
+              <p class="header-sub"><span id="inc-gen-time">2026/04/14 17:03</span> update</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="inc-alert" id="inc-late-alert" style="display:none">
+        <span>⚠️</span><span id="inc-late-msg">마감일을 초과한 항목이 있습니다</span>
+      </div>
+
+      <div class="table-controls" style="margin-top:8px">
+        <div class="section-title" style="margin:0">입고세부내역</div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <input type="text" class="search-input" id="inc-search" placeholder="장비명, 담당업체, 상태 검색...">
+        </div>
+      </div>
+
+      <div class="table-wrap" style="margin-top:8px">
+        <div class="table-scroll">
+          <table id="inc-table" style="min-width:960px">
+            <thead><tr>
+              <th style="width:52px;text-align:center">구분</th>
+              <th style="width:46px;text-align:center">No</th>
+              <th style="width:90px">분류번호</th>
+              <th style="min-width:130px">장비명</th>
+              <th style="min-width:140px">제품번호(제조사)</th>
+              <th style="min-width:110px">담당업체</th>
+              <th style="width:74px;text-align:center">필요수량</th>
+              <th style="width:105px;text-align:center">상태</th>
+              <th style="width:108px;text-align:center">발주일</th>
+              <th style="width:108px;text-align:center">수령일</th>
+              <th style="width:108px;text-align:center">마감일</th>
+              <th style="min-width:90px">비고</th>
+            </tr></thead>
+            <tbody id="inc-tbody"><tr><td colspan="12" style="background:#fffbeb;padding:6px 12px;font-weight:900;font-size:.82rem;color:#111827;letter-spacing:.03em;pointer-events:none">[LT] 액체수소 저장탱크</td></tr><tr data-idx="1"><td class="align-center" style="white-space:nowrap"><div class="cell-inner" style="padding:4px 6px;justify-content:center"><span style="background:#475569;color:#fff;border-radius:6px;padding:2px 7px;font-size:.7rem;font-weight:800;letter-spacing:.04em">LT</span></div></td><td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="1" data-field="no"></div></td><td class="mono"><div class="cell-inner" contenteditable="true" data-idx="1" data-field="category"></div></td><td><div class="cell-inner" contenteditable="true" data-idx="1" data-field="equipment" style="min-width:120px"></div></td><td><div class="cell-inner" contenteditable="true" data-idx="1" data-field="product"></div></td><td><div class="cell-inner" contenteditable="true" data-idx="1" data-field="vendor"></div></td><td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="1" data-field="qty">1</div></td><td class="align-center"><div class="cell-inner" style="padding:2px 4px" data-idx="1"><div class="inc-stepper" style="color:#94a3b8"><div class="inc-step-track"><span class="inc-step-dot active" style="background:#94a3b8;border-color:#94a3b8"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span></div><span class="inc-step-label" style="color:#94a3b8">검토중</span></div></div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="1" data-field="order_date">-</div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="1" data-field="receipt_date">-</div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="1" data-field="deadline">-</div></td><td><div class="cell-inner" contenteditable="true" data-idx="1" data-field="remark"></div></td></tr><tr data-idx="2"><td class="align-center" style="white-space:nowrap"><div class="cell-inner" style="padding:4px 6px;justify-content:center"><span style="background:#475569;color:#fff;border-radius:6px;padding:2px 7px;font-size:.7rem;font-weight:800;letter-spacing:.04em">LT</span></div></td><td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="2" data-field="no">2</div></td><td class="mono"><div class="cell-inner" contenteditable="true" data-idx="2" data-field="category">LTT-01~13</div></td><td><div class="cell-inner" contenteditable="true" data-idx="2" data-field="equipment" style="min-width:120px">SD온도센서</div></td><td><div class="cell-inner" contenteditable="true" data-idx="2" data-field="product">DT-670 (Lakeshore)</div></td><td><div class="cell-inner" contenteditable="true" data-idx="2" data-field="vendor">ACE</div></td><td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="2" data-field="qty">8</div></td><td class="align-center"><div class="cell-inner" style="padding:2px 4px" data-idx="2"><div class="inc-stepper" style="color:#d97706"><div class="inc-step-track"><span class="inc-step-dot done" style="background:#94a3b8;border-color:#94a3b8"></span><span class="inc-step-line done" style="background:#94a3b8"></span><span class="inc-step-dot active" style="background:#fbbf24;border-color:#fbbf24"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span></div><span class="inc-step-label" style="color:#d97706">발주예정</span></div></div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="2" data-field="order_date">-</div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="2" data-field="receipt_date">-</div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="2" data-field="deadline">-</div></td><td><div class="cell-inner" contenteditable="true" data-idx="2" data-field="remark"></div></td></tr><tr data-idx="3"><td class="align-center" style="white-space:nowrap"><div class="cell-inner" style="padding:4px 6px;justify-content:center"><span style="background:#475569;color:#fff;border-radius:6px;padding:2px 7px;font-size:.7rem;font-weight:800;letter-spacing:.04em">LT</span></div></td><td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="3" data-field="no">3</div></td><td class="mono"><div class="cell-inner" contenteditable="true" data-idx="3" data-field="category">dCV-1</div></td><td><div class="cell-inner" contenteditable="true" data-idx="3" data-field="equipment" style="min-width:120px">Defueling 후단 체크밸브</div></td><td><div class="cell-inner" contenteditable="true" data-idx="3" data-field="product"></div></td><td><div class="cell-inner" contenteditable="true" data-idx="3" data-field="vendor"></div></td><td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="3" data-field="qty">1</div></td><td class="align-center"><div class="cell-inner" style="padding:2px 4px" data-idx="3"><div class="inc-stepper" style="color:#94a3b8"><div class="inc-step-track"><span class="inc-step-dot active" style="background:#94a3b8;border-color:#94a3b8"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span></div><span class="inc-step-label" style="color:#94a3b8">검토중</span></div></div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="3" data-field="order_date">-</div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="3" data-field="receipt_date">-</div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="3" data-field="deadline">-</div></td><td><div class="cell-inner" contenteditable="true" data-idx="3" data-field="remark"></div></td></tr><tr><td colspan="12" style="background:#fffbeb;padding:6px 12px;font-weight:900;font-size:.82rem;color:#111827;letter-spacing:.03em;pointer-events:none">[HS] 수소공급 시스템장치</td></tr><tr data-idx="5"><td class="align-center" style="white-space:nowrap"><div class="cell-inner" style="padding:4px 6px;justify-content:center"><span style="background:#475569;color:#fff;border-radius:6px;padding:2px 7px;font-size:.7rem;font-weight:800;letter-spacing:.04em">HS</span></div></td><td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="5" data-field="no">4</div></td><td class="mono"><div class="cell-inner" contenteditable="true" data-idx="5" data-field="category">HSF-03</div></td><td><div class="cell-inner" contenteditable="true" data-idx="5" data-field="equipment" style="min-width:120px">MFM</div></td><td><div class="cell-inner" contenteditable="true" data-idx="5" data-field="product">F-000 (Bronkhorst)</div></td><td><div class="cell-inner" contenteditable="true" data-idx="5" data-field="vendor">나노앤스페이스</div></td><td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="5" data-field="qty">1</div></td><td class="align-center"><div class="cell-inner" style="padding:2px 4px" data-idx="5"><div class="inc-stepper" style="color:#d97706"><div class="inc-step-track"><span class="inc-step-dot done" style="background:#94a3b8;border-color:#94a3b8"></span><span class="inc-step-line done" style="background:#94a3b8"></span><span class="inc-step-dot active" style="background:#fbbf24;border-color:#fbbf24"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span></div><span class="inc-step-label" style="color:#d97706">발주예정</span></div></div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="5" data-field="order_date">-</div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="5" data-field="receipt_date">-</div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="5" data-field="deadline">-</div></td><td><div class="cell-inner" contenteditable="true" data-idx="5" data-field="remark"></div></td></tr><tr data-idx="6"><td class="align-center" style="white-space:nowrap"><div class="cell-inner" style="padding:4px 6px;justify-content:center"><span style="background:#475569;color:#fff;border-radius:6px;padding:2px 7px;font-size:.7rem;font-weight:800;letter-spacing:.04em">HS</span></div></td><td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="6" data-field="no">5</div></td><td class="mono"><div class="cell-inner" contenteditable="true" data-idx="6" data-field="category">HSF-04</div></td><td><div class="cell-inner" contenteditable="true" data-idx="6" data-field="equipment" style="min-width:120px">MFM</div></td><td><div class="cell-inner" contenteditable="true" data-idx="6" data-field="product">F-111AX-HEE-22-V (Bronkhorst)</div></td><td><div class="cell-inner" contenteditable="true" data-idx="6" data-field="vendor">나노앤스페이스</div></td><td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="6" data-field="qty">1</div></td><td class="align-center"><div class="cell-inner" style="padding:2px 4px" data-idx="6"><div class="inc-stepper" style="color:#d97706"><div class="inc-step-track"><span class="inc-step-dot done" style="background:#94a3b8;border-color:#94a3b8"></span><span class="inc-step-line done" style="background:#94a3b8"></span><span class="inc-step-dot active" style="background:#fbbf24;border-color:#fbbf24"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span></div><span class="inc-step-label" style="color:#d97706">발주예정</span></div></div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="6" data-field="order_date">-</div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="6" data-field="receipt_date">-</div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="6" data-field="deadline">-</div></td><td><div class="cell-inner" contenteditable="true" data-idx="6" data-field="remark"></div></td></tr><tr data-idx="7"><td class="align-center" style="white-space:nowrap"><div class="cell-inner" style="padding:4px 6px;justify-content:center"><span style="background:#475569;color:#fff;border-radius:6px;padding:2px 7px;font-size:.7rem;font-weight:800;letter-spacing:.04em">HS</span></div></td><td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="7" data-field="no">6</div></td><td class="mono"><div class="cell-inner" contenteditable="true" data-idx="7" data-field="category">HST-01</div></td><td><div class="cell-inner" contenteditable="true" data-idx="7" data-field="equipment" style="min-width:120px">SD온도센서</div></td><td><div class="cell-inner" contenteditable="true" data-idx="7" data-field="product">DT-670 (Lakeshore)</div></td><td><div class="cell-inner" contenteditable="true" data-idx="7" data-field="vendor">ACE</div></td><td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="7" data-field="qty">1</div></td><td class="align-center"><div class="cell-inner" style="padding:2px 4px" data-idx="7"><div class="inc-stepper" style="color:#d97706"><div class="inc-step-track"><span class="inc-step-dot done" style="background:#94a3b8;border-color:#94a3b8"></span><span class="inc-step-line done" style="background:#94a3b8"></span><span class="inc-step-dot active" style="background:#fbbf24;border-color:#fbbf24"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span></div><span class="inc-step-label" style="color:#d97706">발주예정</span></div></div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="7" data-field="order_date">-</div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="7" data-field="receipt_date">-</div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="7" data-field="deadline">-</div></td><td><div class="cell-inner" contenteditable="true" data-idx="7" data-field="remark"></div></td></tr><tr data-idx="8"><td class="align-center" style="white-space:nowrap"><div class="cell-inner" style="padding:4px 6px;justify-content:center"><span style="background:#475569;color:#fff;border-radius:6px;padding:2px 7px;font-size:.7rem;font-weight:800;letter-spacing:.04em">HS</span></div></td><td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="8" data-field="no">7</div></td><td class="mono"><div class="cell-inner" contenteditable="true" data-idx="8" data-field="category">sHE-0</div></td><td><div class="cell-inner" contenteditable="true" data-idx="8" data-field="equipment" style="min-width:120px">열교환기 (shell &amp; tube)</div></td><td><div class="cell-inner" contenteditable="true" data-idx="8" data-field="product"></div></td><td><div class="cell-inner" contenteditable="true" data-idx="8" data-field="vendor"></div></td><td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="8" data-field="qty">1</div></td><td class="align-center"><div class="cell-inner" style="padding:2px 4px" data-idx="8"><div class="inc-stepper" style="color:#94a3b8"><div class="inc-step-track"><span class="inc-step-dot active" style="background:#94a3b8;border-color:#94a3b8"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span></div><span class="inc-step-label" style="color:#94a3b8">검토중</span></div></div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="8" data-field="order_date">-</div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="8" data-field="receipt_date">-</div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="8" data-field="deadline">-</div></td><td><div class="cell-inner" contenteditable="true" data-idx="8" data-field="remark"></div></td></tr><tr data-idx="9"><td class="align-center" style="white-space:nowrap"><div class="cell-inner" style="padding:4px 6px;justify-content:center"><span style="background:#475569;color:#fff;border-radius:6px;padding:2px 7px;font-size:.7rem;font-weight:800;letter-spacing:.04em">HS</span></div></td><td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="9" data-field="no">8</div></td><td class="mono"><div class="cell-inner" contenteditable="true" data-idx="9" data-field="category">sV-1~5</div></td><td><div class="cell-inner" contenteditable="true" data-idx="9" data-field="equipment" style="min-width:120px">시스템 밸브 (VCR)</div></td><td><div class="cell-inner" contenteditable="true" data-idx="9" data-field="product"></div></td><td><div class="cell-inner" contenteditable="true" data-idx="9" data-field="vendor">ACE</div></td><td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="9" data-field="qty">1</div></td><td class="align-center"><div class="cell-inner" style="padding:2px 4px" data-idx="9"><div class="inc-stepper" style="color:#94a3b8"><div class="inc-step-track"><span class="inc-step-dot active" style="background:#94a3b8;border-color:#94a3b8"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span></div><span class="inc-step-label" style="color:#94a3b8">검토중</span></div></div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="9" data-field="order_date">-</div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="9" data-field="receipt_date">-</div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="9" data-field="deadline">-</div></td><td><div class="cell-inner" contenteditable="true" data-idx="9" data-field="remark"></div></td></tr><tr><td colspan="12" style="background:#fffbeb;padding:6px 12px;font-weight:900;font-size:.82rem;color:#111827;letter-spacing:.03em;pointer-events:none">[CM] 계측/계장 시스템</td></tr><tr data-idx="11"><td class="align-center" style="white-space:nowrap"><div class="cell-inner" style="padding:4px 6px;justify-content:center"><span style="background:#475569;color:#fff;border-radius:6px;padding:2px 7px;font-size:.7rem;font-weight:800;letter-spacing:.04em">CM</span></div></td><td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="11" data-field="no">1</div></td><td class="mono"><div class="cell-inner" contenteditable="true" data-idx="11" data-field="category">CMBC-01~03</div></td><td><div class="cell-inner" contenteditable="true" data-idx="11" data-field="equipment" style="min-width:120px">TC베리어 교정</div></td><td><div class="cell-inner" contenteditable="true" data-idx="11" data-field="product">CTB-01</div></td><td><div class="cell-inner" contenteditable="true" data-idx="11" data-field="vendor">Pepperl</div></td><td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="11" data-field="qty">3</div></td><td class="align-center"><div class="cell-inner" style="padding:2px 4px" data-idx="11"><div class="inc-stepper" style="color:#d97706"><div class="inc-step-track"><span class="inc-step-dot done" style="background:#94a3b8;border-color:#94a3b8"></span><span class="inc-step-line done" style="background:#94a3b8"></span><span class="inc-step-dot active" style="background:#fbbf24;border-color:#fbbf24"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span></div><span class="inc-step-label" style="color:#d97706">발주예정</span></div></div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="11" data-field="order_date">-</div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="11" data-field="receipt_date">-</div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="11" data-field="deadline">-</div></td><td><div class="cell-inner" contenteditable="true" data-idx="11" data-field="remark"></div></td></tr><tr data-idx="12"><td class="align-center" style="white-space:nowrap"><div class="cell-inner" style="padding:4px 6px;justify-content:center"><span style="background:#475569;color:#fff;border-radius:6px;padding:2px 7px;font-size:.7rem;font-weight:800;letter-spacing:.04em">CM</span></div></td><td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="12" data-field="no">9</div></td><td class="mono"><div class="cell-inner" contenteditable="true" data-idx="12" data-field="category">CMB-01~13</div></td><td><div class="cell-inner" contenteditable="true" data-idx="12" data-field="equipment" style="min-width:120px">(LT)SD센서 베리어</div></td><td><div class="cell-inner" contenteditable="true" data-idx="12" data-field="product">KCD2-RR2-Ex1</div></td><td><div class="cell-inner" contenteditable="true" data-idx="12" data-field="vendor">Pepperl</div></td><td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="12" data-field="qty">13</div></td><td class="align-center"><div class="cell-inner" style="padding:2px 4px" data-idx="12"><div class="inc-stepper" style="color:#d97706"><div class="inc-step-track"><span class="inc-step-dot done" style="background:#94a3b8;border-color:#94a3b8"></span><span class="inc-step-line done" style="background:#94a3b8"></span><span class="inc-step-dot active" style="background:#fbbf24;border-color:#fbbf24"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span></div><span class="inc-step-label" style="color:#d97706">발주예정</span></div></div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="12" data-field="order_date">-</div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="12" data-field="receipt_date">-</div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="12" data-field="deadline">-</div></td><td><div class="cell-inner" contenteditable="true" data-idx="12" data-field="remark"></div></td></tr><tr data-idx="13"><td class="align-center" style="white-space:nowrap"><div class="cell-inner" style="padding:4px 6px;justify-content:center"><span style="background:#475569;color:#fff;border-radius:6px;padding:2px 7px;font-size:.7rem;font-weight:800;letter-spacing:.04em">CM</span></div></td><td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="13" data-field="no">10</div></td><td class="mono"><div class="cell-inner" contenteditable="true" data-idx="13" data-field="category">CMB-25~28</div></td><td><div class="cell-inner" contenteditable="true" data-idx="13" data-field="equipment" style="min-width:120px">(CC)TC센서 베리어</div></td><td><div class="cell-inner" contenteditable="true" data-idx="13" data-field="product">KFD2-UT2-Ex1</div></td><td><div class="cell-inner" contenteditable="true" data-idx="13" data-field="vendor">Pepperl</div></td><td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="13" data-field="qty">3</div></td><td class="align-center"><div class="cell-inner" style="padding:2px 4px" data-idx="13"><div class="inc-stepper" style="color:#d97706"><div class="inc-step-track"><span class="inc-step-dot done" style="background:#94a3b8;border-color:#94a3b8"></span><span class="inc-step-line done" style="background:#94a3b8"></span><span class="inc-step-dot active" style="background:#fbbf24;border-color:#fbbf24"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span></div><span class="inc-step-label" style="color:#d97706">발주예정</span></div></div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="13" data-field="order_date">-</div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="13" data-field="receipt_date">-</div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="13" data-field="deadline">-</div></td><td><div class="cell-inner" contenteditable="true" data-idx="13" data-field="remark"></div></td></tr><tr data-idx="14"><td class="align-center" style="white-space:nowrap"><div class="cell-inner" style="padding:4px 6px;justify-content:center"><span style="background:#475569;color:#fff;border-radius:6px;padding:2px 7px;font-size:.7rem;font-weight:800;letter-spacing:.04em">CM</span></div></td><td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="14" data-field="no">11</div></td><td class="mono"><div class="cell-inner" contenteditable="true" data-idx="14" data-field="category">CMBP-01~03</div></td><td><div class="cell-inner" contenteditable="true" data-idx="14" data-field="equipment" style="min-width:120px">베리어 파워레일</div></td><td><div class="cell-inner" contenteditable="true" data-idx="14" data-field="product">UPR-03-S</div></td><td><div class="cell-inner" contenteditable="true" data-idx="14" data-field="vendor">Pepperl</div></td><td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="14" data-field="qty">2</div></td><td class="align-center"><div class="cell-inner" style="padding:2px 4px" data-idx="14"><div class="inc-stepper" style="color:#d97706"><div class="inc-step-track"><span class="inc-step-dot done" style="background:#94a3b8;border-color:#94a3b8"></span><span class="inc-step-line done" style="background:#94a3b8"></span><span class="inc-step-dot active" style="background:#fbbf24;border-color:#fbbf24"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span></div><span class="inc-step-label" style="color:#d97706">발주예정</span></div></div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="14" data-field="order_date">-</div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="14" data-field="receipt_date">-</div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="14" data-field="deadline">-</div></td><td><div class="cell-inner" contenteditable="true" data-idx="14" data-field="remark"></div></td></tr><tr data-idx="15"><td class="align-center" style="white-space:nowrap"><div class="cell-inner" style="padding:4px 6px;justify-content:center"><span style="background:#475569;color:#fff;border-radius:6px;padding:2px 7px;font-size:.7rem;font-weight:800;letter-spacing:.04em">CM</span></div></td><td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="15" data-field="no">12</div></td><td class="mono"><div class="cell-inner" contenteditable="true" data-idx="15" data-field="category">CMBPP-01~03</div></td><td><div class="cell-inner" contenteditable="true" data-idx="15" data-field="equipment" style="min-width:120px">파워레일 전원공급장치</div></td><td><div class="cell-inner" contenteditable="true" data-idx="15" data-field="product">KFD2-EB2</div></td><td><div class="cell-inner" contenteditable="true" data-idx="15" data-field="vendor">Pepperl</div></td><td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="15" data-field="qty">2</div></td><td class="align-center"><div class="cell-inner" style="padding:2px 4px" data-idx="15"><div class="inc-stepper" style="color:#d97706"><div class="inc-step-track"><span class="inc-step-dot done" style="background:#94a3b8;border-color:#94a3b8"></span><span class="inc-step-line done" style="background:#94a3b8"></span><span class="inc-step-dot active" style="background:#fbbf24;border-color:#fbbf24"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span></div><span class="inc-step-label" style="color:#d97706">발주예정</span></div></div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="15" data-field="order_date">-</div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="15" data-field="receipt_date">-</div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="15" data-field="deadline">-</div></td><td><div class="cell-inner" contenteditable="true" data-idx="15" data-field="remark"></div></td></tr><tr data-idx="16"><td class="align-center" style="white-space:nowrap"><div class="cell-inner" style="padding:4px 6px;justify-content:center"><span style="background:#475569;color:#fff;border-radius:6px;padding:2px 7px;font-size:.7rem;font-weight:800;letter-spacing:.04em">CM</span></div></td><td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="16" data-field="no">13</div></td><td class="mono"><div class="cell-inner" contenteditable="true" data-idx="16" data-field="category">CMD-03</div></td><td><div class="cell-inner" contenteditable="true" data-idx="16" data-field="equipment" style="min-width:120px">DAQ(데이터 수집)</div></td><td><div class="cell-inner" contenteditable="true" data-idx="16" data-field="product">NI 9203 DAQ</div></td><td><div class="cell-inner" contenteditable="true" data-idx="16" data-field="vendor">NI</div></td><td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="16" data-field="qty">1</div></td><td class="align-center"><div class="cell-inner" style="padding:2px 4px" data-idx="16"><div class="inc-stepper" style="color:#d97706"><div class="inc-step-track"><span class="inc-step-dot done" style="background:#94a3b8;border-color:#94a3b8"></span><span class="inc-step-line done" style="background:#94a3b8"></span><span class="inc-step-dot active" style="background:#fbbf24;border-color:#fbbf24"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span></div><span class="inc-step-label" style="color:#d97706">발주예정</span></div></div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="16" data-field="order_date">-</div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="16" data-field="receipt_date">-</div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="16" data-field="deadline">-</div></td><td><div class="cell-inner" contenteditable="true" data-idx="16" data-field="remark"></div></td></tr><tr data-idx="17"><td class="align-center" style="white-space:nowrap"><div class="cell-inner" style="padding:4px 6px;justify-content:center"><span style="background:#475569;color:#fff;border-radius:6px;padding:2px 7px;font-size:.7rem;font-weight:800;letter-spacing:.04em">CM</span></div></td><td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="17" data-field="no">14</div></td><td class="mono"><div class="cell-inner" contenteditable="true" data-idx="17" data-field="category">CMM-01~02</div></td><td><div class="cell-inner" contenteditable="true" data-idx="17" data-field="equipment" style="min-width:120px">SD센서 모니터</div></td><td><div class="cell-inner" contenteditable="true" data-idx="17" data-field="product">Model 240(Lake shore)</div></td><td><div class="cell-inner" contenteditable="true" data-idx="17" data-field="vendor">㈜에스크 ACE</div></td><td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="17" data-field="qty">2</div></td><td class="align-center"><div class="cell-inner" style="padding:2px 4px" data-idx="17"><div class="inc-stepper" style="color:#d97706"><div class="inc-step-track"><span class="inc-step-dot done" style="background:#94a3b8;border-color:#94a3b8"></span><span class="inc-step-line done" style="background:#94a3b8"></span><span class="inc-step-dot active" style="background:#fbbf24;border-color:#fbbf24"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span></div><span class="inc-step-label" style="color:#d97706">발주예정</span></div></div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="17" data-field="order_date">-</div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="17" data-field="receipt_date">-</div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="17" data-field="deadline">-</div></td><td><div class="cell-inner" contenteditable="true" data-idx="17" data-field="remark"></div></td></tr><tr data-idx="18"><td class="align-center" style="white-space:nowrap"><div class="cell-inner" style="padding:4px 6px;justify-content:center"><span style="background:#475569;color:#fff;border-radius:6px;padding:2px 7px;font-size:.7rem;font-weight:800;letter-spacing:.04em">CM</span></div></td><td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="18" data-field="no">15</div></td><td class="mono"><div class="cell-inner" contenteditable="true" data-idx="18" data-field="category">CMF-01</div></td><td><div class="cell-inner" contenteditable="true" data-idx="18" data-field="equipment" style="min-width:120px">MFMC 컨트롤러</div></td><td><div class="cell-inner" contenteditable="true" data-idx="18" data-field="product">E-8300-0-1XGES-00-1XGE0</div></td><td><div class="cell-inner" contenteditable="true" data-idx="18" data-field="vendor">㈜나노앤스페이스</div></td><td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="18" data-field="qty">1</div></td><td class="align-center"><div class="cell-inner" style="padding:2px 4px" data-idx="18"><div class="inc-stepper" style="color:#d97706"><div class="inc-step-track"><span class="inc-step-dot done" style="background:#94a3b8;border-color:#94a3b8"></span><span class="inc-step-line done" style="background:#94a3b8"></span><span class="inc-step-dot active" style="background:#fbbf24;border-color:#fbbf24"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span></div><span class="inc-step-label" style="color:#d97706">발주예정</span></div></div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="18" data-field="order_date">-</div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="18" data-field="receipt_date">-</div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="18" data-field="deadline">-</div></td><td><div class="cell-inner" contenteditable="true" data-idx="18" data-field="remark"></div></td></tr><tr><td colspan="12" style="background:#fffbeb;padding:6px 12px;font-weight:900;font-size:.82rem;color:#111827;letter-spacing:.03em;pointer-events:none">설치 및 용역</td></tr><tr data-idx="20"><td class="align-center" style="white-space:nowrap"><div class="cell-inner" style="padding:4px 6px;justify-content:center"><span style="background:#475569;color:#fff;border-radius:6px;padding:2px 7px;font-size:.7rem;font-weight:800;letter-spacing:.04em">SV</span></div></td><td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="20" data-field="no">16</div></td><td class="mono"><div class="cell-inner" contenteditable="true" data-idx="20" data-field="category">LT-2</div></td><td><div class="cell-inner" contenteditable="true" data-idx="20" data-field="equipment" style="min-width:120px">(LT)VENT Line 후단 구성</div></td><td><div class="cell-inner" contenteditable="true" data-idx="20" data-field="product"></div></td><td><div class="cell-inner" contenteditable="true" data-idx="20" data-field="vendor">ACE</div></td><td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="20" data-field="qty">1</div></td><td class="align-center"><div class="cell-inner" style="padding:2px 4px" data-idx="20"><div class="inc-stepper" style="color:#94a3b8"><div class="inc-step-track"><span class="inc-step-dot active" style="background:#94a3b8;border-color:#94a3b8"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span></div><span class="inc-step-label" style="color:#94a3b8">검토중</span></div></div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="20" data-field="order_date">-</div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="20" data-field="receipt_date">-</div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="20" data-field="deadline">-</div></td><td><div class="cell-inner" contenteditable="true" data-idx="20" data-field="remark"></div></td></tr><tr data-idx="21"><td class="align-center" style="white-space:nowrap"><div class="cell-inner" style="padding:4px 6px;justify-content:center"><span style="background:#475569;color:#fff;border-radius:6px;padding:2px 7px;font-size:.7rem;font-weight:800;letter-spacing:.04em">SV</span></div></td><td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="21" data-field="no">17</div></td><td class="mono"><div class="cell-inner" contenteditable="true" data-idx="21" data-field="category">LT-3</div></td><td><div class="cell-inner" contenteditable="true" data-idx="21" data-field="equipment" style="min-width:120px">(LT)Defueling Line 구성</div></td><td><div class="cell-inner" contenteditable="true" data-idx="21" data-field="product"></div></td><td><div class="cell-inner" contenteditable="true" data-idx="21" data-field="vendor">ACE</div></td><td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="21" data-field="qty">1</div></td><td class="align-center"><div class="cell-inner" style="padding:2px 4px" data-idx="21"><div class="inc-stepper" style="color:#d97706"><div class="inc-step-track"><span class="inc-step-dot done" style="background:#94a3b8;border-color:#94a3b8"></span><span class="inc-step-line done" style="background:#94a3b8"></span><span class="inc-step-dot active" style="background:#fbbf24;border-color:#fbbf24"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span></div><span class="inc-step-label" style="color:#d97706">발주예정</span></div></div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="21" data-field="order_date">-</div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="21" data-field="receipt_date">-</div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="21" data-field="deadline">-</div></td><td><div class="cell-inner" contenteditable="true" data-idx="21" data-field="remark"></div></td></tr><tr data-idx="22"><td class="align-center" style="white-space:nowrap"><div class="cell-inner" style="padding:4px 6px;justify-content:center"><span style="background:#475569;color:#fff;border-radius:6px;padding:2px 7px;font-size:.7rem;font-weight:800;letter-spacing:.04em">SV</span></div></td><td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="22" data-field="no">18</div></td><td class="mono"><div class="cell-inner" contenteditable="true" data-idx="22" data-field="category">LT-4</div></td><td><div class="cell-inner" contenteditable="true" data-idx="22" data-field="equipment" style="min-width:120px">(LT)온도센서 wiring</div></td><td><div class="cell-inner" contenteditable="true" data-idx="22" data-field="product"></div></td><td><div class="cell-inner" contenteditable="true" data-idx="22" data-field="vendor">ACE</div></td><td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="22" data-field="qty">1</div></td><td class="align-center"><div class="cell-inner" style="padding:2px 4px" data-idx="22"><div class="inc-stepper" style="color:#d97706"><div class="inc-step-track"><span class="inc-step-dot done" style="background:#94a3b8;border-color:#94a3b8"></span><span class="inc-step-line done" style="background:#94a3b8"></span><span class="inc-step-dot active" style="background:#fbbf24;border-color:#fbbf24"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span></div><span class="inc-step-label" style="color:#d97706">발주예정</span></div></div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="22" data-field="order_date">-</div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="22" data-field="receipt_date">-</div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="22" data-field="deadline">-</div></td><td><div class="cell-inner" contenteditable="true" data-idx="22" data-field="remark"></div></td></tr><tr data-idx="23"><td class="align-center" style="white-space:nowrap"><div class="cell-inner" style="padding:4px 6px;justify-content:center"><span style="background:#475569;color:#fff;border-radius:6px;padding:2px 7px;font-size:.7rem;font-weight:800;letter-spacing:.04em">SV</span></div></td><td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="23" data-field="no">19</div></td><td class="mono"><div class="cell-inner" contenteditable="true" data-idx="23" data-field="category">HS-2</div></td><td><div class="cell-inner" contenteditable="true" data-idx="23" data-field="equipment" style="min-width:120px">(HS)수소공급장치 개조</div></td><td><div class="cell-inner" contenteditable="true" data-idx="23" data-field="product"></div></td><td><div class="cell-inner" contenteditable="true" data-idx="23" data-field="vendor">ACE</div></td><td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="23" data-field="qty">1</div></td><td class="align-center"><div class="cell-inner" style="padding:2px 4px" data-idx="23"><div class="inc-stepper" style="color:#d97706"><div class="inc-step-track"><span class="inc-step-dot done" style="background:#94a3b8;border-color:#94a3b8"></span><span class="inc-step-line done" style="background:#94a3b8"></span><span class="inc-step-dot active" style="background:#fbbf24;border-color:#fbbf24"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span></div><span class="inc-step-label" style="color:#d97706">발주예정</span></div></div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="23" data-field="order_date">-</div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="23" data-field="receipt_date">-</div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="23" data-field="deadline">-</div></td><td><div class="cell-inner" contenteditable="true" data-idx="23" data-field="remark"></div></td></tr><tr data-idx="24"><td class="align-center" style="white-space:nowrap"><div class="cell-inner" style="padding:4px 6px;justify-content:center"><span style="background:#475569;color:#fff;border-radius:6px;padding:2px 7px;font-size:.7rem;font-weight:800;letter-spacing:.04em">SV</span></div></td><td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="24" data-field="no">20</div></td><td class="mono"><div class="cell-inner" contenteditable="true" data-idx="24" data-field="category">CM-1</div></td><td><div class="cell-inner" contenteditable="true" data-idx="24" data-field="equipment" style="min-width:120px">(CM)분전반 제작</div></td><td><div class="cell-inner" contenteditable="true" data-idx="24" data-field="product"></div></td><td><div class="cell-inner" contenteditable="true" data-idx="24" data-field="vendor">시연기전</div></td><td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="24" data-field="qty">1</div></td><td class="align-center"><div class="cell-inner" style="padding:2px 4px" data-idx="24"><div class="inc-stepper" style="color:#d97706"><div class="inc-step-track"><span class="inc-step-dot done" style="background:#94a3b8;border-color:#94a3b8"></span><span class="inc-step-line done" style="background:#94a3b8"></span><span class="inc-step-dot active" style="background:#fbbf24;border-color:#fbbf24"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span></div><span class="inc-step-label" style="color:#d97706">발주예정</span></div></div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="24" data-field="order_date">-</div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="24" data-field="receipt_date">-</div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="24" data-field="deadline">-</div></td><td><div class="cell-inner" contenteditable="true" data-idx="24" data-field="remark"></div></td></tr><tr data-idx="25"><td class="align-center" style="white-space:nowrap"><div class="cell-inner" style="padding:4px 6px;justify-content:center"><span style="background:#475569;color:#fff;border-radius:6px;padding:2px 7px;font-size:.7rem;font-weight:800;letter-spacing:.04em">SV</span></div></td><td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="25" data-field="no">21</div></td><td class="mono"><div class="cell-inner" contenteditable="true" data-idx="25" data-field="category">CM-2</div></td><td><div class="cell-inner" contenteditable="true" data-idx="25" data-field="equipment" style="min-width:120px">(CM)전체 전선 wiring</div></td><td><div class="cell-inner" contenteditable="true" data-idx="25" data-field="product"></div></td><td><div class="cell-inner" contenteditable="true" data-idx="25" data-field="vendor"></div></td><td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="25" data-field="qty">1</div></td><td class="align-center"><div class="cell-inner" style="padding:2px 4px" data-idx="25"><div class="inc-stepper" style="color:#d97706"><div class="inc-step-track"><span class="inc-step-dot done" style="background:#94a3b8;border-color:#94a3b8"></span><span class="inc-step-line done" style="background:#94a3b8"></span><span class="inc-step-dot active" style="background:#fbbf24;border-color:#fbbf24"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span><span class="inc-step-line"></span><span class="inc-step-dot"></span></div><span class="inc-step-label" style="color:#d97706">발주예정</span></div></div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="25" data-field="order_date">-</div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="25" data-field="receipt_date">-</div></td><td class="inc-date-cell align-center"><div class="cell-inner" data-idx="25" data-field="deadline">-</div></td><td><div class="cell-inner" contenteditable="true" data-idx="25" data-field="remark"></div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <footer class="footer" style="margin-top:5px;font-size:.75rem;color:var(--text2)">
+        © 2026 LIBECO E&amp;C · All Rights Reserved
+      </footer>
+    </div>
+
+    <div id="inc-status-drop" style="display: none;">
+      <button data-s="검토중">검토중</button>
+      <button data-s="발주예정">발주예정</button>
+      <button data-s="발주완료">발주완료</button>
+      <button data-s="배송중">배송중</button>
+      <button data-s="제작중">제작중</button>
+      <hr style="border:none;border-top:1px solid #e2e8f0;margin:3px 0">
+      <button data-s="입고완료">입고완료</button>
+      <button data-s="제작완료">제작완료</button>
+    </div>
+    <div id="inc-date-wrap" style="display: none;"><input type="date" id="inc-date-input"></div>
+  </div>
+
+<script>
+(function(){
+  const INC_LS = "incoming_v5";
+
+  /* ── Supabase 설정 ── */
+  const SUPA_URL = "https://mepjsjsldwbbjrodrdfo.supabase.co";
+  const SUPA_KEY = "sb_publishable_VzxsEtLs499S5RKYHHn0XQ__Rupl8jo";
+  const SUPA_TABLE = "incoming";
+
+  async function supaFetch(method, body){
+    const opts = { method, headers: { "apikey": SUPA_KEY, "Authorization": "Bearer "+SUPA_KEY, "Content-Type": "application/json", "Prefer": method==="POST"?"resolution=merge-duplicates":"" } };
+    if(body) opts.body = JSON.stringify(body);
+    const res = await fetch(SUPA_URL+"/rest/v1/"+SUPA_TABLE+(method==="GET"?"?select=*&order=sort_order.asc":""), opts);
+    if(!res.ok) throw new Error(await res.text());
+    return method==="GET" ? res.json() : res;
+  }
+
+  async function supaLoad(){
+    try{
+      const rows = await supaFetch("GET");
+      if(rows && rows.length > 0){
+        incItems = rows.map(r => {
+          const item = {};
+          ["no","category","equipment","product","vendor","qty","status","order_date","receipt_date","deadline","remark","_cat","_group","_label","_color","_bg"].forEach(k=>{ if(r[k]!==undefined&&r[k]!==null) item[k]=r[k]; });
+          item._supa_id = r.id;
+          item._sort = r.sort_order;
+          return item;
+        });
+        return true;
+      }
+    }catch(e){ console.warn("Supabase load failed:", e); }
+    return false;
+  }
+
+  async function supaUpsertAll(){
+    try{
+      const payload = incItems.map((r,i)=>{
+        const obj = { no:r.no||"", category:r.category||"", equipment:r.equipment||"", product:r.product||"", vendor:r.vendor||"", qty:r.qty||"", status:r.status||"검토중", order_date:r.order_date||"", receipt_date:r.receipt_date||"", deadline:r.deadline||"", remark:r.remark||"", sort_order:i, _cat:r._cat||"" };
+        if(r._group){ obj._group=true; obj._label=r._label||""; obj._color=r._color||""; obj._bg=r._bg||""; }
+        if(r._supa_id) obj.id = r._supa_id;
+        return obj;
+      });
+      await fetch(SUPA_URL+"/rest/v1/"+SUPA_TABLE, { method:"POST", headers:{ "apikey":SUPA_KEY, "Authorization":"Bearer "+SUPA_KEY, "Content-Type":"application/json", "Prefer":"resolution=merge-duplicates,return=representation" }, body:JSON.stringify(payload) });
+    }catch(e){ console.warn("Supabase save failed:", e); }
+  }
+
+  /* ── 실시간 동기화 (Supabase Realtime) ── */
+  function startRealtime(){
+    const wsUrl = SUPA_URL.replace("https://","wss://") + "/realtime/v1/websocket?apikey="+SUPA_KEY+"&vsn=1.0.0";
+    let ws;
+    function connect(){
+      ws = new WebSocket(wsUrl);
+      ws.onopen = () => {
+        ws.send(JSON.stringify({topic:"realtime:public:"+SUPA_TABLE,event:"phx_join",payload:{},ref:"1"}));
+      };
+      ws.onmessage = async (e) => {
+        const msg = JSON.parse(e.data);
+        if(msg.event==="postgres_changes"||msg.payload?.data?.type){
+          const ok = await supaLoad();
+          if(ok) build();
+        }
+      };
+      ws.onclose = () => setTimeout(connect, 3000);
+    }
+    connect();
+  }
+  const SEED_INC = [{"_group": true, "_cat": "LT", "_label": "[LT] 액체수소 저장탱크", "_color": "#0f766e", "_bg": "rgba(15,118,110,0.10)"}, {"no": "2", "category": "LTT-01~13", "equipment": "SD온도센서", "product": "DT-670 (Lakeshore)", "vendor": "ACE", "qty": "8", "status": "발주예정", "order_date": "", "receipt_date": "", "deadline": "", "remark": "", "_cat": "LT"}, {"no": "3", "category": "dCV-1", "equipment": "Defueling 후단 체크밸브", "product": "", "vendor": "", "qty": "1", "status": "검토중", "order_date": "", "receipt_date": "", "deadline": "", "remark": "", "_cat": "LT"}, {"_group": true, "_cat": "HS", "_label": "[HS] 수소공급 시스템장치", "_color": "#1d4ed8", "_bg": "rgba(29,78,216,0.10)"}, {"no": "4", "category": "HSF-03", "equipment": "MFM", "product": "F-000 (Bronkhorst)", "vendor": "나노앤스페이스", "qty": "1", "status": "발주예정", "order_date": "", "receipt_date": "", "deadline": "", "remark": "", "_cat": "HS"}, {"no": "5", "category": "HSF-04", "equipment": "MFM", "product": "F-111AX-HEE-22-V (Bronkhorst)", "vendor": "나노앤스페이스", "qty": "1", "status": "발주예정", "order_date": "", "receipt_date": "", "deadline": "", "remark": "", "_cat": "HS"}, {"no": "6", "category": "HST-01", "equipment": "SD온도센서", "product": "DT-670 (Lakeshore)", "vendor": "ACE", "qty": "1", "status": "발주예정", "order_date": "", "receipt_date": "", "deadline": "", "remark": "", "_cat": "HS"}, {"no": "7", "category": "sHE-0", "equipment": "열교환기 (shell & tube)", "product": "", "vendor": "", "qty": "1", "status": "검토중", "order_date": "", "receipt_date": "", "deadline": "", "remark": "", "_cat": "HS"}, {"no": "8", "category": "sV-1~5", "equipment": "시스템 밸브 (VCR)", "product": "", "vendor": "ACE", "qty": "1", "status": "검토중", "order_date": "", "receipt_date": "", "deadline": "", "remark": "", "_cat": "HS"}, {"_group": true, "_cat": "CM", "_label": "[CM] 계측/계장 시스템", "_color": "#6d28d9", "_bg": "rgba(109,40,217,0.10)"}, {"no": "1", "category": "CMBC-01~03", "equipment": "TC베리어 교정", "product": "CTB-01", "vendor": "Pepperl", "qty": "3", "status": "발주예정", "order_date": "", "receipt_date": "", "deadline": "", "remark": "", "_cat": "CM"}, {"no": "9", "category": "CMB-01~13", "equipment": "(LT)SD센서 베리어", "product": "KCD2-RR2-Ex1", "vendor": "Pepperl", "qty": "13", "status": "발주예정", "order_date": "", "receipt_date": "", "deadline": "", "remark": "", "_cat": "CM"}, {"no": "10", "category": "CMB-25~28", "equipment": "(CC)TC센서 베리어", "product": "KFD2-UT2-Ex1", "vendor": "Pepperl", "qty": "3", "status": "발주예정", "order_date": "", "receipt_date": "", "deadline": "", "remark": "", "_cat": "CM"}, {"no": "11", "category": "CMBP-01~03", "equipment": "베리어 파워레일", "product": "UPR-03-S", "vendor": "Pepperl", "qty": "2", "status": "발주예정", "order_date": "", "receipt_date": "", "deadline": "", "remark": "", "_cat": "CM"}, {"no": "12", "category": "CMBPP-01~03", "equipment": "파워레일 전원공급장치", "product": "KFD2-EB2", "vendor": "Pepperl", "qty": "2", "status": "발주예정", "order_date": "", "receipt_date": "", "deadline": "", "remark": "", "_cat": "CM"}, {"no": "13", "category": "CMD-03", "equipment": "DAQ(데이터 수집)", "product": "NI 9203 DAQ", "vendor": "NI", "qty": "1", "status": "발주예정", "order_date": "", "receipt_date": "", "deadline": "", "remark": "", "_cat": "CM"}, {"no": "14", "category": "CMM-01~02", "equipment": "SD센서 모니터", "product": "Model 240(Lake shore)", "vendor": "㈜에스크 ACE", "qty": "2", "status": "발주예정", "order_date": "", "receipt_date": "", "deadline": "", "remark": "", "_cat": "CM"}, {"no": "15", "category": "CMF-01", "equipment": "MFMC 컨트롤러", "product": "E-8300-0-1XGES-00-1XGE0", "vendor": "㈜나노앤스페이스", "qty": "1", "status": "발주예정", "order_date": "", "receipt_date": "", "deadline": "", "remark": "", "_cat": "CM"}, {"_group": true, "_cat": "SV", "_label": "설치 및 용역", "_color": "#be123c", "_bg": "rgba(190,18,60,0.10)"}, {"no": "16", "category": "LT-2", "equipment": "(LT)VENT Line 후단 구성", "product": "", "vendor": "ACE", "qty": "1", "status": "발주예정", "order_date": "", "receipt_date": "", "deadline": "", "remark": "", "_cat": "SV"}, {"no": "17", "category": "LT-3", "equipment": "(LT)Defueling Line 구성", "product": "", "vendor": "ACE", "qty": "1", "status": "발주예정", "order_date": "", "receipt_date": "", "deadline": "", "remark": "", "_cat": "SV"}, {"no": "18", "category": "LT-4", "equipment": "(LT)온도센서 wiring", "product": "", "vendor": "ACE", "qty": "1", "status": "발주예정", "order_date": "", "receipt_date": "", "deadline": "", "remark": "", "_cat": "SV"}, {"no": "19", "category": "HS-2", "equipment": "(HS)수소공급장치 개조", "product": "", "vendor": "ACE", "qty": "1", "status": "발주예정", "order_date": "", "receipt_date": "", "deadline": "", "remark": "", "_cat": "SV"}, {"no": "20", "category": "CM-1", "equipment": "(CM)분전반 제작", "product": "", "vendor": "시연기전", "qty": "1", "status": "발주예정", "order_date": "", "receipt_date": "", "deadline": "", "remark": "", "_cat": "SV"}, {"no": "21", "category": "CM-2", "equipment": "(CM)전체 전선 wiring", "product": "", "vendor": "", "qty": "1", "status": "발주예정", "order_date": "", "receipt_date": "", "deadline": "", "remark": "", "_cat": "SV"}];
+  const STATUS_CLS = {
+    "\uac80\ud1a0\uc911":"inc-s-review",
+    "\ubc1c\uc8fc\uc608\uc815":"inc-s-planned",
+    "\ubc1c\uc8fc\uc644\ub8cc":"inc-s-ordered",
+    "\ubc30\uc1a1\uc911":"inc-s-shipping",
+    "\uc785\uace0\uc644\ub8cc":"inc-s-done",
+    "제작중":"inc-s-shipping",
+    "입고완료":"inc-s-done",
+    "제작완료":"inc-s-done"
+  };
+
+  let incItems = [];
+  let _saveTimer = null;
+
+  function save(){
+    // localStorage 백업
+    try{ localStorage.setItem(INC_LS, JSON.stringify(incItems)); }catch(e){}
+    // Supabase 저장 (디바운스 500ms)
+    clearTimeout(_saveTimer);
+    _saveTimer = setTimeout(()=>{ supaUpsertAll(); }, 500);
+  }
+
+  function load(){
+    try{
+      const s = localStorage.getItem(INC_LS);
+      if(s){ const parsed=JSON.parse(s); if(parsed&&parsed.length>0){ incItems=parsed; return true; } }
+    }catch(e){}
+    incItems = JSON.parse(JSON.stringify(SEED_INC));
+    return false;
+  }
+  function newRow(){
+    return {no:"",category:"",equipment:"",product:"",vendor:"",qty:"",
+            status:"\uac80\ud1a0\uc911",order_date:"",receipt_date:"",deadline:"",remark:""};
+  }
+  function esc(s){ return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+  function isLate(r){ return r.receipt_date && r.deadline && r.receipt_date > r.deadline; }
+  function fmtDate(d){
+    if(!d||d==="-") return "-";
+    const p=d.split("-");
+    return p.length===3 ? p[0].slice(2)+"."+p[1]+"."+p[2] : d;
+  }
+  function setTime(){
+    const now=new Date(), kst=new Date(now.getTime()+9*3600*1000);
+    const s=kst.getUTCFullYear()+"/"+String(kst.getUTCMonth()+1).padStart(2,"0")+"/"+
+      String(kst.getUTCDate()).padStart(2,"0")+" "+
+      String(kst.getUTCHours()).padStart(2,"0")+":"+String(kst.getUTCMinutes()).padStart(2,"0");
+    const a=document.getElementById("inc-gen-time"),b=document.getElementById("inc-footer-gen");
+    if(a)a.textContent=s; if(b)b.textContent=s;
+  }
+
+  const STAGES=["검토중","발주예정","발주완료","배송중","제작중","입고완료","제작완료"];
+  const STAGE_COLORS={"검토중":"#94a3b8","발주예정":"#d97706","발주완료":"#16a34a","배송중":"#0d9488","제작중":"#0d9488","입고완료":"#2563eb","제작완료":"#2563eb"};
+  function stageIdx(s){return {"검토중":0,"발주예정":1,"발주완료":2,"배송중":3,"제작중":3,"입고완료":4,"제작완료":4}[s]??0;}
+  function stepperHtml(status,idx){
+    const color=STAGE_COLORS[status]||"#94a3b8";
+    const ci=stageIdx(status);
+    const SC=["#94a3b8","#fbbf24","#4ade80","#2dd4bf","#60a5fa"];
+    let h='<div class="inc-stepper" style="color:'+color+'">';
+    h+='<div class="inc-step-track">';
+    for(let i=0;i<5;i++){
+      const done=i<ci,active=i===ci;
+      h+='<span class="inc-step-dot'+(done?' done':active?' active':'')+'"'+(done||active?' style="background:'+SC[i]+';border-color:'+SC[i]+'"':'')+'></span>';
+      if(i<4) h+='<span class="inc-step-line'+(done?' done':'')+'"'+(done?' style="background:'+SC[i]+'"':'')+'></span>';
+    }
+    h+='</div>';
+    h+='<span class="inc-step-label" style="color:'+color+'">'+esc(status)+'</span>';
+    h+='</div>';
+    return h;
+  }
+  function build(){
+    const tbody=document.getElementById("inc-tbody");
+    if(!tbody) return;
+    const q=(document.getElementById("inc-search")||{}).value||"";
+    const lq=q.toLowerCase();
+    // Build display list: 관리필요항목 first, then categories
+    const lateItems = incItems.filter(r=>!r._group&&isLate(r));
+    const doneItems = incItems.filter(r=>!r._group&&!isLate(r)&&(r.status==="입고완료"||r.status==="제작완료"));
+    const lateSet = new Set(lateItems);
+    const doneSet = new Set(doneItems);
+    let allRows = [];
+    if(lateItems.length>0){
+      allRows.push({_group:true,_cat:"__late",_label:"⚠️ 관리필요항목 ("+lateItems.length+"건)",_color:"#ef4444",_bg:"rgba(239,68,68,0.08)"});
+      allRows.push(...lateItems);
+    }
+    incItems.forEach(r=>{ if(!lateSet.has(r)&&!doneSet.has(r)) allRows.push(r); });
+    if(doneItems.length>0){
+      allRows.push({_group:true,_cat:"__done",_label:"✅ 입고완료 ("+doneItems.length+"건)",_color:"#1d4ed8",_bg:"rgba(29,78,216,0.08)"});
+      allRows.push(...doneItems);
+    }
+    const rows=!lq ? allRows : allRows.filter(r=>{
+      if(r._group) return true;
+      return ["category","equipment","product","vendor","status","remark"]
+        .some(k=>String(r[k]||"").toLowerCase().includes(lq));
+    });
+
+    tbody.innerHTML="";
+    rows.forEach(r=>{
+      // Group header
+      if(r._group){
+        const tr=document.createElement("tr");
+        const isSpecial=r._cat==="__late"||r._cat==="__done";
+        const grpBg=isSpecial?r._bg:"#fffbeb";
+        const grpColor=isSpecial?r._color:"#111827";
+        tr.innerHTML=`<td colspan="12" style="background:${grpBg};padding:6px 12px;font-weight:900;font-size:.82rem;color:${grpColor};letter-spacing:.03em;pointer-events:none">${r._label}</td>`;
+        tbody.appendChild(tr);
+        return;
+      }
+      const gi=incItems.indexOf(r);
+      const late=isLate(r);
+      const tr=document.createElement("tr");
+      tr.dataset.idx=gi;
+            if(late) tr.classList.add("inc-row-late");
+      const sc=STATUS_CLS[r.status]||"inc-s-review";
+      const recVal = late
+        ? `<span class="inc-late-val">${fmtDate(r.receipt_date)}</span> <span title="\ub9c8\uac10\uc77c \ucd08\uacfc">\u26a0\ufe0f</span>`
+        : esc(fmtDate(r.receipt_date));
+      const catKey=(r._cat||"").toUpperCase();
+      const catColor="#475569";
+      const catBadge=catKey?`<span style="background:${catColor};color:#fff;border-radius:6px;padding:2px 7px;font-size:.7rem;font-weight:800;letter-spacing:.04em">${catKey}</span>`:'-';
+      tr.innerHTML=
+        `<td class="align-center" style="white-space:nowrap"><div class="cell-inner" style="padding:4px 6px;justify-content:center">${catBadge}</div></td>`+
+        `<td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="no">${esc(r.no)}</div></td>`+
+        `<td class="mono"><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="category">${esc(r.category)}</div></td>`+
+        `<td><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="equipment" style="min-width:120px">${esc(r.equipment)}</div></td>`+
+        `<td><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="product">${esc(r.product)}</div></td>`+
+        `<td><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="vendor">${esc(r.vendor)}</div></td>`+
+        `<td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="qty">${esc(r.qty)}</div></td>`+
+        `<td class="align-center"><div class="cell-inner" style="padding:2px 4px" data-idx="${gi}">${stepperHtml(r.status,gi)}</div></td>`+
+        `<td class="inc-date-cell align-center"><div class="cell-inner" data-idx="${gi}" data-field="order_date">${esc(fmtDate(r.order_date))}</div></td>`+
+        `<td class="inc-date-cell align-center"><div class="cell-inner" data-idx="${gi}" data-field="receipt_date">${recVal}</div></td>`+
+        `<td class="inc-date-cell align-center"><div class="cell-inner" data-idx="${gi}" data-field="deadline">${esc(fmtDate(r.deadline))}</div></td>`+
+        `<td><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="remark">${esc(r.remark)}</div></td>`;
+      tbody.appendChild(tr);
+    });
+
+    // Cell edits
+    tbody.querySelectorAll('.cell-inner[contenteditable="true"]').forEach(el=>{
+      el.addEventListener("blur",()=>{
+        const idx=Number(el.dataset.idx), f=el.dataset.field;
+        if(incItems[idx]!==undefined && f){
+          incItems[idx][f]=el.textContent.trim();
+          save();
+          const tr=el.closest("tr");
+          if(tr) tr.classList.toggle("inc-row-late", isLate(incItems[idx]));
+          updateAlert();
+        }
+      });
+      el.addEventListener("keydown",e=>{
+        if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); el.blur(); }
+        if(e.key==="Escape"){ el.blur(); }
+      });
+    });
+
+    // Date cell clicks
+    tbody.querySelectorAll(".inc-date-cell .cell-inner").forEach(el=>{
+      el.addEventListener("click",e=>showDatePicker(el,e));
+    });
+
+    // Status stepper clicks
+    tbody.querySelectorAll(".inc-stepper").forEach(el=>{
+      el.addEventListener("click",e=>{ e.stopPropagation(); const cell=el.closest("[data-idx]"); showStatusDrop(el, Number(cell.dataset.idx)); });
+    });
+    updateAlert();
+    setTime();
+  }
+
+  function updateAlert(){
+    const n=incItems.filter(isLate).length;
+    const el=document.getElementById("inc-late-alert");
+    const msg=document.getElementById("inc-late-msg");
+    if(el){ el.style.display=n?"flex":"none"; }
+    if(msg && n) msg.textContent="\ub9c8\uac10\uc77c\uc744 \ucd08\uacfc\ud55c \ud56d\ubaa9\uc774 "+n+"\uac74 \uc788\uc2b5\ub2c8\ub2e4";
+  }
+
+  /* ── Status dropdown ── */
+  let dropIdx=null;
+  const dropEl=document.getElementById("inc-status-drop");
+  function showStatusDrop(pill,idx){
+    dropIdx=idx;
+    const r=pill.getBoundingClientRect();
+    const dropH=300;
+    const spaceBelow=window.innerHeight-r.bottom;
+    dropEl.style.left=Math.min(r.left,window.innerWidth-140)+"px";
+    if(spaceBelow<dropH&&r.top>dropH){
+      dropEl.style.top=(r.top-dropH-4)+"px";
+    }else{
+      dropEl.style.top=(r.bottom+4)+"px";
+    }
+    dropEl.style.display="block";
+  }
+  document.addEventListener("click",()=>{ if(dropEl) dropEl.style.display="none"; });
+  if(dropEl) dropEl.addEventListener("click",e=>{
+    e.stopPropagation();
+    const btn=e.target.closest("[data-s]");
+    if(!btn||dropIdx===null) return;
+    incItems[dropIdx].status=btn.dataset.s;
+    save(); build();
+    dropEl.style.display="none";
+  });
+
+  /* ── Date picker ── */
+  let dateTgtEl=null;
+  const dateWrap=document.getElementById("inc-date-wrap");
+  const dateInput=document.getElementById("inc-date-input");
+  function showDatePicker(el,e){
+    dateTgtEl=el;
+    const idx=Number(el.dataset.idx), f=el.dataset.field;
+    if(incItems[idx]===undefined) return;
+    dateInput.value=incItems[idx][f]||"";
+    const r=el.getBoundingClientRect();
+    dateWrap.style.left=Math.min(r.left,window.innerWidth-200)+"px";
+    dateWrap.style.top=(r.bottom+4)+"px";
+    dateWrap.style.display="block";
+    setTimeout(()=>{ try{ dateInput.showPicker&&dateInput.showPicker(); }catch(e){} },50);
+  }
+  if(dateInput) dateInput.addEventListener("change",()=>{
+    if(!dateTgtEl) return;
+    const idx=Number(dateTgtEl.dataset.idx), f=dateTgtEl.dataset.field;
+    incItems[idx][f]=dateInput.value;
+    save(); build();
+    dateWrap.style.display="none";
+    dateTgtEl=null;
+  });
+  document.addEventListener("click",e=>{
+    if(dateWrap && !dateWrap.contains(e.target) && !(e.target.closest&&e.target.closest(".inc-date-cell"))){
+      dateWrap.style.display="none";
+    }
+  });
+
+  /* ── Add row ── */
+  const addBtn=document.getElementById("inc-add-btn");
+  if(addBtn) addBtn.addEventListener("click",()=>{ incItems.push(newRow()); save(); build(); });
+
+  /* ── Search ── */
+  const srch=document.getElementById("inc-search");
+  if(srch) srch.addEventListener("input",build);
+
+  /* ── Nav buttons ── */
+  const hBtn=document.getElementById("inc-home-btn");
+  const bBtn=document.getElementById("inc-back-btn");
+  const nBtn=document.getElementById("inc-nav-btn");
+  if(hBtn) hBtn.addEventListener("click",()=>{ window.location.href='index.html'; });
+  if(bBtn) bBtn.addEventListener("click",()=>{ window.location.href='index.html'; });
+  if(nBtn) nBtn.addEventListener("click",e=>{
+    e.stopPropagation();
+    const p=document.getElementById("navPanel");
+    if(p) p.classList.toggle("open");
+  });
+  // Close nav panel on outside click
+  document.addEventListener("click", ()=>{ const p=document.getElementById("navPanel"); if(p) p.classList.remove("open"); });
+  const _navPanel=document.getElementById("navPanel");
+  if(_navPanel) _navPanel.addEventListener("click",e=>e.stopPropagation());
+
+  /* ── Export buttons ── */
+  const ewBtn=document.getElementById("inc-export-work");
+  const erBtn=document.getElementById("inc-export-report");
+  if(ewBtn) ewBtn.addEventListener("click",()=>window.exportWorkHtml&&window.exportWorkHtml());
+  if(erBtn) erBtn.addEventListener("click",()=>window.exportReportPdf&&window.exportReportPdf());
+
+  /* ── Expose for work export to include inc data ── */
+  window.incItems = incItems;
+
+  /* ── Init ── */
+  // 로딩 표시
+  const incTbody = document.getElementById("inc-tbody");
+  if(incTbody) incTbody.innerHTML = `<tr><td colspan="12" style="text-align:center;padding:40px;color:#94a3b8;font-size:.9rem">⏳ 데이터 불러오는 중...</td></tr>`;
+
+  (async ()=>{
+    const ok = await supaLoad();
+    if(!ok){
+      // Supabase에 데이터 없으면 seed 데이터로 초기화 후 업로드
+      load();
+      await supaUpsertAll();
+    }
+    build();
+    startRealtime();
+  })();
+  window._incRebuild = build;
+
+  /* ── Row editing ── */
+  let incUndoStack=[],incRedoStack=[];
+  function saveUndo(){incRedoStack=[];incUndoStack.push(JSON.parse(JSON.stringify(incItems)));if(incUndoStack.length>30)incUndoStack.shift();}
+  function incUndo(){if(!incUndoStack.length)return;incRedoStack.push(JSON.parse(JSON.stringify(incItems)));incItems=incUndoStack.pop();save();build();updateUndoBtns();}
+  function incRedo(){if(!incRedoStack.length)return;incUndoStack.push(JSON.parse(JSON.stringify(incItems)));incItems=incRedoStack.pop();save();build();updateUndoBtns();}
+  function updateUndoBtns(){const u=document.getElementById("inc-undoBtn"),r=document.getElementById("inc-redoBtn");if(u)u.disabled=!incUndoStack.length;if(r)r.disabled=!incRedoStack.length;}
+  function incAddRow(refIdx,where){
+    saveUndo();
+    const ref=incItems[refIdx];
+    const cat=ref?(ref._cat||''):'';
+    const nr={no:'',category:'',equipment:'',product:'',vendor:'',qty:'1',status:'검토중',order_date:'',receipt_date:'',deadline:'',remark:'',_cat:cat};
+    incItems.splice(where==='above'?refIdx:refIdx+1,0,nr);
+    save();build();updateUndoBtns();
+  }
+  async function incDelRow(idx){
+    if(!incItems[idx]||incItems[idx]._group)return;
+    if(!confirm('행을 삭제할까요?'))return;
+    saveUndo();
+    const item = incItems[idx];
+    incItems.splice(idx,1);
+    save();build();updateUndoBtns();
+    // Supabase에서도 삭제
+    if(item._supa_id){
+      try{
+        await fetch(SUPA_URL+"/rest/v1/"+SUPA_TABLE+"?id=eq."+item._supa_id, { method:"DELETE", headers:{ "apikey":SUPA_KEY, "Authorization":"Bearer "+SUPA_KEY } });
+      }catch(e){ console.warn("Supabase delete failed:", e); }
+    }
+  }
+  (function(){
+    const menu=document.getElementById('inc-ctx-menu');
+    let ctxIdx=-1;
+    const tbody=document.getElementById('inc-tbody');
+    if(!tbody||!menu)return;
+    tbody.addEventListener('contextmenu',function(e){
+      const tr=e.target.closest('tr[data-idx]');
+      if(!tr)return;
+      e.preventDefault();
+      ctxIdx=parseInt(tr.dataset.idx);
+      menu.style.display='block';
+      const mx=Math.min(e.clientX,window.innerWidth-150);
+      const my=Math.min(e.clientY,window.innerHeight-120);
+      menu.style.left=mx+'px';menu.style.top=my+'px';
+    });
+    document.addEventListener('click',function(){menu.style.display='none';});
+    document.getElementById('inc-ctx-above').addEventListener('click',function(){if(ctxIdx>=0)incAddRow(ctxIdx,'above');ctxIdx=-1;});
+    const iuBtn=document.getElementById('inc-undoBtn'),irBtn=document.getElementById('inc-redoBtn');
+    if(iuBtn)iuBtn.addEventListener('click',incUndo);
+    if(irBtn)irBtn.addEventListener('click',incRedo);
+    document.addEventListener('keydown',function(e){
+      if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&e.key==='z'){e.preventDefault();incUndo();}
+      if((e.ctrlKey||e.metaKey)&&(e.key==='y'||(e.shiftKey&&e.key==='z'))){e.preventDefault();incRedo();}
+    });
+    document.getElementById('inc-ctx-below').addEventListener('click',function(){if(ctxIdx>=0)incAddRow(ctxIdx,'below');ctxIdx=-1;});
+    document.getElementById('inc-ctx-del').addEventListener('click',function(){if(ctxIdx>=0)incDelRow(ctxIdx);ctxIdx=-1;});
+  })();
+  })();
+
+</script>
+
+
+</script>
+</body>
+</html>
