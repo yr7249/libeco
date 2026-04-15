@@ -700,7 +700,7 @@
       #view-incoming .pg-topbar-r,#view-incoming .inc-alert{display:none !important}
     }
 </head>
-<body class="report-print-mode">
+<body>
 <script>(function(){const SUPA_URL="https://mepjsjsldwbbjrodrdfo.supabase.co";const SUPA_KEY="sb_publishable_VzxsEtLs499S5RKYHHn0XQ__Rupl8jo";const token=localStorage.getItem("supa_token")||"";if(!token){location.href="login.html";return;}fetch(SUPA_URL+"/auth/v1/user",{headers:{"apikey":SUPA_KEY,"Authorization":"Bearer "+token}}).then(r=>r.ok?r.json():Promise.reject()).then(u=>fetch(SUPA_URL+"/rest/v1/profiles?id=eq."+u.id+"&select=approved",{headers:{"apikey":SUPA_KEY,"Authorization":"Bearer "+token}})).then(r=>r.json()).then(p=>{if(!p||!p[0]||!p[0].approved)location.href="login.html";}).catch(()=>location.href="login.html");})()</script>
 
   <!-- Nav panel -->
@@ -834,7 +834,8 @@
   const SUPA_TABLE = "incoming";
 
   async function supaFetch(method, body){
-    const opts = { method, headers: { "apikey": SUPA_KEY, "Authorization": "Bearer "+SUPA_KEY, "Content-Type": "application/json", "Prefer": method==="POST"?"resolution=merge-duplicates":"" } };
+    const userToken = localStorage.getItem("supa_token") || SUPA_KEY;
+    const opts = { method, headers: { "apikey": SUPA_KEY, "Authorization": "Bearer "+userToken, "Content-Type": "application/json", "Prefer": method==="POST"?"resolution=merge-duplicates":"" } };
     if(body) opts.body = JSON.stringify(body);
     const res = await fetch(SUPA_URL+"/rest/v1/"+SUPA_TABLE+(method==="GET"?"?select=*&order=sort_order.asc":""), opts);
     if(!res.ok) throw new Error(await res.text());
@@ -1150,25 +1151,30 @@
   if(ewBtn) ewBtn.addEventListener("click",()=>window.exportWorkHtml&&window.exportWorkHtml());
   if(erBtn) erBtn.addEventListener("click",()=>window.exportReportPdf&&window.exportReportPdf());
 
-  /* ── Expose for work export to include inc data ── */
-  window.incItems = incItems;
-
   /* ── Init ── */
   // 로딩 표시
   const incTbody = document.getElementById("inc-tbody");
   if(incTbody) incTbody.innerHTML = `<tr><td colspan="12" style="text-align:center;padding:40px;color:#94a3b8;font-size:.9rem">⏳ 데이터 불러오는 중...</td></tr>`;
 
   (async ()=>{
-    const ok = await supaLoad();
-    if(!ok){
-      // Supabase에 데이터 없으면 seed 데이터로 초기화 후 업로드
+    try {
+      const ok = await supaLoad();
+      if(!ok){
+        // Supabase에 데이터 없으면 seed 데이터로 초기화 후 업로드
+        load();
+        supaUpsertAll(); // 비동기 업로드, build()를 막지 않음
+      }
+    } catch(e) {
+      console.warn("초기화 실패, 로컬 데이터 사용:", e);
       load();
-      await supaUpsertAll();
     }
     build();
     startRealtime();
   })();
+
+  /* ── Expose for work export to include inc data ── */
   window._incRebuild = build;
+  Object.defineProperty(window, "incItems", { get: ()=>incItems });
 
   /* ── Row editing ── */
   let incUndoStack=[],incRedoStack=[];
@@ -1226,9 +1232,6 @@
     document.getElementById('inc-ctx-del').addEventListener('click',function(){if(ctxIdx>=0)incDelRow(ctxIdx);ctxIdx=-1;});
   })();
   })();
-
-</script>
-
 
 </script>
 </body>
