@@ -294,7 +294,17 @@
         });
       }
 
-      showMsg("signup-msg","success","가입 신청이 완료됐습니다! 이메일 인증 후 이용 가능합니다.");
+      const signupMsgEl = document.getElementById("signup-msg");
+      signupMsgEl.className = "msg success show";
+      signupMsgEl.innerHTML =
+        "가입 신청이 완료됐습니다!<br>" +
+        "e-mail 인증을 진행해주세요 &rarr; " +
+        "<a href=\"https://mail.libeco.kr\" target=\"_blank\" rel=\"noopener\" " +
+        "style=\"color:inherit;font-weight:700;text-decoration:underline;text-underline-offset:3px\">" +
+        "메일함 열기</a><br>" +
+        "<span style=\"font-size:.82em;opacity:.8\">" +
+        "메일이 보이지 않으면 스팸메일함을 확인해주시고, 스팸 해제 후 인증을 재시도해주세요." +
+        "</span>";
     }catch(e){
       showMsg("signup-msg","error",e.message);
     }

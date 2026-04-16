@@ -699,6 +699,7 @@
     @media print{
       #view-incoming .pg-topbar-r,#view-incoming .inc-alert{display:none !important}
     }
+  </style>
 </head>
 <body>
 <script>(function(){const SUPA_URL="https://ikfjpzdzrgsmhaobqnai.supabase.co";const SUPA_KEY="sb_publishable_fbbdwjCZCL9AFD-eUIs0bg_XwdlhxFN";const token=localStorage.getItem("supa_token")||"";if(!token){location.href="login.html";return;}fetch(SUPA_URL+"/auth/v1/user",{headers:{"apikey":SUPA_KEY,"Authorization":"Bearer "+token}}).then(r=>r.ok?r.json():Promise.reject()).then(u=>fetch(SUPA_URL+"/rest/v1/profiles?id=eq."+u.id+"&select=approved",{headers:{"apikey":SUPA_KEY,"Authorization":"Bearer "+token}})).then(r=>r.json()).then(p=>{if(!p||!p[0]||!p[0].approved)location.href="login.html";}).catch(()=>location.href="login.html");})()</script>
@@ -743,7 +744,7 @@
     <button id="ctx-delete" style="color:#f87171">행 삭제</button>
   </div>
 
-  <div class="container">
+  <section id="view-equip">
 <!-- ── 공통 상단바 ── -->
     <div class="pg-topbar">
       <div class="pg-topbar-l">
@@ -1441,7 +1442,7 @@
       © 2026 LIBECO E&amp;C · All Rights Reserved
     </footer>
   </div>
-  </div>
+  </section>
 
 <script type="application/json" id="seed-data" data-fid="llnl_1776154042726">[{"no":"1","category":"LT","code":"LTT-01~12","equipment":"SD온도센서(내부)","product":"DT-670 (CU Type, Lakeshore)","supplier":"ACE","total_qty":12,"purchase_qty":7,"unit_price":820000,"subtotal":5740000,"remark":"5월","payment":"4월 초/ 발주 시 100%","status":"구매예정","checked":true},{"no":"2","category":"LT","code":"LTT-13","equipment":"SD온도센서(외부)","product":"DT-670(SD type, Lakeshore)","supplier":"ACE","total_qty":1,"purchase_qty":1,"unit_price":630000,"subtotal":630000,"status":"구매예정","remark":"5월","payment":"","checked":true},{"no":"3","category":"LT","code":"LTP-01~02","equipment":"압력센서1","product":"-","supplier":"-","total_qty":2,"purchase_qty":0,"unit_price":0,"subtotal":0,"remark":"두진 제공","payment":"-","status":"보유","checked":false},{"no":"4","category":"LT","code":"LTL-01","equipment":"레벨게이지","product":"Model 175 (AMI)","supplier":"ACE","total_qty":1,"purchase_qty":0,"unit_price":0,"subtotal":0,"remark":"ACE 제공","payment":"-","status":"확보","checked":false},{"no":"5","category":"LT","code":"LTV-01","equipment":"진공압력센서","product":"SKY® CDG045D (INFICON)","supplier":"ACE","total_qty":1,"purchase_qty":0,"unit_price":0,"subtotal":0,"remark":"두진 제공","payment":"-","status":"확보"},{"no":"6","category":"LT","code":"LTS-01~04","equipment":"로드셀","product":"SB14 beam load cell","supplier":"FLENTECH","total_qty":4,"purchase_qty":0,"unit_price":0,"subtotal":0,"remark":"보유","payment":"-","status":"보유"},{"no":"7","category":"LT","code":"LTSJ-01","equipment":"로드셀 JB","product":"Junction box","supplier":"FLENTECH","total_qty":1,"purchase_qty":0,"unit_price":0,"subtotal":0,"remark":"보유","payment":"-","status":"보유"},{"no":51,"category":"LT","code":"tV-1~6","equipment":"Tank 밸브","product":"BK9453 (REGO)","supplier":"두진","total_qty":6,"purchase_qty":0,"unit_price":0,"subtotal":0,"remark":"두진 제공","payment":"-","status":"보유"},{"no":"52","category":"LT","code":"tPSV-1~4","equipment":"Tank PSV","product":"-","supplier":"두진","total_qty":4,"purchase_qty":0,"unit_price":0,"subtotal":0,"remark":"두진 제공","payment":"-","status":"보유"},{"no":"53","category":"LT","code":"vReg-1","equipment":"가압 레귤레이터","product":"-","supplier":"-","total_qty":1,"purchase_qty":1,"unit_price":700000,"subtotal":700000,"status":"구매예정","remark":"4월 / 검토중","payment":""},{"no":"54","category":"LT","code":"dCV-1","equipment":"Defueling 후단 체크밸브","product":"-","supplier":"-","total_qty":1,"purchase_qty":1,"unit_price":1000000,"subtotal":1000000,"remark":"5월 / 금액미정","payment":"-","status":"구매검토"},{"no":"71","category":"LT","code":"feed-1~4","equipment":"피드쓰루","product":"내조 2EA, 외조 2EA","supplier":"ACE","total_qty":4,"purchase_qty":4,"unit_price":0,"subtotal":0,"status":"확보","remark":"ACE /두진","payment":""},{"no":101,"category":"HS","code":"HSF-01, HSF-02","equipment":"MFC(C/M)","product":"F-206AX-HEE-55-V (Bronkhorst)","supplier":"나노앤스페이스","total_qty":1,"purchase_qty":0,"unit_price":0,"subtotal":0,"remark":"보유","payment":"-","status":"보유"},{"no":102,"category":"HS","code":"HSF-03","equipment":"MFM(고유량)","product":"F-116AX-HEE-55-V (Bronkhorst)","supplier":"나노앤스페이스","total_qty":1,"purchase_qty":1,"unit_price":8375000,"subtotal":8375000,"remark":"5월","payment":"5월 말/ 제품 수령 후","status":"구매예정","checked":false},{"no":103,"category":"HS","code":"HSF-04","equipment":"MFM(저유량)","product":"F-111AX-HEE-22-V (Bronkhorst)","supplier":"나노앤스페이스","total_qty":1,"purchase_qty":1,"unit_price":3820000,"subtotal":3820000,"remark":"5월","payment":"5월 말/ 제품 수령 후","status":"구매예정","checked":false},{"no":104,"category":"HS","code":"HST-01","equipment":"SD온도센서","product":"DT-670 (SD type, Lakeshore)","supplier":"ACE","total_qty":1,"purchase_qty":1,"unit_price":630000,"subtotal":630000,"remark":"5월","payment":"-","status":"구매예정","checked":true},{"no":105,"category":"HS","code":"HST-02~05","equipment":"TC온도센서","product":"T Type","supplier":"ACE","total_qty":4,"purchase_qty":0,"unit_price":0,"subtotal":0,"remark":"-","payment":"-","status":"보유"},{"no":106,"category":"HS","code":"HSP-01~02","equipment":"압력 트랜스미터 / 게이지","product":"E10 / Series EN 837-1","supplier":"WIKA","total_qty":2,"purchase_qty":0,"unit_price":0,"subtotal":0,"remark":"-","payment":"-","status":"보유"},{"no":151,"category":"HS","code":"sHE-0","equipment":"열교환기 (shell & tube)","product":"-","supplier":"-","total_qty":1,"purchase_qty":1,"unit_price":0,"subtotal":0,"remark":"검토중","payment":"-","status":"구매검토"},{"no":152,"category":"HS","code":"sHE-1~2","equipment":"열교환기 (PCHE)","product":"AN27-50H (Alfa-laval)","supplier":"ACE","total_qty":2,"purchase_qty":0,"unit_price":0,"subtotal":0,"remark":"보유","payment":"-","status":"보유/확보"},{"no":153,"category":"HS","code":"sV-1~5","equipment":"시스템 밸브 (VCR)","product":"-","supplier":"ACE","total_qty":5,"purchase_qty":1,"unit_price":0,"subtotal":0,"remark":"NO. 411","payment":"-","status":"타항목포함"},{"no":154,"category":"HS","code":"sPSV-5~6","equipment":"시스템 안전밸브","product":"ooo","supplier":"조광밸브","total_qty":2,"purchase_qty":0,"unit_price":0,"subtotal":0,"remark":"보유","payment":"-","status":"보유/확보"},{"no":155,"category":"HS","code":"sReg-1","equipment":"시스템 레귤레이터","product":"ooo","supplier":"드라스타","total_qty":1,"purchase_qty":0,"unit_price":0,"subtotal":0,"remark":"보유","payment":"-","status":"보유/확보"},{"no":201,"category":"CC","code":"CCT-01~04","equipment":"TC온도센서","product":"T Type","supplier":"ACE","total_qty":4,"purchase_qty":0,"unit_price":0,"subtotal":0,"remark":"","payment":"-","status":"보유"},{"no":202,"category":"CC","code":"CCF-01","equipment":"유량계","product":"KTR-550-F (KOMETER)","supplier":"ACE","total_qty":1,"purchase_qty":0,"unit_price":0,"subtotal":0,"remark":"","payment":"-","status":"보유"},{"no":251,"category":"CC","code":"cHT-1~6","equipment":"냉각수 히터","product":"-","supplier":"ACE","total_qty":6,"purchase_qty":0,"unit_price":0,"subtotal":0,"remark":"","payment":"-","status":"보유"},{"no":252,"category":"CC","code":"cWP-1~2","equipment":"냉각수 펌프","product":"-","supplier":"ACE","total_qty":2,"purchase_qty":0,"unit_price":0,"subtotal":0,"remark":"","payment":"-","status":"보유"},{"no":253,"category":"CC","code":"cV-1~5","equipment":"냉각수 밸브","product":"-","supplier":"ACE","total_qty":5,"purchase_qty":0,"unit_price":0,"subtotal":0,"remark":"","payment":"-","status":"보유"},{"no":301,"category":"CM","code":"CMB-01~13","equipment":"(LT)SD센서 베리어","product":"KCD2-RR2-Ex1","supplier":"Pepperl","total_qty":13,"purchase_qty":13,"unit_price":550000,"subtotal":7150000,"remark":"5월 / 금액미정","payment":"-","status":"구매예정"},{"no":302,"category":"CM","code":"CMB-14","equipment":"(HS)SD센서 베리어","product":"KCD2-RR2-Ex1","supplier":"Pepperl","total_qty":1,"purchase_qty":0,"unit_price":0,"subtotal":0,"remark":"","payment":"-","status":"보유"},{"no":303,"category":"CM","code":"CMB-21~24","equipment":"(HS)TC센서 베리어","product":"KFD2-UT2-Ex1","supplier":"Pepperl","total_qty":4,"purchase_qty":0,"unit_price":0,"subtotal":0,"remark":"","payment":"-","status":"보유"},{"no":304,"category":"CM","code":"CMB-25~28","equipment":"(CC)TC센서 베리어","product":"KFD2-UT2-Ex1","supplier":"Pepperl","total_qty":4,"purchase_qty":3,"unit_price":550000,"subtotal":1650000,"remark":"5월 / 금액미정","payment":"-","status":"구매예정"},{"no":"305","category":"CM","code":"CMBC-01~03","equipment":"TC베리어 교정","product":"CTB-01","supplier":"Pepperl","total_qty":8,"purchase_qty":3,"unit_price":250000,"subtotal":750000,"status":"구매예정","remark":"5월 / 금액미정","payment":""},{"no":"306","category":"CM","code":"CMB-30","equipment":"(LT)로드셀 베리어","product":"Z966H, Z964","supplier":"FLENTECH","total_qty":1,"purchase_qty":0,"unit_price":0,"subtotal":0,"remark":"","payment":"-","status":"보유"},{"no":"307","category":"CM","code":"CMBP-01~03","equipment":"베리어 파워레일","product":"UPR-03-S","supplier":"Pepperl","total_qty":3,"purchase_qty":2,"unit_price":400000,"subtotal":800000,"remark":"5월 / 금액미정","payment":"-","status":"구매예정"},{"no":"308","category":"CM","code":"CMBPP-01~03","equipment":"파워레일 전원공급장치","product":"KFD2-EB2","supplier":"Pepperl","total_qty":3,"purchase_qty":2,"unit_price":400000,"subtotal":800000,"remark":"5월 / 금액미정","payment":"-","status":"구매예정"},{"no":"321","category":"CM","code":"CMD-02","equipment":"DAQ(데이터 수집)","product":"NI 9203 DAQ (NI)","supplier":"누비콤","total_qty":1,"purchase_qty":0,"unit_price":0,"subtotal":0,"remark":"","payment":"-","status":"보유"},{"no":"322","category":"CM","code":"CMD-03","equipment":"DAQ(데이터 수집)","product":"NI 9203 DAQ (NI)","supplier":"누비콤","total_qty":1,"purchase_qty":0,"unit_price":0,"subtotal":0,"remark":"","payment":"-","status":"보유"},{"no":"323","category":"CM","code":"CMDC-01","equipment":"DAQ 섀시","product":"cDAQ Chassis (NI)","supplier":"누비콤","total_qty":1,"purchase_qty":0,"unit_price":0,"subtotal":0,"remark":"","payment":"-","status":"보유"},{"no":"351","category":"CM","code":"CMM-01~02","equipment":"SD온도센서 계기판","product":"Model 240(Lake shore)","supplier":"ACE","total_qty":4,"purchase_qty":2,"unit_price":2000000,"subtotal":4000000,"remark":"5월 / No(1, 2, 104)","payment":"4월 초/ 발주 시 100%","status":"구매예정"},{"no":"352","category":"CM","code":"CMM-20","equipment":"레벨게이지 계기판","product":"Model 1720","supplier":"AMI","total_qty":1,"purchase_qty":0,"unit_price":0,"subtotal":0,"remark":"ACE 제공 예정","payment":"-","status":"확보"},{"no":"353","category":"CM","code":"CMM-30","equipment":"로드셀 계기판","product":"IT3","supplier":"FLENTECH","total_qty":1,"purchase_qty":0,"unit_price":0,"subtotal":0,"remark":"","payment":"-","status":"보유"},{"no":"354","category":"CM","code":"CMM-10","equipment":"진공압력센서 계기판","product":"VGD500","supplier":"INFICON","total_qty":1,"purchase_qty":0,"unit_price":0,"subtotal":0,"remark":"ACE 제공 예정","payment":"-","status":"확보"},{"no":"356","category":"CM","code":"CMF-01","equipment":"MFMC 컨트롤러(계기판)","product":"E-8300-0-1XGES-00-1XGE0","supplier":"㈜나노앤스페이스","total_qty":1,"purchase_qty":1,"unit_price":6650000,"subtotal":6650000,"remark":"5월","payment":"-","status":"구매예정","checked":false},{"no":"357","category":"CM","code":"CMFC-01","equipment":"MFMC 케이블","product":"Cable MFM E-8000 Ex 10m","supplier":"㈜나노앤스페이스","total_qty":4,"purchase_qty":2,"unit_price":300000,"subtotal":600000,"status":"구매예정","remark":"5월","payment":"","checked":false},{"no":401,"category":"SV","code":"LT-1","equipment":"(LT)VENT Line 후단 구성","product":"Flexible hose, Reg. 등","supplier":"ACE","total_qty":1,"purchase_qty":1,"unit_price":1000000,"subtotal":1000000,"remark":"5월 / 금액미정","payment":"4월 초/ 선금 30%","status":"구매예정"},{"no":402,"category":"SV","code":"LT-2","equipment":"(LT)Defueling Line 구성","product":"Flexible hose 등","supplier":"ACE","total_qty":1,"purchase_qty":1,"unit_price":500000,"subtotal":500000,"remark":"5월 / 금액미정","payment":"4월 초/ 선금 30%","status":"구매예정"},{"no":403,"category":"SV","code":"LT-3","equipment":"(LT)온도센서 wiring","product":"SD온도센서 관련","supplier":"ACE","total_qty":9,"purchase_qty":9,"unit_price":170000,"subtotal":1530000,"remark":"5월","payment":"-","status":"구매예정","checked":true},{"no":411,"category":"SV","code":"HS-2","equipment":"(HS)수소공급장치 개조","product":"MFM 추가분 설치 등","supplier":"ACE","total_qty":1,"purchase_qty":1,"unit_price":2000000,"subtotal":2000000,"remark":"5월 / 금액미정","payment":"4월 초/ 선금 30%","status":"구매예정"},{"no":421,"category":"SV","code":"CM-1","equipment":"(CM)분전반 제작","product":"전원 및 통신 분배장치","supplier":"시연기전","total_qty":1,"purchase_qty":1,"unit_price":12000000,"subtotal":12000000,"remark":"4월 / 금액미정","payment":"4월 초/ 지급방법 검토","status":"구매예정"},{"no":"422","category":"SV","code":"CM-2","equipment":"(CM)전체 전선 wiring","product":"전원/통신 케이블 및 정션박스","supplier":"-","total_qty":1,"purchase_qty":1,"unit_price":3000000,"subtotal":3000000,"status":"구매예정","remark":"5월 / 금액미정","payment":""}]</script>
   <script>
@@ -2063,19 +2064,33 @@
 
   async function supaLoad(){
     try {
-      const rows = await supaFetch("GET", "?select=*&order=sort_order.asc");
+      const rows = await supaFetch("GET", "?select=*&order=sort_order.asc,id.asc");
       if (rows && rows.length > 0){
-        items = rows.map(r => {
+        // 중복 제거: sort_order 기준으로 마지막 행(최신)만 유지
+        const deduped = new Map();
+        rows.forEach(r => deduped.set(r.sort_order, r));
+        const sortedRows = [...deduped.values()].sort((a,b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+
+        items = sortedRows.map(r => {
           const item = {};
           ["no","category","code","equipment","product","supplier",
            "total_qty","purchase_qty","unit_price","subtotal",
            "status","remark","payment","checked"].forEach(k => {
             if (r[k] !== undefined && r[k] !== null) item[k] = r[k];
           });
-          item._supa_id   = r.id;
-          item._sort      = r.sort_order;
+          item._supa_id = r.id;
+          item._sort    = r.sort_order;
           return item;
         });
+
+        // DB에 쌓인 중복 행 비동기 삭제
+        const keepIds = new Set(sortedRows.map(r => r.id));
+        const deleteIds = rows.filter(r => !keepIds.has(r.id)).map(r => r.id);
+        if (deleteIds.length > 0) {
+          supaFetch("DELETE", "?id=in.(" + deleteIds.join(",") + ")")
+            .catch(e => console.warn("Dedup cleanup:", e));
+        }
+
         return true;
       }
     } catch(e){ console.warn("Supabase load failed:", e); }
@@ -2111,9 +2126,17 @@
         const returned = await res.json();
         if (Array.isArray(returned)){
           returned.forEach(r => {
-            const item = items.find(it => it._supa_id === r.id || (!it._supa_id && it.sort_order === r.sort_order));
-            if (item && r.id) item._supa_id = r.id;
+            if (!r.id) return;
+            // 기존 행: _supa_id로 매칭
+            if (items.find(it => it._supa_id === r.id)) return;
+            // 신규 행: sort_order(= 배열 인덱스)로 매칭
+            const idx = typeof r.sort_order === 'number' ? r.sort_order : -1;
+            if (idx >= 0 && idx < items.length && !items[idx]._supa_id) {
+              items[idx]._supa_id = r.id;
+            }
           });
+          // _supa_id를 localStorage에 저장해 다음 저장 시 중복 삽입 방지
+          try { localStorage.setItem(LS_KEY, JSON.stringify(items)); } catch(e){}
         }
       } catch(e){}
     } catch(e){ console.warn("Supabase save failed:", e); }
