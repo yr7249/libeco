@@ -749,9 +749,10 @@
         <button class="pg-btn" id="inc-undoBtn" title="Ctrl+Z" disabled="">↩ 취소</button>
         <button class="pg-btn" id="inc-redoBtn" title="Ctrl+Y" disabled="">↪ 다시</button>
         <div class="pg-vdiv"></div>
-        <button class="pg-btn pg-btn-export" id="inc-export-work">✏️ 작업용 내보내기</button>
-        <button class="pg-btn pg-btn-export" id="inc-export-report">📄 보고용 내보내기</button>
+        <button class="pg-btn pg-btn-export" id="inc-export-report">📄 pdf저장 &lt;</button>
         <button class="pg-btn" onclick="window.print()">🖨 인쇄</button>
+        <div class="pg-vdiv"></div>
+        <button class="pg-btn pg-btn-nav" id="inc-nav-btn">이동 ▾</button>
       </div>
     </div>
 
@@ -1163,9 +1164,7 @@
   if(_navPanel) _navPanel.addEventListener("click",e=>e.stopPropagation());
 
   /* ── Export buttons ── */
-  const ewBtn=document.getElementById("inc-export-work");
   const erBtn=document.getElementById("inc-export-report");
-  if(ewBtn) ewBtn.addEventListener("click",()=>window.exportWorkHtml&&window.exportWorkHtml());
   if(erBtn) erBtn.addEventListener("click",()=>window.exportReportPdf&&window.exportReportPdf());
 
   /* ── Init ── */

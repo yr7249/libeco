@@ -760,8 +760,7 @@
         <button class="pg-btn" id="undoBtn" title="Ctrl+Z">↩ 취소</button>
         <button class="pg-btn" id="redoBtn" title="Ctrl+Y" disabled="">↪ 다시</button>
         <div class="pg-vdiv"></div>
-        <button class="pg-btn pg-btn-export" id="exportWorkBtn">✏️ 작업용 내보내기</button>
-        <button class="pg-btn pg-btn-export" id="exportReportBtn">📄 보고용 내보내기</button>
+        <button class="pg-btn pg-btn-export" id="exportReportBtn">📄 pdf저장 &lt;</button>
         <button class="pg-btn" onclick="window.print()">🖨 인쇄</button>
         <div class="pg-vdiv"></div>
         <button class="pg-btn pg-btn-nav" id="equip-nav-btn">이동 ▾</button>
@@ -2044,6 +2043,19 @@
   const SUPA_KEY   = "sb_publishable_fbbdwjCZCL9AFD-eUIs0bg_XwdlhxFN";
   const SUPA_TABLE = "purchase";
 
+  (async function checkAdminRole(){
+    const token = localStorage.getItem("supa_token") || "";
+    if(!token){ location.href="index.html"; return; }
+    try{
+      const res = await fetch(SUPA_URL+"/auth/v1/user",{headers:{"apikey":SUPA_KEY,"Authorization":"Bearer "+token}});
+      if(!res.ok){ location.href="index.html"; return; }
+      const u = await res.json();
+      const pr = await fetch(SUPA_URL+"/rest/v1/profiles?id=eq."+u.id+"&select=role",{headers:{"apikey":SUPA_KEY,"Authorization":"Bearer "+token}});
+      const profiles = await pr.json();
+      if(!profiles||!profiles[0]||profiles[0].role!=="admin"){ location.href="index.html"; return; }
+    }catch(e){ location.href="index.html"; }
+  })();
+
   async function supaFetch(method, urlSuffix, body){
     const url = SUPA_URL + "/rest/v1/" + SUPA_TABLE + (urlSuffix || "");
     const userToken = localStorage.getItem("supa_token") || SUPA_KEY;
@@ -2458,7 +2470,6 @@
 
   document.getElementById("undoBtn").addEventListener("click", undo);
   document.getElementById("redoBtn").addEventListener("click", redo);
-  document.getElementById("exportWorkBtn").addEventListener("click", exportWorkHtml);
   document.getElementById("exportReportBtn").addEventListener("click", exportReportPdf);
 
   document.addEventListener("keydown", e => {
