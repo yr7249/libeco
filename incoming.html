@@ -862,13 +862,30 @@
 
   async function supaUpsertAll(){
     try{
-      const payload = incItems.map((r,i)=>{
-        const obj = { no:r.no||"", category:r.category||"", equipment:r.equipment||"", product:r.product||"", vendor:r.vendor||"", qty:r.qty||"", status:r.status||"검토중", order_date:r.order_date||"", receipt_date:r.receipt_date||"", deadline:r.deadline||"", remark:r.remark||"", sort_order:i, _cat:r._cat||"" };
-        if(r._group){ obj._group=true; obj._label=r._label||""; obj._color=r._color||""; obj._bg=r._bg||""; }
-        if(r._supa_id) obj.id = r._supa_id;
-        return obj;
+      const token = localStorage.getItem("supa_token")||SUPA_KEY;
+      const headers = { "apikey":SUPA_KEY, "Authorization":"Bearer "+token, "Content-Type":"application/json" };
+
+      const existing = [], newRows = [];
+      incItems.forEach((r,i)=>{
+        const obj = { no:r.no||"", category:r.category||"", equipment:r.equipment||"", product:r.product||"", vendor:r.vendor||"", qty:r.qty||"", status:r.status||"검토중", order_date:r.order_date||"", receipt_date:r.receipt_date||"", deadline:r.deadline||"", remark:r.remark||"", sort_order:i, _cat:r._cat||"", _group:r._group||false, _label:r._label||"", _color:r._color||"", _bg:r._bg||"" };
+        if(r._supa_id){ obj.id = r._supa_id; existing.push(obj); }
+        else newRows.push(obj);
       });
-      await fetch(SUPA_URL+"/rest/v1/"+SUPA_TABLE, { method:"POST", headers:{ "apikey":SUPA_KEY, "Authorization":"Bearer "+(localStorage.getItem("supa_token")||SUPA_KEY), "Content-Type":"application/json", "Prefer":"resolution=merge-duplicates,return=representation" }, body:JSON.stringify(payload) });
+
+      // 기존 행 upsert
+      if(existing.length > 0){
+        await fetch(SUPA_URL+"/rest/v1/"+SUPA_TABLE, { method:"POST", headers:{...headers, "Prefer":"resolution=merge-duplicates,return=representation"}, body:JSON.stringify(existing) });
+      }
+      // 신규 행 insert
+      if(newRows.length > 0){
+        const res = await fetch(SUPA_URL+"/rest/v1/"+SUPA_TABLE, { method:"POST", headers:{...headers, "Prefer":"return=representation"}, body:JSON.stringify(newRows) });
+        if(res.ok){
+          const inserted = await res.json();
+          // 새로 생성된 id를 incItems에 반영
+          let ni = 0;
+          incItems.forEach(r=>{ if(!r._supa_id && inserted[ni]){ r._supa_id=inserted[ni].id; ni++; } });
+        }
+      }
     }catch(e){ console.warn("Supabase save failed:", e); }
   }
 
