@@ -38,7 +38,7 @@
       position:sticky;top:0;z-index:10;
     }
     .site-topbar-left{display:flex;align-items:center;gap:14px}
-    .site-topbar-right{display:flex;align-items:center;gap:8px;overflow:hidden}
+    .site-topbar-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
     .topbar-badge{
       font-family:var(--font-mono);font-size:.68rem;font-weight:700;
       color:var(--text2);background:var(--surface2);
@@ -47,7 +47,8 @@
     }
     @media(max-width:520px){
       .user-info{display:none !important}
-      .topbar-badge{display:none}
+      .topbar-badge{display:none !important}
+      .site-topbar-left span:not(:first-child){display:none}
       .site-topbar{padding:0 14px}
     }
 
