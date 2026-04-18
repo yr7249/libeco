@@ -152,6 +152,20 @@
   </style>
 </head>
 <body>
+  <!-- Nav panel -->
+  <div class="nav-panel" id="navPanel">
+    <div class="nav-panel-title">페이지 이동</div>
+    <div class="nav-item active"><span class="nav-icon">🏠</span><div><div class="nav-label">홈</div><div class="nav-sub">메인 화면</div></div></div>
+    <div class="nav-sep"></div>
+    <a class="nav-item" href="purchase.html"><span class="nav-icon">📋</span><div><div class="nav-label">구매리스트</div><div class="nav-sub">구매 필요내역</div></div></a>
+    <a class="nav-item" href="diagram.html"><span class="nav-icon">📐</span><div><div class="nav-label">구성도</div><div class="nav-sub">P&amp;ID Schematic</div></div></a>
+    <div class="nav-sep"></div>
+    <div class="nav-item disabled"><span class="nav-icon">🔬</span><div><div class="nav-label">시험장비</div><div class="nav-sub">준비중</div></div><span class="nav-soon-tag">SOON</span></div>
+    <a class="nav-item" href="incoming.html"><span class="nav-icon">📦</span><div><div class="nav-label">입고관리</div><div class="nav-sub">장비 일정관리</div></div></a>
+    <div class="nav-item disabled"><span class="nav-icon">📖</span><div><div class="nav-label">시험절차서</div><div class="nav-sub">준비중</div></div><span class="nav-soon-tag">SOON</span></div>
+    <div class="nav-item disabled"><span class="nav-icon">💬</span><div><div class="nav-label">기타 공유사항</div><div class="nav-sub">준비중</div></div><span class="nav-soon-tag">SOON</span></div>
+  </div>
+
 <script>
   const SUPA_URL="https://ikfjpzdzrgsmhaobqnai.supabase.co";
   const SUPA_KEY="sb_publishable_fbbdwjCZCL9AFD-eUIs0bg_XwdlhxFN";
@@ -201,6 +215,12 @@
       const exp=Number(sessionStorage.getItem("libeco_tab_active")||0);
       if(!exp||Date.now()>exp){logout();return;}
       const rem=exp-Date.now();
+      const disp=document.getElementById("home-session-display");
+      if(disp){
+        const h=Math.floor(rem/3600000),m=Math.floor((rem%3600000)/60000);
+        disp.textContent="⏱ "+(h>0?h+"h ":"")+m+"분";
+        disp.style.color=rem<=600000?"#dc2626":"";
+      }
       const banner=document.getElementById("session-warn-banner");
       if(!banner) return;
       if(rem<=600000){
@@ -287,6 +307,15 @@
         }
       }
       startSessionTimer();
+      const navBtn=document.getElementById("home-nav-btn");
+      if(navBtn) navBtn.addEventListener("click",e=>{
+        e.stopPropagation();
+        const p=document.getElementById("navPanel");
+        if(p) p.classList.toggle("open");
+      });
+      document.addEventListener("click",()=>{ const p=document.getElementById("navPanel"); if(p) p.classList.remove("open"); });
+      const np=document.getElementById("navPanel");
+      if(np) np.addEventListener("click",e=>e.stopPropagation());
     }catch(e){logout();}
   }
 
@@ -302,6 +331,8 @@
       <div class="site-topbar-right">
         <span class="topbar-badge">LLNL POC</span>
         <span class="user-info" id="user-info"></span>
+        <span id="home-session-display" style="font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:var(--text2);padding:0 4px">⏱ --</span>
+        <button class="btn-logout" id="home-nav-btn" style="padding:5px 11px">이동 ▾</button>
         <button class="btn-logout" onclick="openProfileEdit()" style="min-width:44px;min-height:36px">✏️</button>
         <button class="btn-logout" onclick="logout()">로그아웃</button>
       </div>
