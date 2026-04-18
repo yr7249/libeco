@@ -387,6 +387,7 @@
     /* Topbars stay at top while scrolling */
     #view-home .site-topbar{position:sticky;top:0;z-index:10}
     #view-equip .pg-topbar{position:sticky;top:0;z-index:10;width:100vw;margin-left:calc((100% - 100vw) / 2)}
+    .pg-topbar{position:sticky;top:0;z-index:100}
 
     /* ══════════════════════════════════════════
        HOME PAGE
@@ -773,15 +774,17 @@
 
 <div class="pg-topbar">
       <div class="pg-topbar-l">
-        <span class="pg-ci-logo" style="color:#16a34a;font-weight:800;font-size:.95rem;letter-spacing:-.02em;font-family:inherit">LIBECO E&amp;C</span>
+        <a href="index.html" class="pg-ci-logo" style="color:#16a34a;font-weight:800;font-size:.95rem;letter-spacing:-.02em;font-family:inherit;text-decoration:none;cursor:pointer">LIBECO E&amp;C</a>
         <div class="pg-vdiv"></div>
-        <button class="pg-btn" id="inc-home-btn">🏠 홈</button>
         <button class="pg-btn pg-btn-nav" id="inc-nav-btn">이동 ▾</button>
         <div class="pg-vdiv"></div>
         <span class="pg-title">LLNL POC <span>입고관리</span></span>
         <span class="pg-badge">INCOMING</span>
       </div>
       <div class="pg-topbar-r">
+        <span id="inc-session-display" style="font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:var(--text2);padding:0 4px">⏱ --</span>
+        <button class="pg-btn" id="inc-extend-topbar">연장하기</button>
+        <div class="pg-vdiv"></div>
         <button class="pg-btn" id="inc-undoBtn" title="Ctrl+Z" disabled="">↩ 취소</button>
         <button class="pg-btn" id="inc-redoBtn" title="Ctrl+Y" disabled="">↪ 다시</button>
         <div class="pg-vdiv"></div>
@@ -790,9 +793,6 @@
         <div class="pg-vdiv"></div>
         <span id="inc-user-display" style="font-size:.75rem;font-weight:600;font-family:'Outfit',sans-serif;color:var(--text)"></span>
         <button class="pg-btn" id="inc-user-btn" title="계정">👤</button>
-        <div class="pg-vdiv"></div>
-        <span id="inc-session-display" style="font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:var(--text2);padding:0 4px">⏱ --</span>
-        <button class="pg-btn" id="inc-extend-topbar">연장하기</button>
       </div>
     </div>
 
@@ -1266,9 +1266,7 @@
   if(srch) srch.addEventListener("input",build);
 
   /* ── Nav buttons ── */
-  const hBtn=document.getElementById("inc-home-btn");
   const nBtn=document.getElementById("inc-nav-btn");
-  if(hBtn) hBtn.addEventListener("click",()=>{ window.location.href='index.html'; });
   if(nBtn) nBtn.addEventListener("click",e=>{
     e.stopPropagation();
     const p=document.getElementById("navPanel");

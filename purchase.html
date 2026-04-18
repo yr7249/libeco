@@ -793,15 +793,17 @@
 <!-- ── 공통 상단바 ── -->
     <div class="pg-topbar">
       <div class="pg-topbar-l">
-        <span class="pg-ci-logo" style="color:#16a34a;font-weight:800;font-size:.95rem;letter-spacing:-.02em;font-family:inherit">LIBECO E&amp;C</span>
+        <a href="index.html" class="pg-ci-logo" style="color:#16a34a;font-weight:800;font-size:.95rem;letter-spacing:-.02em;font-family:inherit;text-decoration:none;cursor:pointer">LIBECO E&amp;C</a>
         <div class="pg-vdiv"></div>
-        <button class="pg-btn" id="homeBtn">🏠 홈</button>
         <button class="pg-btn pg-btn-nav" id="equip-nav-btn">이동 ▾</button>
         <div class="pg-vdiv"></div>
         <span class="pg-title">LLNL POC <span>구매리스트</span></span>
         <span class="pg-badge">EQUIP LIST</span>
       </div>
       <div class="pg-topbar-r">
+        <span id="pur-session-display" style="font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:var(--text2);padding:0 4px">⏱ --</span>
+        <button class="pg-btn" id="pur-extend-topbar">연장하기</button>
+        <div class="pg-vdiv"></div>
         <button class="pg-btn" id="undoBtn" title="Ctrl+Z">↩ 취소</button>
         <button class="pg-btn" id="redoBtn" title="Ctrl+Y" disabled="">↪ 다시</button>
         <div class="pg-vdiv"></div>
@@ -810,9 +812,6 @@
         <div class="pg-vdiv"></div>
         <span id="pur-user-display" style="font-size:.75rem;font-weight:600;font-family:'Outfit',sans-serif;color:var(--text)"></span>
         <button class="pg-btn" id="pur-user-btn" title="계정">👤</button>
-        <div class="pg-vdiv"></div>
-        <span id="pur-session-display" style="font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:var(--text2);padding:0 4px">⏱ --</span>
-        <button class="pg-btn" id="pur-extend-topbar">연장하기</button>
       </div>
     </div>
   <div class="container">
@@ -2530,7 +2529,7 @@
   window.goBack=goBack;
   window.exportWorkHtml=exportWorkHtml;
   window.exportReportPdf=exportReportPdf;
-  document.getElementById('homeBtn').addEventListener('click', goHome);
+  // homeBtn removed; LIBECO E&C link handles home navigation
   // Nav + user panel toggle
   (function(){
     const navBtn=document.getElementById('equip-nav-btn');
