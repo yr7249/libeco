@@ -717,6 +717,14 @@
 </head>
 <body>
 
+  <!-- 준비중 오버레이 (비관리자용) -->
+  <div id="dgm-soon-overlay" style="display:none;position:fixed;inset:0;background:rgba(255,255,255,.97);z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:14px">
+    <div style="font-size:2.8rem">🚧</div>
+    <div style="font-size:1.25rem;font-weight:800;color:#0f172a;font-family:'Outfit',sans-serif">준비중입니다</div>
+    <div style="font-size:.85rem;color:#64748b">현재 관리자만 접근 가능한 페이지입니다</div>
+    <a href="index.html" style="margin-top:6px;padding:9px 22px;background:#166534;color:#fff;border-radius:8px;text-decoration:none;font-size:.85rem;font-weight:700">홈으로 돌아가기</a>
+  </div>
+
   <!-- Nav panel -->
   <div class="nav-panel" id="navPanel">
     <div class="nav-panel-title" style="font-family:monospace;font-size:.65rem;color:#64748b;font-weight:700;letter-spacing:.1em;padding:4px 10px 8px;text-transform:uppercase">페이지 이동</div>
@@ -818,6 +826,30 @@
     </div>
   </div>
 
+<script>
+// 관리자 권한 체크 — 비관리자는 준비중 오버레이 표시
+(async function(){
+  const SUPA_URL="https://ikfjpzdzrgsmhaobqnai.supabase.co";
+  const SUPA_KEY="sb_publishable_fbbdwjCZCL9AFD-eUIs0bg_XwdlhxFN";
+  const token=localStorage.getItem("supa_token")||"";
+  let isAdmin=false;
+  if(token){
+    try{
+      const ur=await fetch(SUPA_URL+"/auth/v1/user",{headers:{"apikey":SUPA_KEY,"Authorization":"Bearer "+token}});
+      if(ur.ok){
+        const u=await ur.json();
+        const pr=await fetch(SUPA_URL+"/rest/v1/profiles?id=eq."+u.id+"&select=role",{headers:{"apikey":SUPA_KEY,"Authorization":"Bearer "+token}});
+        const profiles=await pr.json();
+        if(profiles&&profiles[0]&&profiles[0].role==="admin") isAdmin=true;
+      }
+    }catch(e){}
+  }
+  if(!isAdmin){
+    const ov=document.getElementById("dgm-soon-overlay");
+    if(ov){ ov.style.display="flex"; }
+  }
+})();
+</script>
 <script>
 // Nav panel toggle for diagram page
 (function(){
