@@ -2571,9 +2571,9 @@
     }
     async function doExtend(btn){
       if(btn){btn.disabled=true;btn.textContent="연장 중...";}
-      const ok=await refreshSession();
-      if(ok){sessionStorage.setItem("libeco_tab_active",String(Date.now()+SESSION_MS));tick();}
-      else{localStorage.removeItem("supa_token");localStorage.removeItem("supa_refresh");sessionStorage.removeItem("libeco_tab_active");location.href="login.html";}
+      await refreshSession(); // best-effort JWT refresh, 실패해도 세션 타이머는 연장
+      sessionStorage.setItem("libeco_tab_active",String(Date.now()+SESSION_MS));
+      tick();
       if(btn){btn.disabled=false;btn.textContent="연장하기";}
     }
     const extBtn=document.getElementById("pur-extend-topbar");

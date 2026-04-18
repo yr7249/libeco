@@ -1578,15 +1578,10 @@
 
     async function doExtend(btn){
       if(btn){btn.disabled=true;btn.textContent="연장 중...";}
-      const ok=await refreshSession();
-      if(ok){
-        sessionStorage.setItem("libeco_tab_active",String(Date.now()+SESSION_MS));
-        if(banner) banner.style.display="none";
-        sessionTick();
-      } else {
-        localStorage.removeItem("supa_token");localStorage.removeItem("supa_refresh");
-        sessionStorage.removeItem("libeco_tab_active");location.href="login.html";
-      }
+      await refreshSession(); // best-effort JWT refresh
+      sessionStorage.setItem("libeco_tab_active",String(Date.now()+SESSION_MS));
+      if(banner) banner.style.display="none";
+      sessionTick();
       if(btn){btn.disabled=false;btn.textContent="연장하기";}
     }
     if(extBtn) extBtn.addEventListener("click",()=>doExtend(extBtn));

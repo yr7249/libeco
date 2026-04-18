@@ -210,14 +210,10 @@
   let _tick=null;
 
   async function extendSession(){
-    const ok=await refreshSession();
-    if(ok){
-      sessionStorage.setItem("libeco_tab_active",String(Date.now()+SESSION_MS));
-      document.getElementById("session-warn-banner").style.display="none";
-      if(_tick) _tick();
-    } else {
-      logout();
-    }
+    await refreshSession(); // best-effort JWT refresh
+    sessionStorage.setItem("libeco_tab_active",String(Date.now()+SESSION_MS));
+    const b=document.getElementById("session-warn-banner");if(b)b.style.display="none";
+    if(_tick) _tick();
   }
 
   function startSessionTimer(){
