@@ -1133,14 +1133,18 @@
     tbody.querySelectorAll(".inc-stage-sel").forEach(sel=>{
       sel.addEventListener("change",()=>{
         const idx=Number(sel.dataset.idx);
-        if(incItems[idx]!==undefined){
-          incItems[idx].deadline_stage=sel.value;
-          if(sel.value){
-            const ms=milestones.find(m=>m.name===sel.value);
-            if(ms&&ms.date) incItems[idx].deadline=ms.date;
+        if(incItems[idx]===undefined) return;
+        incItems[idx].deadline_stage=sel.value;
+        if(sel.value){
+          const ms=milestones.find(m=>m.name===sel.value);
+          if(ms&&ms.date){
+            incItems[idx].deadline=ms.date;
+            // 전체 rebuild 없이 해당 셀만 즉시 업데이트
+            const deadlineCell=tbody.querySelector(`.cell-inner[data-idx="${idx}"][data-field="deadline"]`);
+            if(deadlineCell) deadlineCell.textContent=fmtDate(ms.date);
           }
-          save(); build();
         }
+        save();
       });
     });
     // Star/highlight toggle
