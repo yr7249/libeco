@@ -845,6 +845,13 @@
       <footer class="footer" style="margin-top:5px;font-size:.75rem;color:var(--text2)">
         © 2026 LIBECO E&amp;C · All Rights Reserved
       </footer>
+
+  <!-- 세션 만료 경고 배너 -->
+  <div id="inc-session-banner" style="display:none;position:fixed;bottom:20px;right:20px;z-index:9000;background:#0f172a;color:#fff;border-radius:12px;padding:12px 16px;gap:10px;font-size:.84rem;box-shadow:0 4px 24px rgba(0,0,0,.3);align-items:center">
+    ⏰ 세션이 <strong id="inc-session-remaining">--</strong> 후 만료됩니다&nbsp;
+    <button id="inc-extend-btn" style="background:#16a34a;color:#fff;border:none;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:.8rem;font-weight:700">연장하기</button>
+    <button onclick="(function(){localStorage.removeItem('supa_token');localStorage.removeItem('supa_refresh');sessionStorage.removeItem('libeco_tab_active');location.href='login.html';})()" style="background:#dc2626;color:#fff;border:none;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:.8rem;font-weight:700">로그아웃</button>
+  </div>
     </div>
 
     <div id="inc-status-drop" style="display: none;">
@@ -1417,6 +1424,62 @@
     dlSortBtn.style.color=deadlineSortAsc?"#fff":"";
     build();
   });
+
+  /* ── 세션 타이머 ── */
+  (function(){
+    const SESSION_MS=7200000;
+    const banner=document.getElementById("inc-session-banner");
+    const remEl=document.getElementById("inc-session-remaining");
+    const extBtn=document.getElementById("inc-extend-btn");
+
+    async function refreshSession(){
+      const refresh=localStorage.getItem("supa_refresh");
+      if(!refresh) return false;
+      try{
+        const res=await fetch(SUPA_URL+"/auth/v1/token?grant_type=refresh_token",{
+          method:"POST",headers:{"apikey":SUPA_KEY,"Content-Type":"application/json"},
+          body:JSON.stringify({refresh_token:refresh})
+        });
+        if(!res.ok) return false;
+        const data=await res.json();
+        if(data.access_token){
+          localStorage.setItem("supa_token",data.access_token);
+          if(data.refresh_token) localStorage.setItem("supa_refresh",data.refresh_token);
+          return true;
+        }
+        return false;
+      }catch(e){ return false; }
+    }
+
+    if(extBtn) extBtn.addEventListener("click",async()=>{
+      extBtn.disabled=true; extBtn.textContent="연장 중...";
+      const ok=await refreshSession();
+      if(ok){
+        sessionStorage.setItem("libeco_tab_active",String(Date.now()+SESSION_MS));
+        if(banner) banner.style.display="none";
+      } else {
+        localStorage.removeItem("supa_token");localStorage.removeItem("supa_refresh");
+        sessionStorage.removeItem("libeco_tab_active");location.href="login.html";
+      }
+      extBtn.disabled=false; extBtn.textContent="연장하기";
+    });
+
+    setInterval(()=>{
+      const exp=Number(sessionStorage.getItem("libeco_tab_active")||0);
+      if(!exp||Date.now()>exp){
+        localStorage.removeItem("supa_token");localStorage.removeItem("supa_refresh");
+        sessionStorage.removeItem("libeco_tab_active");location.href="login.html";
+        return;
+      }
+      const rem=exp-Date.now();
+      if(rem<=600000){
+        if(remEl) remEl.textContent=Math.ceil(rem/60000)+"분";
+        if(banner) banner.style.display="flex";
+      } else {
+        if(banner) banner.style.display="none";
+      }
+    },30000);
+  })();
   })();
 
 </script>

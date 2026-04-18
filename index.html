@@ -166,9 +166,34 @@
     location.href="login.html";
   }
 
-  function extendSession(){
-    sessionStorage.setItem("libeco_tab_active", String(Date.now()+SESSION_MS));
-    document.getElementById("session-warn-banner").style.display="none";
+  async function refreshSession(){
+    const refresh=localStorage.getItem("supa_refresh");
+    if(!refresh) return false;
+    try{
+      const res=await fetch(SUPA_URL+"/auth/v1/token?grant_type=refresh_token",{
+        method:"POST",
+        headers:{"apikey":SUPA_KEY,"Content-Type":"application/json"},
+        body:JSON.stringify({refresh_token:refresh})
+      });
+      if(!res.ok) return false;
+      const data=await res.json();
+      if(data.access_token){
+        localStorage.setItem("supa_token",data.access_token);
+        if(data.refresh_token) localStorage.setItem("supa_refresh",data.refresh_token);
+        return true;
+      }
+      return false;
+    }catch(e){ return false; }
+  }
+
+  async function extendSession(){
+    const ok=await refreshSession();
+    if(ok){
+      sessionStorage.setItem("libeco_tab_active",String(Date.now()+SESSION_MS));
+      document.getElementById("session-warn-banner").style.display="none";
+    } else {
+      logout();
+    }
   }
 
   function startSessionTimer(){
