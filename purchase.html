@@ -533,7 +533,7 @@
 
     /* ── Sitemap / 이동 panel ── */
     .nav-panel{
-      position:fixed;top:54px;right:16px;z-index:9998;
+      position:fixed;z-index:9998;
       background:var(--surface);border:1px solid var(--border);
       border-radius:16px;padding:10px;
       box-shadow:0 8px 32px rgba(15,23,42,.14);
@@ -2538,7 +2538,14 @@
     const userBtn=document.getElementById('pur-user-btn');
     const userPanel=document.getElementById('purUserPanel');
     if(navBtn&&navPanel){
-      navBtn.addEventListener('click',e=>{e.stopPropagation();navPanel.classList.toggle('open');userPanel&&userPanel.classList.remove('open');});
+      navBtn.addEventListener('click',e=>{
+        e.stopPropagation();
+        const r=navBtn.getBoundingClientRect();
+        navPanel.style.left=r.left+"px";
+        navPanel.style.top=(r.bottom+4)+"px";
+        navPanel.classList.toggle('open');
+        userPanel&&userPanel.classList.remove('open');
+      });
     }
     if(userBtn&&userPanel){
       userBtn.addEventListener('click',e=>{e.stopPropagation();userPanel.classList.toggle('open');navPanel&&navPanel.classList.remove('open');});

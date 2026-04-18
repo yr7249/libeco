@@ -533,7 +533,7 @@
 
     /* ── Sitemap / 이동 panel ── */
     .nav-panel{
-      position:fixed;top:54px;right:16px;z-index:9998;
+      position:fixed;z-index:9998;
       background:var(--surface);border:1px solid var(--border);
       border-radius:16px;padding:10px;
       box-shadow:0 8px 32px rgba(15,23,42,.14);
@@ -1272,7 +1272,12 @@
   if(nBtn) nBtn.addEventListener("click",e=>{
     e.stopPropagation();
     const p=document.getElementById("navPanel");
-    if(p) p.classList.toggle("open");
+    if(p){
+      const r=nBtn.getBoundingClientRect();
+      p.style.left=r.left+"px";
+      p.style.top=(r.bottom+4)+"px";
+      p.classList.toggle("open");
+    }
     document.getElementById("incUserPanel").classList.remove("open");
   });
   document.addEventListener("click",()=>{
