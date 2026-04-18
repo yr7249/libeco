@@ -207,11 +207,14 @@
     }catch(e){ return false; }
   }
 
+  let _tick=null;
+
   async function extendSession(){
     const ok=await refreshSession();
     if(ok){
       sessionStorage.setItem("libeco_tab_active",String(Date.now()+SESSION_MS));
       document.getElementById("session-warn-banner").style.display="none";
+      if(_tick) _tick();
     } else {
       logout();
     }
@@ -237,6 +240,7 @@
         banner.style.display="none";
       }
     }
+    _tick=tick;
     setInterval(tick,30000);
     tick();
   }

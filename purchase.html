@@ -2557,10 +2557,12 @@
   // Session timer + extend
   (function(){
     const SESSION_MS=7200000;
+    const _SU="https://ikfjpzdzrgsmhaobqnai.supabase.co";
+    const _SK="sb_publishable_fbbdwjCZCL9AFD-eUIs0bg_XwdlhxFN";
     async function refreshSession(){
       const refresh=localStorage.getItem("supa_refresh");if(!refresh)return false;
       try{
-        const res=await fetch(SU+"/auth/v1/token?grant_type=refresh_token",{method:"POST",headers:{"apikey":SK,"Content-Type":"application/json"},body:JSON.stringify({refresh_token:refresh})});
+        const res=await fetch(_SU+"/auth/v1/token?grant_type=refresh_token",{method:"POST",headers:{"apikey":_SK,"Content-Type":"application/json"},body:JSON.stringify({refresh_token:refresh})});
         if(!res.ok)return false;
         const d=await res.json();
         if(d.access_token){localStorage.setItem("supa_token",d.access_token);if(d.refresh_token)localStorage.setItem("supa_refresh",d.refresh_token);return true;}
@@ -2570,7 +2572,7 @@
     async function doExtend(btn){
       if(btn){btn.disabled=true;btn.textContent="연장 중...";}
       const ok=await refreshSession();
-      if(ok){sessionStorage.setItem("libeco_tab_active",String(Date.now()+SESSION_MS));}
+      if(ok){sessionStorage.setItem("libeco_tab_active",String(Date.now()+SESSION_MS));tick();}
       else{localStorage.removeItem("supa_token");localStorage.removeItem("supa_refresh");sessionStorage.removeItem("libeco_tab_active");location.href="login.html";}
       if(btn){btn.disabled=false;btn.textContent="연장하기";}
     }

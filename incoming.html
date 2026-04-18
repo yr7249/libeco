@@ -1582,6 +1582,7 @@
       if(ok){
         sessionStorage.setItem("libeco_tab_active",String(Date.now()+SESSION_MS));
         if(banner) banner.style.display="none";
+        sessionTick();
       } else {
         localStorage.removeItem("supa_token");localStorage.removeItem("supa_refresh");
         sessionStorage.removeItem("libeco_tab_active");location.href="login.html";
