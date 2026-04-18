@@ -714,6 +714,7 @@
   const SU="https://ikfjpzdzrgsmhaobqnai.supabase.co",SK="sb_publishable_fbbdwjCZCL9AFD-eUIs0bg_XwdlhxFN";
   const token=localStorage.getItem("supa_token")||"";
   if(!token){location.href="login.html";return;}
+  if(!sessionStorage.getItem("libeco_tab_active")||Date.now()>Number(sessionStorage.getItem("libeco_tab_active"))){localStorage.removeItem("supa_token");location.href="login.html";return;}
   let isAdmin=false;
   try{
     const ur=await fetch(SU+"/auth/v1/user",{headers:{"apikey":SK,"Authorization":"Bearer "+token}});

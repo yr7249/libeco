@@ -705,7 +705,11 @@
   </style>
 </head>
 <body>
-<script>(function(){const SUPA_URL="https://ikfjpzdzrgsmhaobqnai.supabase.co";const SUPA_KEY="sb_publishable_fbbdwjCZCL9AFD-eUIs0bg_XwdlhxFN";const token=localStorage.getItem("supa_token")||"";if(!token){location.href="login.html";return;}fetch(SUPA_URL+"/auth/v1/user",{headers:{"apikey":SUPA_KEY,"Authorization":"Bearer "+token}}).then(r=>r.ok?r.json():Promise.reject()).then(u=>fetch(SUPA_URL+"/rest/v1/profiles?id=eq."+u.id+"&select=approved",{headers:{"apikey":SUPA_KEY,"Authorization":"Bearer "+token}})).then(r=>r.json()).then(p=>{if(!p||!p[0]||!p[0].approved)location.href="login.html";}).catch(()=>location.href="login.html");})()</script>
+<script>(function(){
+  const token=localStorage.getItem("supa_token")||"";
+  if(!token){location.href="login.html";return;}
+  if(!sessionStorage.getItem("libeco_tab_active")||Date.now()>Number(sessionStorage.getItem("libeco_tab_active"))){localStorage.removeItem("supa_token");location.href="login.html";return;}
+})()</script>
 
   <!-- Nav panel -->
   <div class="nav-panel" id="navPanel">

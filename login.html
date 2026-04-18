@@ -242,6 +242,7 @@
         showMsg("login-msg","pending","승인 대기 중입니다. 관리자 승인 후 이용 가능합니다.");
         localStorage.removeItem("supa_token");
       } else {
+        sessionStorage.setItem("libeco_tab_active", String(Date.now() + 7200000));
         location.href="index.html";
       }
     }catch(e){
