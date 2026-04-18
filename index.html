@@ -149,6 +149,18 @@
     .user-info{font-family:var(--font-mono);font-size:.72rem;color:var(--text2)}
     .btn-logout{padding:5px 12px;border:1px solid var(--border);border-radius:7px;background:#fff;cursor:pointer;font-size:.75rem;font-weight:600;font-family:var(--font-heading);transition:background .12s}
     .btn-logout:hover{background:#fee2e2;border-color:#fca5a5;color:#dc2626}
+    .nav-panel{position:fixed;top:48px;right:12px;z-index:9999;width:220px;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,.15);padding:8px 0;display:none;flex-direction:column}
+    .nav-panel.open{display:flex}
+    .nav-panel-title{font-size:.68rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;padding:4px 14px 8px;border-bottom:1px solid var(--border);margin-bottom:4px}
+    .nav-sep{height:1px;background:var(--border);margin:4px 0}
+    .nav-item{display:flex;align-items:center;gap:10px;padding:7px 14px;cursor:default;text-decoration:none;color:var(--text);transition:background .1s}
+    a.nav-item{cursor:pointer}
+    a.nav-item:hover{background:var(--surface2)}
+    .nav-item.active{background:rgba(22,101,52,.06)}
+    .nav-icon{font-size:1.1rem;width:22px;text-align:center;flex-shrink:0}
+    .nav-label{font-size:.8rem;font-weight:600;font-family:var(--font-heading)}
+    .nav-sub{font-size:.68rem;color:var(--text2)}
+    .nav-soon{font-size:.6rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.04em;background:#f1f5f9;border-radius:4px;padding:1px 5px;margin-top:2px;display:inline-block}
   </style>
 </head>
 <body>
