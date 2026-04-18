@@ -2116,12 +2116,7 @@
     try {
       const rows = await supaFetch("GET", "?select=*&order=sort_order.asc,id.asc");
       if (rows && rows.length > 0){
-        // 중복 제거: sort_order 기준으로 마지막 행(최신)만 유지
-        const deduped = new Map();
-        rows.forEach(r => deduped.set(r.sort_order, r));
-        const sortedRows = [...deduped.values()].sort((a,b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
-
-        items = sortedRows.map(r => {
+        items = rows.map(r => {
           const item = {};
           ["no","category","code","equipment","product","supplier",
            "total_qty","purchase_qty","unit_price","subtotal",
@@ -2132,15 +2127,6 @@
           item._sort    = r.sort_order;
           return item;
         });
-
-        // DB에 쌓인 중복 행 비동기 삭제
-        const keepIds = new Set(sortedRows.map(r => r.id));
-        const deleteIds = rows.filter(r => !keepIds.has(r.id)).map(r => r.id);
-        if (deleteIds.length > 0) {
-          supaFetch("DELETE", "?id=in.(" + deleteIds.join(",") + ")")
-            .catch(e => console.warn("Dedup cleanup:", e));
-        }
-
         return true;
       }
     } catch(e){ console.warn("Supabase load failed:", e); }
@@ -2645,9 +2631,8 @@
     try {
       let loaded = await supaLoad();
       if (!loaded){
-        // localStorage 또는 seed 사용 후 Supabase에 초기 업로드
+        // Supabase 로드 실패 시 로컬 캐시만 표시 (Supabase 덮어쓰기 금지)
         loadLocal();
-        supaUpsertAll(); // 비동기 업로드, 렌더링을 막지 않음
       }
     } catch(e) {
       console.warn("초기화 실패, 로컬 데이터 사용:", e);
