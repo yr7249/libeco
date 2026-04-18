@@ -556,6 +556,16 @@
     .nav-sub{font-size:.67rem;color:var(--text2);font-weight:500;margin-top:1px;font-family:var(--font-mono)}
     .nav-soon-tag{font-family:var(--font-mono);font-size:.6rem;color:#94a3b8;background:rgba(148,163,184,.12);border:1px solid rgba(148,163,184,.2);padding:1px 6px;border-radius:4px;margin-left:auto}
     .nav-sep{height:1px;background:var(--border);margin:6px 2px}
+    .user-panel{position:fixed;top:54px;right:12px;z-index:9999;width:200px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 32px rgba(15,23,42,.14);padding:8px 0;display:none;flex-direction:column}
+    .user-panel.open{display:flex}
+    .user-panel-info{padding:8px 14px 6px}
+    .user-panel-name{font-size:.82rem;font-weight:700;font-family:var(--font-heading)}
+    .user-panel-sub{font-size:.68rem;color:var(--text2);margin-top:2px}
+    .user-panel-sep{height:1px;background:var(--border);margin:6px 0}
+    .user-panel-item{display:flex;align-items:center;width:100%;padding:7px 14px;background:none;border:none;cursor:pointer;font-size:.78rem;font-weight:600;font-family:var(--font-heading);color:var(--text);text-align:left;transition:background .12s}
+    .user-panel-item:hover{background:var(--accent-wash2)}
+    .user-panel-logout{color:#dc2626}
+    .user-panel-logout:hover{background:#fee2e2 !important}
 
 
     /* ══ Shared Page Topbar ══ */
@@ -729,6 +739,16 @@
   if(!isAdmin){const ov=document.getElementById("pur-access-overlay");if(ov)ov.style.display="flex";}
 })();</script>
 
+  <!-- User panel -->
+  <div class="user-panel" id="purUserPanel">
+    <div class="user-panel-info">
+      <div class="user-panel-name" id="pur-upanel-name">--</div>
+      <div class="user-panel-sub" id="pur-upanel-sub"></div>
+    </div>
+    <div class="user-panel-sep"></div>
+    <button class="user-panel-item user-panel-logout" onclick="(function(){localStorage.removeItem('supa_token');localStorage.removeItem('supa_refresh');sessionStorage.removeItem('libeco_tab_active');location.href='login.html';})()">로그아웃</button>
+  </div>
+
   <!-- Nav panel -->
   <div class="nav-panel" id="navPanel">
     <div class="nav-panel-title">페이지 이동</div>
@@ -776,7 +796,7 @@
         <span class="pg-ci-logo" style="color:#16a34a;font-weight:800;font-size:.95rem;letter-spacing:-.02em;font-family:inherit">LIBECO E&amp;C</span>
         <div class="pg-vdiv"></div>
         <button class="pg-btn" id="homeBtn">🏠 홈</button>
-        <button class="pg-btn" id="backBtn">← 이전</button>
+        <button class="pg-btn pg-btn-nav" id="equip-nav-btn">이동 ▾</button>
         <div class="pg-vdiv"></div>
         <span class="pg-title">LLNL POC <span>구매리스트</span></span>
         <span class="pg-badge">EQUIP LIST</span>
@@ -785,10 +805,14 @@
         <button class="pg-btn" id="undoBtn" title="Ctrl+Z">↩ 취소</button>
         <button class="pg-btn" id="redoBtn" title="Ctrl+Y" disabled="">↪ 다시</button>
         <div class="pg-vdiv"></div>
-        <button class="pg-btn pg-btn-export" id="exportReportBtn">📄 pdf저장 &lt;</button>
+        <button class="pg-btn pg-btn-export" id="exportReportBtn">📄 PDF저장</button>
         <button class="pg-btn" onclick="window.print()">🖨 인쇄</button>
         <div class="pg-vdiv"></div>
-        <button class="pg-btn pg-btn-nav" id="equip-nav-btn">이동 ▾</button>
+        <span id="pur-user-display" style="font-size:.75rem;font-weight:600;font-family:'Outfit',sans-serif;color:var(--text)"></span>
+        <button class="pg-btn" id="pur-user-btn" title="계정">👤</button>
+        <div class="pg-vdiv"></div>
+        <span id="pur-session-display" style="font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:var(--text2);padding:0 4px">⏱ --</span>
+        <button class="pg-btn" id="pur-extend-topbar">연장하기</button>
       </div>
     </div>
   <div class="container">
@@ -2507,16 +2531,68 @@
   window.exportWorkHtml=exportWorkHtml;
   window.exportReportPdf=exportReportPdf;
   document.getElementById('homeBtn').addEventListener('click', goHome);
-  document.getElementById('backBtn').addEventListener('click', goBack);
-  // Nav panel toggle
+  // Nav + user panel toggle
   (function(){
-    const btn = document.getElementById('equip-nav-btn');
-    const panel = document.getElementById('navPanel');
-    if(btn && panel){
-      btn.addEventListener('click', function(e){ e.stopPropagation(); panel.classList.toggle('open'); });
-      document.addEventListener('click', function(){ panel.classList.remove('open'); });
-      panel.addEventListener('click', function(e){ e.stopPropagation(); });
+    const navBtn=document.getElementById('equip-nav-btn');
+    const navPanel=document.getElementById('navPanel');
+    const userBtn=document.getElementById('pur-user-btn');
+    const userPanel=document.getElementById('purUserPanel');
+    if(navBtn&&navPanel){
+      navBtn.addEventListener('click',e=>{e.stopPropagation();navPanel.classList.toggle('open');userPanel&&userPanel.classList.remove('open');});
     }
+    if(userBtn&&userPanel){
+      userBtn.addEventListener('click',e=>{e.stopPropagation();userPanel.classList.toggle('open');navPanel&&navPanel.classList.remove('open');});
+    }
+    document.addEventListener('click',()=>{navPanel&&navPanel.classList.remove('open');userPanel&&userPanel.classList.remove('open');});
+    navPanel&&navPanel.addEventListener('click',e=>e.stopPropagation());
+    userPanel&&userPanel.addEventListener('click',e=>e.stopPropagation());
+  })();
+  // Session timer + extend
+  (function(){
+    const SESSION_MS=7200000;
+    async function refreshSession(){
+      const refresh=localStorage.getItem("supa_refresh");if(!refresh)return false;
+      try{
+        const res=await fetch(SU+"/auth/v1/token?grant_type=refresh_token",{method:"POST",headers:{"apikey":SK,"Content-Type":"application/json"},body:JSON.stringify({refresh_token:refresh})});
+        if(!res.ok)return false;
+        const d=await res.json();
+        if(d.access_token){localStorage.setItem("supa_token",d.access_token);if(d.refresh_token)localStorage.setItem("supa_refresh",d.refresh_token);return true;}
+        return false;
+      }catch(e){return false;}
+    }
+    async function doExtend(btn){
+      if(btn){btn.disabled=true;btn.textContent="연장 중...";}
+      const ok=await refreshSession();
+      if(ok){sessionStorage.setItem("libeco_tab_active",String(Date.now()+SESSION_MS));}
+      else{localStorage.removeItem("supa_token");localStorage.removeItem("supa_refresh");sessionStorage.removeItem("libeco_tab_active");location.href="login.html";}
+      if(btn){btn.disabled=false;btn.textContent="연장하기";}
+    }
+    const extBtn=document.getElementById("pur-extend-topbar");
+    if(extBtn) extBtn.addEventListener("click",()=>doExtend(extBtn));
+    function tick(){
+      const exp=Number(sessionStorage.getItem("libeco_tab_active")||0);
+      if(!exp||Date.now()>exp){localStorage.removeItem("supa_token");localStorage.removeItem("supa_refresh");sessionStorage.removeItem("libeco_tab_active");location.href="login.html";return;}
+      const rem=exp-Date.now();
+      const disp=document.getElementById("pur-session-display");
+      if(disp){const h=Math.floor(rem/3600000),m=Math.floor((rem%3600000)/60000);disp.textContent="⏱ "+(h>0?h+"h ":"")+m+"분";disp.style.color=rem<=600000?"#dc2626":"";}
+    }
+    tick();setInterval(tick,30000);
+  })();
+  // User info
+  (async()=>{
+    try{
+      const tok=localStorage.getItem("supa_token")||"";if(!tok)return;
+      const ur=await fetch(SU+"/auth/v1/user",{headers:{"apikey":SK,"Authorization":"Bearer "+tok}});
+      if(!ur.ok)return;
+      const u=await ur.json();
+      const pr=await fetch(SU+"/rest/v1/profiles?id=eq."+u.id+"&select=name,department,position",{headers:{"apikey":SK,"Authorization":"Bearer "+tok}});
+      const prof=(await pr.json())?.[0]||{};
+      const nm=prof.name||(u.email||"").split("@")[0];
+      const sb=[prof.department,prof.position].filter(Boolean).join(" · ");
+      const ud=document.getElementById("pur-user-display");if(ud)ud.textContent=nm;
+      const upN=document.getElementById("pur-upanel-name");if(upN)upN.textContent=nm;
+      const upS=document.getElementById("pur-upanel-sub");if(upS)upS.textContent=sb;
+    }catch(e){}
   })();
 
   function autoFitCells(scope){

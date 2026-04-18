@@ -556,6 +556,16 @@
     .nav-sub{font-size:.67rem;color:var(--text2);font-weight:500;margin-top:1px;font-family:var(--font-mono)}
     .nav-soon-tag{font-family:var(--font-mono);font-size:.6rem;color:#94a3b8;background:rgba(148,163,184,.12);border:1px solid rgba(148,163,184,.2);padding:1px 6px;border-radius:4px;margin-left:auto}
     .nav-sep{height:1px;background:var(--border);margin:6px 2px}
+    .user-panel{position:fixed;top:54px;right:12px;z-index:9999;width:200px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 32px rgba(15,23,42,.14);padding:8px 0;display:none;flex-direction:column}
+    .user-panel.open{display:flex}
+    .user-panel-info{padding:8px 14px 6px}
+    .user-panel-name{font-size:.82rem;font-weight:700;font-family:var(--font-heading)}
+    .user-panel-sub{font-size:.68rem;color:var(--text2);margin-top:2px}
+    .user-panel-sep{height:1px;background:var(--border);margin:6px 0}
+    .user-panel-item{display:flex;align-items:center;width:100%;padding:7px 14px;background:none;border:none;cursor:pointer;font-size:.78rem;font-weight:600;font-family:var(--font-heading);color:var(--text);text-align:left;transition:background .12s}
+    .user-panel-item:hover{background:var(--accent-wash2)}
+    .user-panel-logout{color:#dc2626}
+    .user-panel-logout:hover{background:#fee2e2 !important}
 
 
     /* ══ Shared Page Topbar ══ */
@@ -720,6 +730,16 @@
   if(!_ta) sessionStorage.setItem("libeco_tab_active",String(Date.now()+7200000));
 })()</script>
 
+  <!-- User panel -->
+  <div class="user-panel" id="incUserPanel">
+    <div class="user-panel-info">
+      <div class="user-panel-name" id="inc-upanel-name">--</div>
+      <div class="user-panel-sub" id="inc-upanel-sub"></div>
+    </div>
+    <div class="user-panel-sep"></div>
+    <button class="user-panel-item user-panel-logout" onclick="(function(){localStorage.removeItem('supa_token');localStorage.removeItem('supa_refresh');sessionStorage.removeItem('libeco_tab_active');location.href='login.html';})()">로그아웃</button>
+  </div>
+
   <!-- Nav panel -->
   <div class="nav-panel" id="navPanel">
     <div class="nav-panel-title">페이지 이동</div>
@@ -756,7 +776,7 @@
         <span class="pg-ci-logo" style="color:#16a34a;font-weight:800;font-size:.95rem;letter-spacing:-.02em;font-family:inherit">LIBECO E&amp;C</span>
         <div class="pg-vdiv"></div>
         <button class="pg-btn" id="inc-home-btn">🏠 홈</button>
-        <button class="pg-btn" id="inc-back-btn">← 이전</button>
+        <button class="pg-btn pg-btn-nav" id="inc-nav-btn">이동 ▾</button>
         <div class="pg-vdiv"></div>
         <span class="pg-title">LLNL POC <span>입고관리</span></span>
         <span class="pg-badge">INCOMING</span>
@@ -765,11 +785,14 @@
         <button class="pg-btn" id="inc-undoBtn" title="Ctrl+Z" disabled="">↩ 취소</button>
         <button class="pg-btn" id="inc-redoBtn" title="Ctrl+Y" disabled="">↪ 다시</button>
         <div class="pg-vdiv"></div>
-        <button class="pg-btn pg-btn-export" id="inc-export-report">📄 pdf저장 &lt;</button>
+        <button class="pg-btn pg-btn-export" id="inc-export-report">📄 PDF저장</button>
         <button class="pg-btn" onclick="window.print()">🖨 인쇄</button>
         <div class="pg-vdiv"></div>
+        <span id="inc-user-display" style="font-size:.75rem;font-weight:600;font-family:'Outfit',sans-serif;color:var(--text)"></span>
+        <button class="pg-btn" id="inc-user-btn" title="계정">👤</button>
+        <div class="pg-vdiv"></div>
         <span id="inc-session-display" style="font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:var(--text2);padding:0 4px">⏱ --</span>
-        <button class="pg-btn pg-btn-nav" id="inc-nav-btn">이동 ▾</button>
+        <button class="pg-btn" id="inc-extend-topbar">연장하기</button>
       </div>
     </div>
 
@@ -1244,19 +1267,45 @@
 
   /* ── Nav buttons ── */
   const hBtn=document.getElementById("inc-home-btn");
-  const bBtn=document.getElementById("inc-back-btn");
   const nBtn=document.getElementById("inc-nav-btn");
   if(hBtn) hBtn.addEventListener("click",()=>{ window.location.href='index.html'; });
-  if(bBtn) bBtn.addEventListener("click",()=>{ window.location.href='index.html'; });
   if(nBtn) nBtn.addEventListener("click",e=>{
     e.stopPropagation();
     const p=document.getElementById("navPanel");
     if(p) p.classList.toggle("open");
+    document.getElementById("incUserPanel").classList.remove("open");
   });
-  // Close nav panel on outside click
-  document.addEventListener("click", ()=>{ const p=document.getElementById("navPanel"); if(p) p.classList.remove("open"); });
+  document.addEventListener("click",()=>{
+    const p=document.getElementById("navPanel"); if(p) p.classList.remove("open");
+    const up=document.getElementById("incUserPanel"); if(up) up.classList.remove("open");
+  });
   const _navPanel=document.getElementById("navPanel");
   if(_navPanel) _navPanel.addEventListener("click",e=>e.stopPropagation());
+  const _userPanel=document.getElementById("incUserPanel");
+  if(_userPanel) _userPanel.addEventListener("click",e=>e.stopPropagation());
+  const incUserBtn=document.getElementById("inc-user-btn");
+  if(incUserBtn) incUserBtn.addEventListener("click",e=>{
+    e.stopPropagation();
+    document.getElementById("incUserPanel").classList.toggle("open");
+    document.getElementById("navPanel").classList.remove("open");
+  });
+  // User info fetch
+  (async()=>{
+    try{
+      const tok=localStorage.getItem("supa_token")||"";
+      if(!tok) return;
+      const ur=await fetch(SUPA_URL+"/auth/v1/user",{headers:{"apikey":SUPA_KEY,"Authorization":"Bearer "+tok}});
+      if(!ur.ok) return;
+      const u=await ur.json();
+      const pr=await fetch(SUPA_URL+"/rest/v1/profiles?id=eq."+u.id+"&select=name,department,position",{headers:{"apikey":SUPA_KEY,"Authorization":"Bearer "+tok}});
+      const prof=(await pr.json())?.[0]||{};
+      const nm=prof.name||(u.email||"").split("@")[0];
+      const sb=[prof.department,prof.position].filter(Boolean).join(" · ");
+      const ud=document.getElementById("inc-user-display");if(ud)ud.textContent=nm;
+      const upN=document.getElementById("inc-upanel-name");if(upN)upN.textContent=nm;
+      const upS=document.getElementById("inc-upanel-sub");if(upS)upS.textContent=sb;
+    }catch(e){}
+  })();
 
   /* ── Export buttons ── */
   const erBtn=document.getElementById("inc-export-report");
@@ -1522,8 +1571,8 @@
       }catch(e){ return false; }
     }
 
-    if(extBtn) extBtn.addEventListener("click",async()=>{
-      extBtn.disabled=true; extBtn.textContent="연장 중...";
+    async function doExtend(btn){
+      if(btn){btn.disabled=true;btn.textContent="연장 중...";}
       const ok=await refreshSession();
       if(ok){
         sessionStorage.setItem("libeco_tab_active",String(Date.now()+SESSION_MS));
@@ -1532,8 +1581,11 @@
         localStorage.removeItem("supa_token");localStorage.removeItem("supa_refresh");
         sessionStorage.removeItem("libeco_tab_active");location.href="login.html";
       }
-      extBtn.disabled=false; extBtn.textContent="연장하기";
-    });
+      if(btn){btn.disabled=false;btn.textContent="연장하기";}
+    }
+    if(extBtn) extBtn.addEventListener("click",()=>doExtend(extBtn));
+    const topExtBtn=document.getElementById("inc-extend-topbar");
+    if(topExtBtn) topExtBtn.addEventListener("click",()=>doExtend(topExtBtn));
 
     function sessionTick(){
       const exp=Number(sessionStorage.getItem("libeco_tab_active")||0);
