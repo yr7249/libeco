@@ -702,7 +702,30 @@
   </style>
 </head>
 <body>
-<script>(function(){const SUPA_URL="https://ikfjpzdzrgsmhaobqnai.supabase.co";const SUPA_KEY="sb_publishable_fbbdwjCZCL9AFD-eUIs0bg_XwdlhxFN";const token=localStorage.getItem("supa_token")||"";if(!token){location.href="login.html";return;}fetch(SUPA_URL+"/auth/v1/user",{headers:{"apikey":SUPA_KEY,"Authorization":"Bearer "+token}}).then(r=>r.ok?r.json():Promise.reject()).then(u=>fetch(SUPA_URL+"/rest/v1/profiles?id=eq."+u.id+"&select=approved",{headers:{"apikey":SUPA_KEY,"Authorization":"Bearer "+token}})).then(r=>r.json()).then(p=>{if(!p||!p[0]||!p[0].approved)location.href="login.html";}).catch(()=>location.href="login.html");})()</script>
+
+  <!-- 접근권한 오버레이 (비관리자용) -->
+  <div id="pur-access-overlay" style="display:none;position:fixed;inset:0;background:rgba(255,255,255,.97);z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:14px">
+    <div style="font-size:2.8rem">🔒</div>
+    <div style="font-size:1.25rem;font-weight:800;color:#0f172a;font-family:'Outfit',sans-serif">접근권한이 없습니다</div>
+    <div style="font-size:.85rem;color:#64748b">관리자만 접근 가능한 페이지입니다</div>
+    <a href="index.html" style="margin-top:6px;padding:9px 22px;background:#166534;color:#fff;border-radius:8px;text-decoration:none;font-size:.85rem;font-weight:700">홈으로 돌아가기</a>
+  </div>
+<script>(async function(){
+  const SU="https://ikfjpzdzrgsmhaobqnai.supabase.co",SK="sb_publishable_fbbdwjCZCL9AFD-eUIs0bg_XwdlhxFN";
+  const token=localStorage.getItem("supa_token")||"";
+  if(!token){location.href="login.html";return;}
+  let isAdmin=false;
+  try{
+    const ur=await fetch(SU+"/auth/v1/user",{headers:{"apikey":SK,"Authorization":"Bearer "+token}});
+    if(ur.ok){
+      const u=await ur.json();
+      const pr=await fetch(SU+"/rest/v1/profiles?id=eq."+u.id+"&select=role",{headers:{"apikey":SK,"Authorization":"Bearer "+token}});
+      const profiles=await pr.json();
+      if((profiles&&profiles[0]&&profiles[0].role==="admin")||u.email==="yr@libeco.kr") isAdmin=true;
+    }
+  }catch(e){}
+  if(!isAdmin){const ov=document.getElementById("pur-access-overlay");if(ov)ov.style.display="flex";}
+})();</script>
 
   <!-- Nav panel -->
   <div class="nav-panel" id="navPanel">
@@ -2043,18 +2066,6 @@
   const SUPA_KEY   = "sb_publishable_fbbdwjCZCL9AFD-eUIs0bg_XwdlhxFN";
   const SUPA_TABLE = "purchase";
 
-  (async function checkAdminRole(){
-    const token = localStorage.getItem("supa_token") || "";
-    if(!token){ location.href="index.html"; return; }
-    try{
-      const res = await fetch(SUPA_URL+"/auth/v1/user",{headers:{"apikey":SUPA_KEY,"Authorization":"Bearer "+token}});
-      if(!res.ok){ location.href="index.html"; return; }
-      const u = await res.json();
-      const pr = await fetch(SUPA_URL+"/rest/v1/profiles?id=eq."+u.id+"&select=role",{headers:{"apikey":SUPA_KEY,"Authorization":"Bearer "+token}});
-      const profiles = await pr.json();
-      if(!profiles||!profiles[0]||profiles[0].role!=="admin"){ location.href="index.html"; return; }
-    }catch(e){ location.href="index.html"; }
-  })();
 
   async function supaFetch(method, urlSuffix, body){
     const url = SUPA_URL + "/rest/v1/" + SUPA_TABLE + (urlSuffix || "");
