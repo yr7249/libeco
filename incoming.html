@@ -708,7 +708,9 @@
 <script>(function(){
   const token=localStorage.getItem("supa_token")||"";
   if(!token){location.href="login.html";return;}
-  if(!sessionStorage.getItem("libeco_tab_active")||Date.now()>Number(sessionStorage.getItem("libeco_tab_active"))){localStorage.removeItem("supa_token");location.href="login.html";return;}
+  const _ta=sessionStorage.getItem("libeco_tab_active");
+  if(_ta&&Date.now()>Number(_ta)){localStorage.removeItem("supa_token");location.href="login.html";return;}
+  if(!_ta) sessionStorage.setItem("libeco_tab_active",String(Date.now()+7200000));
 })()</script>
 
   <!-- Nav panel -->
