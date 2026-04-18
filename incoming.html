@@ -693,6 +693,14 @@
     #inc-tbody tr.row-dragging{opacity:.4;background:rgba(22,101,52,.06) !important}
     #inc-tbody tr.drag-over-top td{border-top:2px solid var(--accent) !important}
     #inc-tbody tr.drag-over-bot td{border-bottom:2px solid var(--accent) !important}
+    .inc-drag-handle{cursor:grab;text-align:center;color:#94a3b8;font-size:1rem;user-select:none;padding:0 4px;width:28px}
+    .inc-drag-handle:active{cursor:grabbing}
+    .inc-drag-handle:hover{color:var(--accent)}
+    .inc-star-btn{background:none;border:none;cursor:pointer;font-size:1rem;padding:2px 5px;border-radius:4px;color:#cbd5e1;line-height:1;transition:color .15s}
+    .inc-star-btn.on{color:#f59e0b}
+    .inc-star-btn:hover{color:#f59e0b}
+    tbody tr.row-highlight td{background:rgba(245,158,11,.09) !important;border-top:1px solid rgba(245,158,11,.25) !important;border-bottom:1px solid rgba(245,158,11,.25) !important}
+    tbody tr.row-highlight:hover td{background:rgba(245,158,11,.16) !important}
     .inc-alert{
       display:flex;align-items:center;gap:8px;
       background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);
@@ -708,7 +716,9 @@
 <script>(function(){
   const token=localStorage.getItem("supa_token")||"";
   if(!token){location.href="login.html";return;}
-  if(!sessionStorage.getItem("libeco_tab_active")||Date.now()>Number(sessionStorage.getItem("libeco_tab_active"))){localStorage.removeItem("supa_token");location.href="login.html";return;}
+  const _ta=sessionStorage.getItem("libeco_tab_active");
+  if(_ta&&Date.now()>Number(_ta)){localStorage.removeItem("supa_token");location.href="login.html";return;}
+  if(!_ta) sessionStorage.setItem("libeco_tab_active",String(Date.now()+7200000));
 })()</script>
 
   <!-- Nav panel -->
@@ -800,6 +810,7 @@
           <table id="inc-table" style="min-width:960px">
             <thead>
               <tr>
+                <th rowspan="2" style="width:28px;text-align:center;cursor:default" title="드래그 순서변경">⠿</th>
                 <th rowspan="2" style="width:52px;text-align:center">구분</th>
                 <th rowspan="2" style="min-width:130px">장비명</th>
                 <th rowspan="2" style="min-width:140px">제품번호(제조사)</th>
@@ -810,6 +821,7 @@
                 <th rowspan="2" style="width:108px;text-align:center">수령일</th>
                 <th colspan="2" style="text-align:center">마감</th>
                 <th rowspan="2" style="min-width:90px">비고</th>
+                <th rowspan="2" style="width:36px;text-align:center" title="강조">★</th>
               </tr>
               <tr>
                 <th style="width:88px;text-align:center">시기</th>
@@ -833,6 +845,13 @@
       <footer class="footer" style="margin-top:5px;font-size:.75rem;color:var(--text2)">
         © 2026 LIBECO E&amp;C · All Rights Reserved
       </footer>
+
+  <!-- 세션 만료 경고 배너 -->
+  <div id="inc-session-banner" style="display:none;position:fixed;bottom:20px;right:20px;z-index:9000;background:#0f172a;color:#fff;border-radius:12px;padding:12px 16px;gap:10px;font-size:.84rem;box-shadow:0 4px 24px rgba(0,0,0,.3);align-items:center">
+    ⏰ 세션이 <strong id="inc-session-remaining">--</strong> 후 만료됩니다&nbsp;
+    <button id="inc-extend-btn" style="background:#16a34a;color:#fff;border:none;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:.8rem;font-weight:700">연장하기</button>
+    <button onclick="(function(){localStorage.removeItem('supa_token');localStorage.removeItem('supa_refresh');sessionStorage.removeItem('libeco_tab_active');location.href='login.html';})()" style="background:#dc2626;color:#fff;border:none;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:.8rem;font-weight:700">로그아웃</button>
+  </div>
     </div>
 
     <div id="inc-status-drop" style="display: none;">
@@ -948,8 +967,8 @@
   let _saveTimer = null;
   const MS_LS = "incoming_milestones_v1";
   let milestones = (function(){
-    try{ const s=localStorage.getItem("incoming_milestones_v1"); if(s){ const p=JSON.parse(s); if(Array.isArray(p)&&p.length===6) return p; } }catch(e){}
-    return Array.from({length:6},()=>({name:"",date:""}));
+    try{ const s=localStorage.getItem("incoming_milestones_v1"); if(s){ const p=JSON.parse(s); if(Array.isArray(p)&&p.length>0) return p; } }catch(e){}
+    return Array.from({length:3},()=>({name:"",date:""}));
   })();
   let deadlineSortAsc = false;
 
@@ -1048,7 +1067,7 @@
         const isSpecial=r._cat==="__late"||r._cat==="__done";
         const grpBg=isSpecial?r._bg:"#fffbeb";
         const grpColor=isSpecial?r._color:"#111827";
-        tr.innerHTML=`<td colspan="11" style="background:${grpBg};padding:6px 12px;font-weight:900;font-size:.82rem;color:${grpColor};letter-spacing:.03em;pointer-events:none">${r._label}</td>`;
+        tr.innerHTML=`<td colspan="13" style="background:${grpBg};padding:6px 12px;font-weight:900;font-size:.82rem;color:${grpColor};letter-spacing:.03em;pointer-events:none">${r._label}</td>`;
         tbody.appendChild(tr);
         return;
       }
@@ -1056,7 +1075,8 @@
       const late=isLate(r);
       const tr=document.createElement("tr");
       tr.dataset.idx=gi;
-            if(late) tr.classList.add("inc-row-late");
+      if(late) tr.classList.add("inc-row-late");
+      if(r._highlight) tr.classList.add("row-highlight");
       const sc=STATUS_CLS[r.status]||"inc-s-review";
       const recVal = late
         ? `<span class="inc-late-val">${fmtDate(r.receipt_date)}</span> <span title="\ub9c8\uac10\uc77c \ucd08\uacfc">\u26a0\ufe0f</span>`
@@ -1066,6 +1086,7 @@
       const catBadge=catKey?`<span style="background:${catColor};color:#fff;border-radius:6px;padding:2px 7px;font-size:.7rem;font-weight:800;letter-spacing:.04em">${catKey}</span>`:'-';
       const stageOpts=milestones.map(m=>m.name?`<option value="${esc(m.name)}"${r.deadline_stage===m.name?" selected":""}>${esc(m.name)}</option>`:"").join("");
       tr.innerHTML=
+        `<td class="inc-drag-handle" title="드래그하여 순서 변경">⠿</td>`+
         `<td class="align-center" style="white-space:nowrap"><div class="cell-inner" style="padding:4px 6px;justify-content:center">${catBadge}</div></td>`+
         `<td><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="equipment" style="min-width:120px">${esc(r.equipment)}</div></td>`+
         `<td><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="product">${esc(r.product)}</div></td>`+
@@ -1076,7 +1097,8 @@
         `<td class="inc-date-cell align-center"><div class="cell-inner" data-idx="${gi}" data-field="receipt_date">${recVal}</div></td>`+
         `<td class="align-center" style="padding:2px 4px"><select class="inc-stage-sel" data-idx="${gi}" style="border:none;background:transparent;font-size:.75rem;color:var(--text1);width:100%;cursor:pointer"><option value="">-</option>${stageOpts}</select></td>`+
         `<td class="inc-date-cell align-center"><div class="cell-inner" data-idx="${gi}" data-field="deadline">${esc(fmtDate(r.deadline))}</div></td>`+
-        `<td><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="remark">${esc(r.remark)}</div></td>`;
+        `<td><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="remark">${esc(r.remark)}</div></td>`+
+        `<td class="align-center"><button class="inc-star-btn${r._highlight?' on':''}" data-idx="${gi}" title="강조">${r._highlight?'★':'☆'}</button></td>`;
       tbody.appendChild(tr);
     });
 
@@ -1107,25 +1129,51 @@
     tbody.querySelectorAll(".inc-stepper").forEach(el=>{
       el.addEventListener("click",e=>{ e.stopPropagation(); const cell=el.closest("[data-idx]"); showStatusDrop(el, Number(cell.dataset.idx)); });
     });
-    // Deadline stage selects
+    // Deadline stage selects — auto-fill deadline date from milestone
     tbody.querySelectorAll(".inc-stage-sel").forEach(sel=>{
       sel.addEventListener("change",()=>{
         const idx=Number(sel.dataset.idx);
-        if(incItems[idx]!==undefined){ incItems[idx].deadline_stage=sel.value; save(); }
+        if(incItems[idx]===undefined) return;
+        incItems[idx].deadline_stage=sel.value;
+        if(sel.value){
+          const ms=milestones.find(m=>m.name===sel.value);
+          if(ms&&ms.date){
+            incItems[idx].deadline=ms.date;
+            // 전체 rebuild 없이 해당 셀만 즉시 업데이트
+            const deadlineCell=tbody.querySelector(`.cell-inner[data-idx="${idx}"][data-field="deadline"]`);
+            if(deadlineCell) deadlineCell.textContent=fmtDate(ms.date);
+          }
+        }
+        save();
       });
     });
-    // Drag & drop row reordering
+    // Star/highlight toggle
+    tbody.querySelectorAll(".inc-star-btn").forEach(btn=>{
+      btn.addEventListener("click",e=>{
+        e.stopPropagation();
+        const idx=Number(btn.dataset.idx);
+        if(incItems[idx]!==undefined){ incItems[idx]._highlight=!incItems[idx]._highlight; save(); build(); }
+      });
+    });
+    // Drag & drop row reordering (handle-restricted)
     let dragSrcIdx=null;
     tbody.querySelectorAll("tr[data-idx]").forEach(tr=>{
-      tr.draggable=true;
+      tr.draggable=false;
+      const handle=tr.querySelector(".inc-drag-handle");
+      if(handle){
+        handle.addEventListener("mousedown",()=>{ tr.draggable=true; });
+        handle.addEventListener("mouseleave",()=>{ if(!dragSrcIdx) tr.draggable=false; });
+      }
       tr.addEventListener("dragstart",e=>{
         dragSrcIdx=Number(tr.dataset.idx);
         tr.classList.add("row-dragging");
         e.dataTransfer.effectAllowed="move";
       });
       tr.addEventListener("dragend",()=>{
+        tr.draggable=false;
         tr.classList.remove("row-dragging");
         tbody.querySelectorAll(".drag-over-top,.drag-over-bot").forEach(r=>r.classList.remove("drag-over-top","drag-over-bot"));
+        dragSrcIdx=null;
       });
       tr.addEventListener("dragover",e=>{
         e.preventDefault();
@@ -1142,7 +1190,6 @@
         const moved=incItems.splice(dragSrcIdx,1)[0];
         const nt=targetIdx>dragSrcIdx?targetIdx-1:targetIdx;
         incItems.splice(before?nt:nt+1,0,moved);
-        dragSrcIdx=null;
         save();build();
       });
     });
@@ -1244,7 +1291,7 @@
   /* ── Init ── */
   // 로딩 표시
   const incTbody = document.getElementById("inc-tbody");
-  if(incTbody) incTbody.innerHTML = `<tr><td colspan="11" style="text-align:center;padding:40px;color:#94a3b8;font-size:.9rem">⏳ 데이터 불러오는 중...</td></tr>`;
+  if(incTbody) incTbody.innerHTML = `<tr><td colspan="13" style="text-align:center;padding:40px;color:#94a3b8;font-size:.9rem">⏳ 데이터 불러오는 중...</td></tr>`;
 
   (async ()=>{
     try {
@@ -1332,16 +1379,43 @@
       const div=document.createElement("div");
       div.style.cssText="display:flex;align-items:center;gap:6px;background:var(--surface,#fff);border:1px solid var(--border);border-radius:6px;padding:6px 8px";
       div.innerHTML=
-        `<span style="font-size:.72rem;color:var(--text2);min-width:28px">시기${i+1}</span>`+
-        `<input type="text" placeholder="이름 없음" value="${esc(m.name)}" data-mi="${i}" data-mf="name" style="border:none;outline:none;background:transparent;font-size:.78rem;flex:1;min-width:0;color:var(--text1)">`+
-        `<input type="date" value="${esc(m.date)}" data-mi="${i}" data-mf="date" style="border:none;outline:none;background:transparent;font-size:.75rem;color:var(--text2)">`;
+        `<span style="font-size:.72rem;color:var(--text2);min-width:28px;font-weight:700">시기${i+1}</span>`+
+        `<input type="text" placeholder="이름 없음" value="${esc(m.name)}" data-mi="${i}" data-mf="name" style="border:none;outline:none;background:transparent;font-size:.78rem;flex:1;min-width:0;color:var(--text)">`+
+        `<input type="date" value="${esc(m.date)}" data-mi="${i}" data-mf="date" style="border:none;outline:none;background:transparent;font-size:.75rem;color:var(--text2)">`+
+        `<button data-mi-del="${i}" style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:1rem;padding:0 2px;line-height:1;flex-shrink:0" title="삭제">×</button>`;
       grid.appendChild(div);
     });
+    // + 시기 추가 버튼 (full-width row)
+    const addDiv=document.createElement("div");
+    addDiv.style.cssText="display:flex;align-items:center;justify-content:center;grid-column:1/-1";
+    const addMsBtn=document.createElement("button");
+    addMsBtn.className="btn btn-muted";
+    addMsBtn.style.cssText="font-size:.78rem;padding:4px 14px;width:100%";
+    addMsBtn.textContent="+ 시기 추가";
+    addMsBtn.addEventListener("click",()=>{
+      milestones.push({name:"",date:""});
+      saveMilestones();
+      renderMilestonePanel();
+      build();
+    });
+    addDiv.appendChild(addMsBtn);
+    grid.appendChild(addDiv);
+    // Events
     grid.querySelectorAll("input[data-mi]").forEach(inp=>{
       inp.addEventListener("change",()=>{
         const i=Number(inp.dataset.mi), f=inp.dataset.mf;
         milestones[i][f]=inp.value;
         saveMilestones();
+        build();
+      });
+    });
+    grid.querySelectorAll("button[data-mi-del]").forEach(btn=>{
+      btn.addEventListener("click",()=>{
+        const i=Number(btn.getAttribute("data-mi-del"));
+        if(milestones.length<=1){alert("마감시기는 최소 1개 이상이어야 합니다.");return;}
+        milestones.splice(i,1);
+        saveMilestones();
+        renderMilestonePanel();
         build();
       });
     });
@@ -1354,6 +1428,62 @@
     dlSortBtn.style.color=deadlineSortAsc?"#fff":"";
     build();
   });
+
+  /* ── 세션 타이머 ── */
+  (function(){
+    const SESSION_MS=7200000;
+    const banner=document.getElementById("inc-session-banner");
+    const remEl=document.getElementById("inc-session-remaining");
+    const extBtn=document.getElementById("inc-extend-btn");
+
+    async function refreshSession(){
+      const refresh=localStorage.getItem("supa_refresh");
+      if(!refresh) return false;
+      try{
+        const res=await fetch(SUPA_URL+"/auth/v1/token?grant_type=refresh_token",{
+          method:"POST",headers:{"apikey":SUPA_KEY,"Content-Type":"application/json"},
+          body:JSON.stringify({refresh_token:refresh})
+        });
+        if(!res.ok) return false;
+        const data=await res.json();
+        if(data.access_token){
+          localStorage.setItem("supa_token",data.access_token);
+          if(data.refresh_token) localStorage.setItem("supa_refresh",data.refresh_token);
+          return true;
+        }
+        return false;
+      }catch(e){ return false; }
+    }
+
+    if(extBtn) extBtn.addEventListener("click",async()=>{
+      extBtn.disabled=true; extBtn.textContent="연장 중...";
+      const ok=await refreshSession();
+      if(ok){
+        sessionStorage.setItem("libeco_tab_active",String(Date.now()+SESSION_MS));
+        if(banner) banner.style.display="none";
+      } else {
+        localStorage.removeItem("supa_token");localStorage.removeItem("supa_refresh");
+        sessionStorage.removeItem("libeco_tab_active");location.href="login.html";
+      }
+      extBtn.disabled=false; extBtn.textContent="연장하기";
+    });
+
+    setInterval(()=>{
+      const exp=Number(sessionStorage.getItem("libeco_tab_active")||0);
+      if(!exp||Date.now()>exp){
+        localStorage.removeItem("supa_token");localStorage.removeItem("supa_refresh");
+        sessionStorage.removeItem("libeco_tab_active");location.href="login.html";
+        return;
+      }
+      const rem=exp-Date.now();
+      if(rem<=600000){
+        if(remEl) remEl.textContent=Math.ceil(rem/60000)+"분";
+        if(banner) banner.style.display="flex";
+      } else {
+        if(banner) banner.style.display="none";
+      }
+    },30000);
+  })();
   })();
 
 </script>
