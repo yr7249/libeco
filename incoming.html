@@ -1404,7 +1404,17 @@
     grid.querySelectorAll("input[data-mi]").forEach(inp=>{
       inp.addEventListener("change",()=>{
         const i=Number(inp.dataset.mi), f=inp.dataset.mf;
+        const oldVal=milestones[i][f];
         milestones[i][f]=inp.value;
+        if(f==="date" && milestones[i].name){
+          // 날짜 변경 → 해당 시기로 설정된 모든 행 deadline 일괄 업데이트
+          incItems.forEach(r=>{ if(!r._group&&r.deadline_stage===milestones[i].name) r.deadline=inp.value; });
+          save();
+        } else if(f==="name" && oldVal){
+          // 이름 변경 → 기존 이름으로 설정된 행들 deadline_stage 업데이트
+          incItems.forEach(r=>{ if(!r._group&&r.deadline_stage===oldVal) r.deadline_stage=inp.value; });
+          save();
+        }
         saveMilestones();
         build();
       });
