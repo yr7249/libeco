@@ -690,6 +690,9 @@
     .inc-step-line{height:2px;width:14px;background:#e2e8f0;flex-shrink:0;transition:background .2s}
     .inc-step-line.done{background:currentColor}
     .inc-step-label{font-size:.7rem;font-weight:700;white-space:nowrap}
+    #inc-tbody tr.row-dragging{opacity:.4;background:rgba(22,101,52,.06) !important}
+    #inc-tbody tr.drag-over-top td{border-top:2px solid var(--accent) !important}
+    #inc-tbody tr.drag-over-bot td{border-bottom:2px solid var(--accent) !important}
     .inc-alert{
       display:flex;align-items:center;gap:8px;
       background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);
@@ -1105,6 +1108,38 @@
       sel.addEventListener("change",()=>{
         const idx=Number(sel.dataset.idx);
         if(incItems[idx]!==undefined){ incItems[idx].deadline_stage=sel.value; save(); }
+      });
+    });
+    // Drag & drop row reordering
+    let dragSrcIdx=null;
+    tbody.querySelectorAll("tr[data-idx]").forEach(tr=>{
+      tr.draggable=true;
+      tr.addEventListener("dragstart",e=>{
+        dragSrcIdx=Number(tr.dataset.idx);
+        tr.classList.add("row-dragging");
+        e.dataTransfer.effectAllowed="move";
+      });
+      tr.addEventListener("dragend",()=>{
+        tr.classList.remove("row-dragging");
+        tbody.querySelectorAll(".drag-over-top,.drag-over-bot").forEach(r=>r.classList.remove("drag-over-top","drag-over-bot"));
+      });
+      tr.addEventListener("dragover",e=>{
+        e.preventDefault();
+        tbody.querySelectorAll(".drag-over-top,.drag-over-bot").forEach(r=>r.classList.remove("drag-over-top","drag-over-bot"));
+        const rect=tr.getBoundingClientRect(),mid=rect.top+rect.height/2;
+        tr.classList.add(e.clientY<mid?"drag-over-top":"drag-over-bot");
+      });
+      tr.addEventListener("drop",e=>{
+        e.preventDefault();
+        const targetIdx=Number(tr.dataset.idx);
+        if(dragSrcIdx===null||dragSrcIdx===targetIdx) return;
+        const rect=tr.getBoundingClientRect(),mid=rect.top+rect.height/2,before=e.clientY<mid;
+        saveUndo();
+        const moved=incItems.splice(dragSrcIdx,1)[0];
+        const nt=targetIdx>dragSrcIdx?targetIdx-1:targetIdx;
+        incItems.splice(before?nt:nt+1,0,moved);
+        dragSrcIdx=null;
+        save();build();
       });
     });
     updateAlert();
