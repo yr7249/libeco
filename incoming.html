@@ -693,12 +693,14 @@
     #inc-tbody tr.row-dragging{opacity:.4;background:rgba(22,101,52,.06) !important}
     #inc-tbody tr.drag-over-top td{border-top:2px solid var(--accent) !important}
     #inc-tbody tr.drag-over-bot td{border-bottom:2px solid var(--accent) !important}
-    .inc-drag-handle{cursor:grab;text-align:center;color:#94a3b8;font-size:1rem;user-select:none;padding:0 4px;width:28px}
+    .inc-drag-handle{cursor:grab;text-align:center;font-size:1rem;user-select:none;padding:0 4px;width:28px;color:transparent;transition:color .15s}
     .inc-drag-handle:active{cursor:grabbing}
-    .inc-drag-handle:hover{color:var(--accent)}
-    .inc-star-btn{background:none;border:none;cursor:pointer;font-size:1rem;padding:2px 5px;border-radius:4px;color:#cbd5e1;line-height:1;transition:color .15s}
-    .inc-star-btn.on{color:#f59e0b}
-    .inc-star-btn:hover{color:#f59e0b}
+    #inc-tbody tr:hover .inc-drag-handle{color:#94a3b8}
+    #inc-tbody tr:hover .inc-drag-handle:hover{color:var(--accent)}
+    .inc-star-btn{background:none;border:none;cursor:pointer;font-size:1rem;padding:2px 5px;border-radius:4px;color:transparent;line-height:1;transition:color .15s}
+    .inc-star-btn.on{color:#f59e0b !important}
+    #inc-tbody tr:hover .inc-star-btn{color:#cbd5e1}
+    #inc-tbody tr:hover .inc-star-btn:hover{color:#f59e0b}
     tbody tr.row-highlight td{background:rgba(245,158,11,.09) !important;border-top:1px solid rgba(245,158,11,.25) !important;border-bottom:1px solid rgba(245,158,11,.25) !important}
     tbody tr.row-highlight:hover td{background:rgba(245,158,11,.16) !important}
     .inc-alert{
