@@ -2621,17 +2621,20 @@
     if (tb) tb.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:40px;color:#94a3b8;font-size:.9rem">⏳ 데이터 불러오는 중...</td></tr>';
   })();
 
-  // 초기화 (Supabase 우선, 없으면 localStorage → seed)
+  // 초기화 (Supabase 단독 소스)
   (async function(){
+    let supaOk = false;
     try {
-      let loaded = await supaLoad();
-      if (!loaded){
-        // Supabase 로드 실패 시 로컬 캐시만 표시 (Supabase 덮어쓰기 금지)
-        loadLocal();
-      }
+      supaOk = await supaLoad();
     } catch(e) {
-      console.warn("초기화 실패, 로컬 데이터 사용:", e);
-      loadLocal();
+      console.warn("Supabase 로드 실패:", e);
+    }
+    if (!supaOk) {
+      const tb = document.getElementById("tableBody");
+      if (tb) tb.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:40px;color:#ef4444;font-size:.9rem">⚠️ 데이터를 불러오지 못했습니다. 로그인 상태를 확인하고 새로고침 해주세요.</td></tr>';
+      setTime(); syncUndoButtons(); updateKpis();
+      startPurchaseRealtime();
+      return;
     }
     // subtotal 재계산
     items.forEach(function(item){
