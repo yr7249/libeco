@@ -1154,7 +1154,7 @@
         `<td class="inc-date-cell align-center"><div class="cell-inner" data-idx="${gi}" data-field="receipt_date">${recVal}</div></td>`+
         `<td class="inc-date-cell align-center"><div class="cell-inner" data-idx="${gi}" data-field="deadline">${esc(fmtDate(r.deadline))}</div></td>`+
         `<td class="align-center" style="padding:2px 4px"><select class="inc-stage-sel" data-idx="${gi}" style="border:none;background:transparent;font-size:.75rem;color:var(--text1);width:100%;cursor:pointer"><option value="">-</option>${stageOpts}</select></td>`+
-        `<td><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="remark">${esc(r.remark)}</div></td>`;
+        `<td><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="remark">${esc(r.remark).replaceAll("\n","<br>")}</div></td>`;
       tbody.appendChild(tr);
     });
 
@@ -1163,7 +1163,9 @@
       el.addEventListener("blur",()=>{
         const idx=Number(el.dataset.idx), f=el.dataset.field;
         if(incItems[idx]!==undefined && f){
-          incItems[idx][f]=el.textContent.trim();
+          incItems[idx][f]= f==="remark"
+            ? el.innerHTML.replace(/<br\s*\/?>/gi,"\n").replace(/<[^>]*>/g,"").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#39;/g,"'").trim()
+            : el.textContent.trim();
           save();
           const tr=el.closest("tr");
           if(tr) tr.classList.toggle("inc-row-late", isLate(incItems[idx]));

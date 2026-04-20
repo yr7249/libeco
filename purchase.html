@@ -1665,7 +1665,10 @@
     const idx = Number(el.dataset.idx);
     const field = el.dataset.field;
     if (isNaN(idx) || !items[idx]) return;
-    const raw = el.textContent;
+    // remark 칸은 줄바꿈(<br>) 보존, 나머지는 textContent
+    const raw = field === "remark"
+      ? el.innerHTML.replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]*>/g, "").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#39;/g,"'")
+      : el.textContent;
     const resolved = evalFormula(raw);
     if (resolved !== raw) el.textContent = resolved;
     commitField(idx, field, resolved);
@@ -1825,7 +1828,7 @@
 <td class="mono align-right"><div class="cell-inner" contenteditable="true" data-idx="${globalIdx}" data-field="unit_price">${escapeHtml(unitStr)}</div></td>
 <td class="mono align-right"><div class="cell-inner" data-idx="${globalIdx}" data-field="subtotal" style="${subColor};cursor:default">${escapeHtml(subStr)}</div></td>
 <td><div class="cell-inner" contenteditable="true" data-idx="${globalIdx}" data-field="status">${escapeHtml(row.status)}</div></td>
-<td><div class="cell-inner" contenteditable="true" data-idx="${globalIdx}" data-field="remark">${escapeHtml(row.remark || "")}</div></td>`;
+<td><div class="cell-inner" contenteditable="true" data-idx="${globalIdx}" data-field="remark">${escapeHtml(row.remark || "").replaceAll("\n","<br>")}</div></td>`;
 
         tbody.appendChild(tr);
       });

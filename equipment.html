@@ -597,7 +597,7 @@
         `<td class="align-center"><div class="cell-inner" style="padding:3px 4px" data-idx="${gi}" data-field="usage">${usageBadge(r.usage)}</div></td>` +
         `<td><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="signal_path" style="min-width:180px">${esc(r.signal_path)}</div></td>` +
         `<td><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="location">${esc(r.location)}</div></td>` +
-        `<td><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="remark">${esc(r.remark)}</div></td>`;
+        `<td><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="remark">${esc(r.remark).replaceAll("\n","<br>")}</div></td>`;
       tbody.appendChild(tr);
     });
 
@@ -610,7 +610,9 @@
       el.addEventListener("blur",()=>{
         const idx=Number(el.dataset.idx), f=el.dataset.field;
         if(eqItems[idx] !== undefined && f){
-          eqItems[idx][f] = el.textContent.trim();
+          eqItems[idx][f] = f==="remark"
+            ? el.innerHTML.replace(/<br\s*\/?>/gi,"\n").replace(/<[^>]*>/g,"").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#39;/g,"'").trim()
+            : el.textContent.trim();
           save();
         }
       });
