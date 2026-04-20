@@ -699,6 +699,53 @@
     @media print{
       #view-incoming .pg-topbar-r,#view-incoming .inc-alert{display:none !important}
     }
+
+    /* ── 이미지 편집 패널 ── */
+    #dgm-img-panel{
+      position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+      z-index:9990;background:#fff;border:1px solid rgba(15,23,42,.14);
+      border-radius:16px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.25);
+      min-width:320px;display:none;flex-direction:column;gap:12px;
+      font-family:'Outfit',sans-serif;
+    }
+    #dgm-img-panel.open{display:flex}
+    #dgm-img-panel-backdrop{
+      position:fixed;inset:0;z-index:9989;background:rgba(0,0,0,.4);display:none;
+    }
+    #dgm-img-panel-backdrop.open{display:block}
+    .dgm-panel-title{font-size:1rem;font-weight:800;color:#0f172a}
+    .dgm-panel-status{
+      background:#f1f5f9;border-radius:8px;padding:10px 14px;
+      font-size:.82rem;color:#475569;font-family:'IBM Plex Mono',monospace;
+      display:flex;align-items:center;gap:8px;
+    }
+    .dgm-panel-status.has-img{background:rgba(22,101,52,.08);color:#166534}
+    .dgm-panel-btns{display:flex;gap:8px}
+    .dgm-panel-btn{
+      flex:1;padding:9px 14px;border-radius:9px;border:1px solid rgba(15,23,42,.14);
+      background:#fff;cursor:pointer;font-size:.82rem;font-weight:700;
+      font-family:'Outfit',sans-serif;transition:background .12s,border-color .12s;
+      display:flex;align-items:center;justify-content:center;gap:6px;
+    }
+    .dgm-panel-btn:hover:not(:disabled){background:rgba(22,101,52,.08);border-color:#166534}
+    .dgm-panel-btn:disabled{opacity:.4;cursor:not-allowed}
+    .dgm-panel-btn-del{color:#dc2626;border-color:rgba(220,38,38,.25)}
+    .dgm-panel-btn-del:hover:not(:disabled){background:rgba(220,38,38,.08)!important;border-color:#dc2626!important}
+    .dgm-panel-btn-close{background:rgba(15,23,42,.04);border-color:rgba(15,23,42,.14)}
+    #dgm-upload-progress{
+      font-size:.8rem;color:#166534;font-family:'IBM Plex Mono',monospace;
+      background:rgba(22,101,52,.08);padding:8px 12px;border-radius:7px;
+      display:none;align-items:center;gap:8px;
+    }
+    #dgm-upload-progress.show{display:flex}
+    #dgm-no-img{
+      display:flex;align-items:center;justify-content:center;
+      width:2400px;height:1350px;background:#1a1a2e;
+      border-radius:8px;flex-direction:column;gap:14px;
+      color:#475569;font-size:1.1rem;font-family:'Outfit',sans-serif;
+    }
+    #dgm-no-img .no-img-icon{font-size:3rem;opacity:.4}
+    #dgm-no-img .no-img-text{font-weight:700;opacity:.5}
   </style>
 
   <style>
@@ -732,7 +779,7 @@
       <div><div style="font-size:.83rem;font-weight:700">홈</div><div style="font-size:.67rem;color:#64748b;font-family:monospace">메인 화면</div></div>
     </a>
     <div class="nav-sep"></div>
-    <a class="nav-item" href="purchase.html">
+    <a id="nav-purchase" class="nav-item" href="purchase.html">
       <span class="nav-icon" style="font-size:.9rem;width:22px;text-align:center">📋</span>
       <div><div style="font-size:.83rem;font-weight:700">구매리스트</div><div style="font-size:.67rem;color:#64748b;font-family:monospace">구매 필요내역</div></div>
     </a>
@@ -741,7 +788,7 @@
       <div><div style="font-size:.83rem;font-weight:700">구성도</div><div style="font-size:.67rem;color:#64748b;font-family:monospace">P&amp;ID Schematic</div></div>
     </div>
     <div class="nav-sep"></div>
-    <div class="nav-item disabled"><span style="font-size:.9rem;width:22px;text-align:center">🔬</span><div><div style="font-size:.83rem;font-weight:700">시험장비</div><div style="font-size:.67rem;color:#64748b;font-family:monospace">준비중</div></div><span class="nav-soon-tag">SOON</span></div>
+    <a id="nav-equipment" class="nav-item" href="equipment.html"><span style="font-size:.9rem;width:22px;text-align:center">🔬</span><div><div style="font-size:.83rem;font-weight:700">시험장비</div><div style="font-size:.67rem;color:#64748b;font-family:monospace">계측/제어 장비 목록</div></div></a>
     <a class="nav-item" href="incoming.html">
       <span class="nav-icon" style="font-size:.9rem;width:22px;text-align:center">📦</span>
       <div><div style="font-size:.83rem;font-weight:700">입고관리</div><div style="font-size:.67rem;color:#64748b;font-family:monospace">장비 일정관리</div></div>
@@ -803,10 +850,16 @@
       <div class="dgm-sep"></div>
       <button class="dgm-btn" id="dgm-btn-undo" title="실행취소 (Ctrl+Z)">↩ 취소</button>
       <button class="dgm-btn" id="dgm-btn-clear" title="전체 삭제">🗑 전체삭제</button>
+      <div class="dgm-sep" id="dgm-sep-imgedit" style="display:none"></div>
+      <button class="dgm-btn" id="dgm-btn-imgedit" style="display:none;background:rgba(22,101,52,.08);border-color:rgba(22,101,52,.3);color:#166534">🖼 편집</button>
     </div>
     <div class="dgm-wrap" id="dgm-wrap">
       <div id="dgm-canvas">
-        <div id="dgm-img" style="display:flex;align-items:center;justify-content:center;height:400px;background:#f1f5f9;border-radius:8px;color:#94a3b8;font-size:1.1rem;border:2px dashed #cbd5e1">구성도 이미지 없음</div>
+        <img id="dgm-img" style="display:none;user-select:none;-webkit-user-drag:none" draggable="false">
+        <div id="dgm-no-img">
+          <span class="no-img-icon">🖼</span>
+          <span class="no-img-text">구성도 이미지 없음</span>
+        </div>
         <svg id="dgm-overlay" width="2400" height="1350">
           <defs>
             <marker id="dgm-ah" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
@@ -823,6 +876,22 @@
       </div>
       <div id="dgm-hint" class="">보기 모드 — 드래그로 이동, 휠로 확대/축소</div>
     </div>
+  </div>
+
+  <!-- 이미지 편집 패널 -->
+  <div id="dgm-img-panel-backdrop"></div>
+  <div id="dgm-img-panel">
+    <div class="dgm-panel-title">🖼 이미지 관리</div>
+    <div class="dgm-panel-status" id="dgm-panel-status">이미지 없음</div>
+    <div id="dgm-upload-progress">⏳ 업로드 중...</div>
+    <div class="dgm-panel-btns">
+      <label class="dgm-panel-btn" style="cursor:pointer" id="dgm-upload-label">
+        📤 이미지 추가/교체
+        <input type="file" id="dgm-file-input" accept="image/jpeg,image/png,image/webp" style="display:none">
+      </label>
+      <button class="dgm-panel-btn dgm-panel-btn-del" id="dgm-delete-img-btn" disabled>🗑 삭제</button>
+    </div>
+    <button class="dgm-panel-btn dgm-panel-btn-close" id="dgm-panel-close">닫기</button>
   </div>
 
 <script>
@@ -846,9 +915,19 @@
       }
     }catch(e){}
   }
+  window._isAdmin=isAdmin;
+  if(isAdmin){
+    const eb=document.getElementById("dgm-btn-imgedit");
+    const es=document.getElementById("dgm-sep-imgedit");
+    if(eb){eb.style.display="inline-flex";}
+    if(es){es.style.display="block";}
+  }
   if(!isAdmin){
-    const ov=document.getElementById("dgm-soon-overlay");
-    if(ov){ ov.style.display="flex"; }
+    ["nav-purchase","nav-equipment"].forEach(function(id){
+      const el=document.getElementById(id);if(!el)return;
+      el.removeAttribute("href");el.classList.add("disabled");
+      const t=document.createElement("span");t.className="nav-soon-tag";t.textContent="비공개";el.appendChild(t);
+    });
   }
 })();
 </script>
@@ -1184,8 +1263,167 @@
   dgm_setMode('view');
 })();
 
-/* ══════════════ INCOMING VIEW LOGIC ══════════════ */
+/* ══════════════ 이미지 관리 ══════════════ */
+(async function(){
+  const SU="https://ikfjpzdzrgsmhaobqnai.supabase.co";
+  const SK="sb_publishable_fbbdwjCZCL9AFD-eUIs0bg_XwdlhxFN";
+  const BUCKET="assets";
+  const STORAGE_KEY="diagram_image";
 
+  function getToken(){ return localStorage.getItem("supa_token")||SK; }
+  function authHeaders(extra){
+    return Object.assign({"apikey":SK,"Authorization":"Bearer "+getToken()},extra||{});
+  }
+
+  /* ── 설정 불러오기 / 저장 ── */
+  async function loadSetting(key){
+    try{
+      const r=await fetch(SU+"/rest/v1/settings?key=eq."+key+"&select=value",{headers:authHeaders()});
+      if(!r.ok)return null;
+      const d=await r.json();
+      return d&&d[0]?d[0].value:null;
+    }catch(e){return null;}
+  }
+  async function saveSetting(key,value){
+    await fetch(SU+"/rest/v1/settings",{
+      method:"POST",
+      headers:authHeaders({"Content-Type":"application/json","Prefer":"resolution=merge-duplicates"}),
+      body:JSON.stringify({key,value,updated_at:new Date().toISOString()})
+    });
+  }
+
+  /* ── 이미지 표시 / 숨김 ── */
+  function showImage(url){
+    const img=document.getElementById("dgm-img");
+    const noImg=document.getElementById("dgm-no-img");
+    if(!img)return;
+    img.onload=function(){
+      img.style.display="block";
+      if(noImg)noImg.style.display="none";
+      if(window.dgm_fitToWindow)window.dgm_fitToWindow();
+    };
+    img.onerror=function(){
+      img.style.display="none";
+      if(noImg)noImg.style.display="flex";
+    };
+    img.src=url;
+  }
+  function clearImage(){
+    const img=document.getElementById("dgm-img");
+    const noImg=document.getElementById("dgm-no-img");
+    if(img){img.src="";img.style.display="none";}
+    if(noImg)noImg.style.display="flex";
+  }
+
+  /* ── 패널 상태 업데이트 ── */
+  function updatePanelStatus(imageData){
+    const st=document.getElementById("dgm-panel-status");
+    const delBtn=document.getElementById("dgm-delete-img-btn");
+    if(!st)return;
+    if(imageData&&imageData.filename){
+      st.className="dgm-panel-status has-img";
+      st.textContent="✅ "+imageData.filename;
+      if(delBtn)delBtn.disabled=false;
+    }else{
+      st.className="dgm-panel-status";
+      st.textContent="이미지 없음";
+      if(delBtn)delBtn.disabled=true;
+    }
+  }
+
+  /* ── 초기 로드 ── */
+  const imageData=await loadSetting(STORAGE_KEY);
+  if(imageData&&imageData.url){
+    showImage(imageData.url);
+    updatePanelStatus(imageData);
+  }else{
+    updatePanelStatus(null);
+  }
+
+  /* ── 편집 버튼 ── */
+  const editBtn=document.getElementById("dgm-btn-imgedit");
+  const panel=document.getElementById("dgm-img-panel");
+  const backdrop=document.getElementById("dgm-img-panel-backdrop");
+  const closeBtn=document.getElementById("dgm-panel-close");
+
+  function openPanel(){
+    if(panel)panel.classList.add("open");
+    if(backdrop)backdrop.classList.add("open");
+  }
+  function closePanel(){
+    if(panel)panel.classList.remove("open");
+    if(backdrop)backdrop.classList.remove("open");
+  }
+  if(editBtn)editBtn.addEventListener("click",openPanel);
+  if(closeBtn)closeBtn.addEventListener("click",closePanel);
+  if(backdrop)backdrop.addEventListener("click",closePanel);
+
+  /* ── 업로드 ── */
+  const fileInput=document.getElementById("dgm-file-input");
+  const progress=document.getElementById("dgm-upload-progress");
+
+  if(fileInput){
+    fileInput.addEventListener("change",async function(){
+      const file=fileInput.files[0];
+      if(!file)return;
+      const ext=file.name.split(".").pop().toLowerCase();
+      const path="diagram_image."+ext;
+
+      if(progress)progress.classList.add("show");
+      document.getElementById("dgm-upload-label").style.pointerEvents="none";
+      document.getElementById("dgm-delete-img-btn").disabled=true;
+
+      try{
+        // 기존 이미지 삭제 후 업로드 (덮어쓰기)
+        await fetch(SU+"/storage/v1/object/"+BUCKET+"/"+path,{
+          method:"DELETE",headers:authHeaders()
+        }).catch(()=>{});
+
+        const up=await fetch(SU+"/storage/v1/object/"+BUCKET+"/"+path,{
+          method:"POST",
+          headers:authHeaders({"Content-Type":file.type,"x-upsert":"true"}),
+          body:file
+        });
+        if(!up.ok)throw new Error(await up.text());
+
+        const publicUrl=SU+"/storage/v1/object/public/"+BUCKET+"/"+path;
+        const data={url:publicUrl,filename:file.name,path};
+        await saveSetting(STORAGE_KEY,data);
+        showImage(publicUrl+"?t="+Date.now());
+        updatePanelStatus(data);
+        closePanel();
+      }catch(e){
+        alert("업로드 실패: "+e.message);
+      }finally{
+        if(progress)progress.classList.remove("show");
+        document.getElementById("dgm-upload-label").style.pointerEvents="";
+        fileInput.value="";
+        const delBtn=document.getElementById("dgm-delete-img-btn");
+        if(delBtn&&document.getElementById("dgm-panel-status").classList.contains("has-img")) delBtn.disabled=false;
+      }
+    });
+  }
+
+  /* ── 삭제 ── */
+  const delBtn=document.getElementById("dgm-delete-img-btn");
+  if(delBtn){
+    delBtn.addEventListener("click",async function(){
+      if(!confirm("이미지를 삭제할까요?"))return;
+      delBtn.disabled=true;
+      const cur=await loadSetting(STORAGE_KEY);
+      if(cur&&cur.path){
+        await fetch(SU+"/storage/v1/object/"+BUCKET+"/"+cur.path,{
+          method:"DELETE",headers:authHeaders()
+        }).catch(()=>{});
+      }
+      await saveSetting(STORAGE_KEY,null);
+      clearImage();
+      updatePanelStatus(null);
+      closePanel();
+    });
+  }
+
+})();
 </script>
 </body>
 </html>

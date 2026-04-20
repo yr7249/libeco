@@ -741,6 +741,30 @@
   if(_ta&&Date.now()>Number(_ta)){localStorage.removeItem("supa_token");location.href="login.html";return;}
   if(!_ta) sessionStorage.setItem("libeco_tab_active",String(Date.now()+7200000));
 })()</script>
+<script>(async function(){
+  const SU="https://ikfjpzdzrgsmhaobqnai.supabase.co",SK="sb_publishable_fbbdwjCZCL9AFD-eUIs0bg_XwdlhxFN";
+  const token=localStorage.getItem("supa_token")||"";
+  let isAdmin=false;
+  try{
+    const ur=await fetch(SU+"/auth/v1/user",{headers:{"apikey":SK,"Authorization":"Bearer "+token}});
+    if(ur.ok){
+      const u=await ur.json();
+      const pr=await fetch(SU+"/rest/v1/profiles?id=eq."+u.id+"&select=role",{headers:{"apikey":SK,"Authorization":"Bearer "+token}});
+      const profiles=await pr.json();
+      if((profiles&&profiles[0]&&profiles[0].role==="admin")||u.email==="yr@libeco.kr") isAdmin=true;
+    }
+  }catch(e){}
+  window._isAdmin=isAdmin;
+  if(!isAdmin){
+    ["nav-purchase","nav-equipment"].forEach(function(id){
+      const el=document.getElementById(id);
+      if(!el)return;
+      el.removeAttribute("href");
+      el.classList.add("disabled");
+      const t=document.createElement("span");t.className="nav-soon-tag";t.textContent="비공개";el.appendChild(t);
+    });
+  }
+})()</script>
 
   <!-- User panel -->
   <div class="user-panel" id="incUserPanel">
@@ -760,7 +784,7 @@
       <div><div class="nav-label">홈</div><div class="nav-sub">메인 화면</div></div>
     </a>
     <div class="nav-sep"></div>
-    <a class="nav-item" href="purchase.html">
+    <a id="nav-purchase" class="nav-item" href="purchase.html">
       <span class="nav-icon">📋</span>
       <div><div class="nav-label">구매리스트</div><div class="nav-sub">구매 필요내역</div></div>
     </a>
@@ -769,7 +793,7 @@
       <div><div class="nav-label">구성도</div><div class="nav-sub">P&amp;ID Schematic</div></div>
     </a>
     <div class="nav-sep"></div>
-    <div class="nav-item disabled"><span class="nav-icon">🔬</span><div><div class="nav-label">시험장비</div><div class="nav-sub">준비중</div></div><span class="nav-soon-tag">SOON</span></div>
+    <a id="nav-equipment" class="nav-item" href="equipment.html"><span class="nav-icon">🔬</span><div><div class="nav-label">시험장비</div><div class="nav-sub">계측/제어 장비 목록</div></div></a>
     <div class="nav-item active"><span class="nav-icon">📦</span><div><div class="nav-label">입고관리</div><div class="nav-sub">장비 일정관리</div></div></div>
     <div class="nav-item disabled"><span class="nav-icon">📖</span><div><div class="nav-label">시험절차서</div><div class="nav-sub">준비중</div></div><span class="nav-soon-tag">SOON</span></div>
     <div class="nav-item disabled"><span class="nav-icon">💬</span><div><div class="nav-label">기타 공유사항</div><div class="nav-sub">준비중</div></div><span class="nav-soon-tag">SOON</span></div>

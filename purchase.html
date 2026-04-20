@@ -746,7 +746,15 @@
       if((profiles&&profiles[0]&&profiles[0].role==="admin")||u.email==="yr@libeco.kr") isAdmin=true;
     }
   }catch(e){}
-  if(!isAdmin){const ov=document.getElementById("pur-access-overlay");if(ov)ov.style.display="flex";}
+  window._isAdmin=isAdmin;
+  if(!isAdmin){
+    const ov=document.getElementById("pur-access-overlay");if(ov)ov.style.display="flex";
+    ["nav-equipment"].forEach(function(id){
+      const el=document.getElementById(id);if(!el)return;
+      el.removeAttribute("href");el.classList.add("disabled");
+      const t=document.createElement("span");t.className="nav-soon-tag";t.textContent="비공개";el.appendChild(t);
+    });
+  }
 })();</script>
 
   <!-- User panel -->
@@ -776,7 +784,7 @@
       <div><div class="nav-label">구성도</div><div class="nav-sub">P&amp;ID Schematic</div></div>
     </a>
     <div class="nav-sep"></div>
-    <div class="nav-item disabled"><span class="nav-icon">🔬</span><div><div class="nav-label">시험장비</div><div class="nav-sub">준비중</div></div><span class="nav-soon-tag">SOON</span></div>
+    <a id="nav-equipment" class="nav-item" href="equipment.html"><span class="nav-icon">🔬</span><div><div class="nav-label">시험장비</div><div class="nav-sub">계측/제어 장비 목록</div></div></a>
     <a class="nav-item" href="incoming.html">
       <span class="nav-icon">📦</span><div><div class="nav-label">입고관리</div><div class="nav-sub">장비 일정관리</div></div>
     </a>

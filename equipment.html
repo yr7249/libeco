@@ -212,7 +212,15 @@
       if((profiles&&profiles[0]&&profiles[0].role==="admin")||u.email==="yr@libeco.kr") isAdmin=true;
     }
   }catch(e){}
-  if(!isAdmin){const ov=document.getElementById("eq-access-overlay");if(ov)ov.style.display="flex";}
+  window._isAdmin=isAdmin;
+  if(!isAdmin){
+    const ov=document.getElementById("eq-access-overlay");if(ov)ov.style.display="flex";
+    ["nav-purchase"].forEach(function(id){
+      const el=document.getElementById(id);if(!el)return;
+      el.removeAttribute("href");el.classList.add("disabled");
+      const t=document.createElement("span");t.className="nav-soon-tag";t.textContent="비공개";el.appendChild(t);
+    });
+  }
 })();</script>
 
 <!-- User panel -->
@@ -233,7 +241,7 @@
     <div><div class="nav-label">홈</div><div class="nav-sub">메인 화면</div></div>
   </a>
   <div class="nav-sep"></div>
-  <a class="nav-item" href="purchase.html">
+  <a id="nav-purchase" class="nav-item" href="purchase.html">
     <span class="nav-icon">📋</span>
     <div><div class="nav-label">구매리스트</div><div class="nav-sub">구매 필요내역</div></div>
   </a>

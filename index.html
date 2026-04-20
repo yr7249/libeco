@@ -294,9 +294,9 @@
       const res=await fetch(SUPA_URL+"/auth/v1/user",{headers:{"apikey":SUPA_KEY,"Authorization":"Bearer "+token}});
       if(!res.ok){logout();return;}
       const u=await res.json();
-      const isAdmin=(u.email==="yr@libeco.kr");
-      const pr=await fetch(SUPA_URL+"/rest/v1/profiles?id=eq."+u.id+"&select=name,department,position,approved,phone",{headers:{"apikey":SUPA_KEY,"Authorization":"Bearer "+token}});
+      const pr=await fetch(SUPA_URL+"/rest/v1/profiles?id=eq."+u.id+"&select=name,department,position,approved,phone,role",{headers:{"apikey":SUPA_KEY,"Authorization":"Bearer "+token}});
       const profiles=await pr.json();
+      const isAdmin=(u.email==="yr@libeco.kr")||(profiles&&profiles[0]&&profiles[0].role==="admin");
       if(!isAdmin&&(!profiles||!profiles[0]||!profiles[0].approved)){location.href="login.html";return;}
       const p=profiles?.[0]||{};
       const displayName=p.name||(u.email||"").split("@")[0];
