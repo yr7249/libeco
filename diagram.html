@@ -607,6 +607,7 @@
     #view-diagram .dgm-wrap.drag-mode{cursor:grabbing}
     #view-diagram .dgm-wrap.draw-mode{cursor:crosshair}
     #view-diagram .dgm-wrap.edit-mode{cursor:default}
+    #view-diagram .dgm-btn.erase-active{background:#f97316;border-color:#ea580c;color:#fff}
     #dgm-canvas{position:absolute;transform-origin:0 0}
     #dgm-canvas img{display:block;max-width:none;user-select:none;-webkit-user-drag:none}
     #dgm-overlay{position:absolute;top:0;left:0;pointer-events:none;overflow:visible}
@@ -746,6 +747,58 @@
     }
     #dgm-no-img .no-img-icon{font-size:3rem;opacity:.4}
     #dgm-no-img .no-img-text{font-weight:700;opacity:.5}
+
+    @media(max-width:640px){.no-mobile{display:none!important}}
+
+    /* ── User panel ── */
+    .user-panel{
+      position:fixed;top:54px;right:10px;z-index:9999;
+      background:#fff;border:1px solid rgba(15,23,42,.12);
+      border-radius:14px;padding:12px;
+      box-shadow:0 8px 32px rgba(15,23,42,.14);
+      min-width:200px;display:none;
+    }
+    .user-panel.open{display:block;animation:navFadeIn .15s ease}
+    @keyframes navFadeIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+    .user-panel-info{padding:4px 4px 8px}
+    .user-panel-name{font-size:.9rem;font-weight:800;color:#0f172a}
+    .user-panel-sub{font-size:.72rem;color:#64748b;font-family:monospace;margin-top:2px}
+    .user-panel-sep{height:1px;background:rgba(15,23,42,.1);margin:4px 0}
+    .user-panel-item{display:block;width:100%;padding:8px 10px;border:none;background:none;border-radius:8px;cursor:pointer;font-size:.82rem;font-weight:600;text-align:left;font-family:'Outfit',sans-serif;color:#0f172a;transition:background .1s}
+    .user-panel-item:hover{background:rgba(22,101,52,.08)}
+    .user-panel-logout{color:#ef4444}
+    .user-panel-logout:hover{background:rgba(239,68,68,.08)!important}
+
+    /* ── Toolbar dropdowns ── */
+    .dgm-dropdown{position:relative;flex-shrink:0}
+    .dgm-dd-panel{
+      position:absolute;top:calc(100% + 6px);left:0;z-index:9990;
+      background:#fff;border:1px solid rgba(15,23,42,.12);border-radius:12px;
+      padding:10px;box-shadow:0 8px 24px rgba(15,23,42,.14);
+      min-width:180px;display:none;flex-direction:column;gap:6px;
+    }
+    .dgm-dd-panel.open{display:flex}
+    .dgm-dd-label{font-size:.68rem;color:#64748b;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-top:4px}
+    .dgm-dd-label:first-child{margin-top:0}
+    .dgm-dd-row{display:flex;gap:4px;flex-wrap:wrap}
+    .dgm-dd-opt{
+      padding:4px 10px;border-radius:6px;border:1px solid rgba(15,23,42,.12);
+      background:#fff;cursor:pointer;font-size:.72rem;font-weight:700;
+      font-family:'IBM Plex Mono',monospace;transition:background .1s,border-color .1s;
+      white-space:nowrap;flex-shrink:0;
+    }
+    .dgm-dd-opt:hover{background:rgba(22,101,52,.08);border-color:#166534}
+    .dgm-dd-opt.sel{background:#0f172a;border-color:#0f172a;color:#fff}
+    .dgm-dd-swatches{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+    .dgm-dd-swatch{width:20px;height:20px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:border-color .1s,transform .1s;flex-shrink:0}
+    .dgm-dd-swatch:hover{transform:scale(1.18)}
+    .dgm-dd-swatch.sel{border-color:#0f172a;transform:scale(1.22)}
+    /* eraser size buttons */
+    #dgm-eraser-wrap{display:none;align-items:center;gap:4px;flex-shrink:0}
+    #dgm-eraser-wrap.show{display:flex}
+    .dgm-esz-btn{padding:3px 9px;border-radius:6px;border:1px solid rgba(15,23,42,.12);background:#fff;cursor:pointer;font-size:.7rem;font-weight:700;font-family:'IBM Plex Mono',monospace;transition:background .1s}
+    .dgm-esz-btn:hover{background:rgba(22,101,52,.08)}
+    .dgm-esz-btn.sel{background:#0f172a;color:#fff;border-color:#0f172a}
   </style>
 
   <style>
@@ -771,6 +824,16 @@
     <a href="index.html" style="margin-top:6px;padding:9px 22px;background:#166534;color:#fff;border-radius:8px;text-decoration:none;font-size:.85rem;font-weight:700">홈으로 돌아가기</a>
   </div>
 
+  <!-- User panel -->
+  <div class="user-panel" id="dgmUserPanel">
+    <div class="user-panel-info">
+      <div class="user-panel-name" id="dgm-upanel-name">--</div>
+      <div class="user-panel-sub" id="dgm-upanel-sub"></div>
+    </div>
+    <div class="user-panel-sep"></div>
+    <button class="user-panel-item user-panel-logout" onclick="(function(){localStorage.removeItem('supa_token');localStorage.removeItem('supa_refresh');sessionStorage.removeItem('libeco_tab_active');location.href='login.html';})()">로그아웃</button>
+  </div>
+
   <!-- Nav panel -->
   <div class="nav-panel" id="navPanel">
     <div class="nav-panel-title" style="font-family:monospace;font-size:.65rem;color:#64748b;font-weight:700;letter-spacing:.1em;padding:4px 10px 8px;text-transform:uppercase">페이지 이동</div>
@@ -779,16 +842,16 @@
       <div><div style="font-size:.83rem;font-weight:700">홈</div><div style="font-size:.67rem;color:#64748b;font-family:monospace">메인 화면</div></div>
     </a>
     <div class="nav-sep"></div>
-    <a id="nav-purchase" class="nav-item" href="purchase.html">
-      <span class="nav-icon" style="font-size:.9rem;width:22px;text-align:center">📋</span>
-      <div><div style="font-size:.83rem;font-weight:700">구매리스트</div><div style="font-size:.67rem;color:#64748b;font-family:monospace">구매 필요내역</div></div>
-    </a>
     <div class="nav-item active">
       <span class="nav-icon" style="font-size:.9rem;width:22px;text-align:center">📐</span>
       <div><div style="font-size:.83rem;font-weight:700">구성도</div><div style="font-size:.67rem;color:#64748b;font-family:monospace">P&amp;ID Schematic</div></div>
     </div>
-    <div class="nav-sep"></div>
     <a id="nav-equipment" class="nav-item" href="equipment.html"><span style="font-size:.9rem;width:22px;text-align:center">🔬</span><div><div style="font-size:.83rem;font-weight:700">시험장비</div><div style="font-size:.67rem;color:#64748b;font-family:monospace">계측/제어 장비 목록</div></div></a>
+    <a id="nav-purchase" class="nav-item" href="purchase.html">
+      <span class="nav-icon" style="font-size:.9rem;width:22px;text-align:center">📋</span>
+      <div><div style="font-size:.83rem;font-weight:700">구매리스트</div><div style="font-size:.67rem;color:#64748b;font-family:monospace">구매 필요내역</div></div>
+    </a>
+    <div class="nav-sep"></div>
     <a class="nav-item" href="incoming.html">
       <span class="nav-icon" style="font-size:.9rem;width:22px;text-align:center">📦</span>
       <div><div style="font-size:.83rem;font-weight:700">입고관리</div><div style="font-size:.67rem;color:#64748b;font-family:monospace">장비 일정관리</div></div>
@@ -801,52 +864,98 @@
 <!-- ── 공통 상단바 ── -->
     <div class="pg-topbar">
       <div class="pg-topbar-l">
-        <span class="pg-ci-logo" style="color:#16a34a;font-weight:800;font-size:.95rem;letter-spacing:-.02em;font-family:inherit">LIBECO E&amp;C</span>
+        <a href="index.html" class="pg-ci-logo" style="color:#16a34a;font-weight:800;font-size:.95rem;letter-spacing:-.02em;font-family:inherit;text-decoration:none;cursor:pointer">LIBECO E&amp;C</a>
         <div class="pg-vdiv"></div>
-        <button class="dgm-btn pg-btn" id="dgm-back-btn">🏠 홈</button>
-        <button class="dgm-btn pg-btn" id="dgm-prev-btn">← 이전</button>
-        <div class="pg-vdiv"></div>
-        <span class="pg-title">POC <span>시스템 구성도</span></span>
-        <span class="pg-badge">SCHEMATIC</span>
+        <button class="pg-btn pg-btn-nav" id="dgm-nav-btn">이동 ▾</button>
+        <div class="pg-vdiv no-mobile"></div>
+        <span class="pg-title no-mobile">LLNL POC <span>구성도</span></span>
+        <span class="pg-badge no-mobile">SCHEMATIC</span>
       </div>
       <div class="pg-topbar-r">
-        <button class="dgm-btn pg-btn" id="dgm-btn-zi">＋</button>
-        <button class="dgm-btn pg-btn" id="dgm-btn-zo">－</button>
-        <button class="dgm-btn pg-btn" id="dgm-btn-fit">⊙ 맞춤</button>
+        <button class="pg-btn" id="dgm-btn-zi">＋</button>
+        <button class="pg-btn" id="dgm-btn-zo">－</button>
+        <button class="pg-btn" id="dgm-btn-fit">⊙ 맞춤</button>
         <span class="dgm-zoom-lbl" id="dgm-zpct">100%</span>
         <div class="pg-vdiv"></div>
-        <button class="dgm-btn pg-btn pg-btn-export" id="dgm-btn-export-report">🖼 보고용</button>
-        <button class="dgm-btn pg-btn" id="dgm-btn-print">🖨 인쇄</button>
+        <button class="pg-btn pg-btn-export no-mobile" id="dgm-btn-export-report">🖼 보고용</button>
+        <button class="pg-btn no-mobile" id="dgm-btn-print">🖨 인쇄</button>
         <div class="pg-vdiv"></div>
-        <button class="dgm-btn pg-btn pg-btn-nav" id="dgm-nav-btn">이동 ▾</button>
+        <span id="dgm-user-display" class="no-mobile" style="font-size:.75rem;font-weight:600;font-family:'Outfit',sans-serif;color:var(--text)"></span>
+        <button class="pg-btn" id="dgm-user-btn" title="계정">👤</button>
       </div>
     </div>
+    <!-- feature toolbar -->
     <div class="dgm-toolbar">
       <button class="dgm-btn active" id="dgm-btn-view" title="보기 모드 (V)">🖐 보기</button>
-      <button class="dgm-btn" id="dgm-btn-draw" title="경로 그리기 (D)">✏️ 경로 그리기</button>
-      <button class="dgm-btn" id="dgm-btn-edit" title="경로 편집 (E)">👆 편집</button>
       <div class="dgm-sep"></div>
+      <!-- 그리기 dropdown -->
+      <div class="dgm-dropdown" id="dgm-draw-dd">
+        <button class="dgm-btn" id="dgm-btn-draw" title="선 그리기 (D)">✏️ 그리기 ▾</button>
+        <div class="dgm-dd-panel" id="dgm-draw-dd-panel">
+          <div class="dgm-dd-label">선 종류</div>
+          <div class="dgm-dd-row">
+            <button class="dgm-dd-opt sel" data-tool="draw" data-dash="0">—— 실선</button>
+            <button class="dgm-dd-opt" data-tool="draw" data-dash="12,7">- - 점선1</button>
+            <button class="dgm-dd-opt" data-tool="draw" data-dash="2,6">·· 점선2</button>
+          </div>
+          <div class="dgm-dd-label">두께</div>
+          <div class="dgm-dd-row">
+            <button class="dgm-dd-opt sel" data-tool="draw" data-w="2">가늘</button>
+            <button class="dgm-dd-opt" data-tool="draw" data-w="4">보통</button>
+            <button class="dgm-dd-opt" data-tool="draw" data-w="7">굵게</button>
+          </div>
+          <div class="dgm-dd-label">색상</div>
+          <div class="dgm-dd-swatches" id="dgm-draw-swatches">
+            <div class="dgm-dd-swatch sel" style="background:#ef4444" data-color="#ef4444" data-tool="draw" title="빨강"></div>
+            <div class="dgm-dd-swatch" style="background:#f97316" data-color="#f97316" data-tool="draw" title="주황"></div>
+            <div class="dgm-dd-swatch" style="background:#eab308" data-color="#eab308" data-tool="draw" title="노랑"></div>
+            <div class="dgm-dd-swatch" style="background:#22c55e" data-color="#22c55e" data-tool="draw" title="초록"></div>
+            <div class="dgm-dd-swatch" style="background:#3b82f6" data-color="#3b82f6" data-tool="draw" title="파랑"></div>
+            <div class="dgm-dd-swatch" style="background:#0f172a" data-color="#0f172a" data-tool="draw" title="검정"></div>
+            <div class="dgm-dd-swatch" style="background:#fff;box-shadow:inset 0 0 0 1.5px #cbd5e1" data-color="#ffffff" data-tool="draw" title="흰색"></div>
+          </div>
+        </div>
+      </div>
+      <!-- 화살표 dropdown -->
+      <div class="dgm-dropdown" id="dgm-arrow-dd">
+        <button class="dgm-btn" id="dgm-btn-arrow" title="화살표 그리기 (A)">→ 화살표 ▾</button>
+        <div class="dgm-dd-panel" id="dgm-arrow-dd-panel">
+          <div class="dgm-dd-label">선 종류</div>
+          <div class="dgm-dd-row">
+            <button class="dgm-dd-opt sel" data-tool="arrow" data-dash="0">—→ 실선</button>
+            <button class="dgm-dd-opt" data-tool="arrow" data-dash="12,7">- →점선1</button>
+            <button class="dgm-dd-opt" data-tool="arrow" data-dash="2,6">··→ 점선2</button>
+          </div>
+          <div class="dgm-dd-label">두께</div>
+          <div class="dgm-dd-row">
+            <button class="dgm-dd-opt sel" data-tool="arrow" data-w="2">가늘</button>
+            <button class="dgm-dd-opt" data-tool="arrow" data-w="4">보통</button>
+            <button class="dgm-dd-opt" data-tool="arrow" data-w="7">굵게</button>
+          </div>
+          <div class="dgm-dd-label">색상</div>
+          <div class="dgm-dd-swatches" id="dgm-arrow-swatches">
+            <div class="dgm-dd-swatch sel" style="background:#ef4444" data-color="#ef4444" data-tool="arrow" title="빨강"></div>
+            <div class="dgm-dd-swatch" style="background:#f97316" data-color="#f97316" data-tool="arrow" title="주황"></div>
+            <div class="dgm-dd-swatch" style="background:#eab308" data-color="#eab308" data-tool="arrow" title="노랑"></div>
+            <div class="dgm-dd-swatch" style="background:#22c55e" data-color="#22c55e" data-tool="arrow" title="초록"></div>
+            <div class="dgm-dd-swatch" style="background:#3b82f6" data-color="#3b82f6" data-tool="arrow" title="파랑"></div>
+            <div class="dgm-dd-swatch" style="background:#0f172a" data-color="#0f172a" data-tool="arrow" title="검정"></div>
+            <div class="dgm-dd-swatch" style="background:#fff;box-shadow:inset 0 0 0 1.5px #cbd5e1" data-color="#ffffff" data-tool="arrow" title="흰색"></div>
+          </div>
+        </div>
+      </div>
+      <div class="dgm-sep"></div>
+      <button class="dgm-btn" id="dgm-btn-eraser" title="지우기 (X)">⬜ 지우기</button>
+      <div id="dgm-eraser-wrap">
+        <span class="dgm-tlabel" style="font-size:.68rem">크기</span>
+        <button class="dgm-esz-btn sel" data-esz="20">소</button>
+        <button class="dgm-esz-btn" data-esz="45">중</button>
+        <button class="dgm-esz-btn" data-esz="90">대</button>
+      </div>
+      <div class="dgm-sep"></div>
+      <button class="dgm-btn" id="dgm-btn-edit" title="편집 (E)">👆 편집</button>
+      <div class="dgm-sep" id="dgm-sep-del-sel" style="display:none"></div>
       <button class="dgm-btn" id="dgm-btn-del-sel" title="선택한 경로 삭제 (Delete)" style="color:#ef4444;border-color:rgba(239,68,68,.35)">🗑 선택삭제</button>
-      <div class="dgm-sep" id="dgm-sep-del-sel" style="display: none;"></div>
-      <div class="dgm-sep"></div>
-      <span class="dgm-tlabel">색상</span>
-      <div class="dgm-swatch sel" style="background:#ef4444" data-color="#ef4444" title="빨강"></div>
-      <div class="dgm-swatch" style="background:#f97316" data-color="#f97316" title="주황"></div>
-      <div class="dgm-swatch" style="background:#eab308" data-color="#eab308" title="노랑"></div>
-      <div class="dgm-swatch" style="background:#22c55e" data-color="#22c55e" title="초록"></div>
-      <div class="dgm-swatch" style="background:#3b82f6" data-color="#3b82f6" title="파랑"></div>
-      <div class="dgm-swatch" style="background:#a855f7" data-color="#a855f7" title="보라"></div>
-      <div class="dgm-swatch" style="background:#fff;box-shadow:inset 0 0 0 1px #cbd5e1" data-color="#ffffff" title="흰색"></div>
-      <div class="dgm-sep"></div>
-      <span class="dgm-tlabel">굵기</span>
-      <button class="dgm-wbtn sel" data-w="2">가늘</button>
-      <button class="dgm-wbtn" data-w="4">보통</button>
-      <button class="dgm-wbtn" data-w="7">굵게</button>
-      <div class="dgm-sep"></div>
-      <span class="dgm-tlabel">선 종류</span>
-      <button class="dgm-dbtn sel" data-dash="12,7">- - →</button>
-      <button class="dgm-dbtn" data-dash="2,6">· · →</button>
-      <button class="dgm-dbtn" data-dash="0">——→</button>
       <div class="dgm-sep"></div>
       <button class="dgm-btn" id="dgm-btn-undo" title="실행취소 (Ctrl+Z)">↩ 취소</button>
       <button class="dgm-btn" id="dgm-btn-clear" title="전체 삭제">🗑 전체삭제</button>
@@ -895,7 +1004,7 @@
   </div>
 
 <script>
-// 관리자 권한 체크 — 비관리자는 준비중 오버레이 표시
+// 관리자 권한 체크 + 유저 표시
 (async function(){
   const SUPA_URL="https://ikfjpzdzrgsmhaobqnai.supabase.co";
   const SUPA_KEY="sb_publishable_fbbdwjCZCL9AFD-eUIs0bg_XwdlhxFN";
@@ -909,9 +1018,22 @@
       const ur=await fetch(SUPA_URL+"/auth/v1/user",{headers:{"apikey":SUPA_KEY,"Authorization":"Bearer "+token}});
       if(ur.ok){
         const u=await ur.json();
-        const pr=await fetch(SUPA_URL+"/rest/v1/profiles?id=eq."+u.id+"&select=role",{headers:{"apikey":SUPA_KEY,"Authorization":"Bearer "+token}});
+        const pr=await fetch(SUPA_URL+"/rest/v1/profiles?id=eq."+u.id+"&select=name,department,position,role",{headers:{"apikey":SUPA_KEY,"Authorization":"Bearer "+token}});
         const profiles=await pr.json();
         if((profiles&&profiles[0]&&profiles[0].role==="admin")||u.email==="yr@libeco.kr") isAdmin=true;
+        // Populate user display
+        const ud=document.getElementById("dgm-user-display");
+        const un=document.getElementById("dgm-upanel-name");
+        const us=document.getElementById("dgm-upanel-sub");
+        if(profiles&&profiles[0]){
+          const nm=profiles[0].name||u.email;
+          if(ud)ud.textContent=nm;
+          if(un)un.textContent=nm;
+          if(us)us.textContent=[profiles[0].department,profiles[0].position].filter(Boolean).join(' · ');
+        } else {
+          if(ud)ud.textContent=u.email;
+          if(un)un.textContent=u.email;
+        }
       }
     }catch(e){}
   }
@@ -932,18 +1054,22 @@
 })();
 </script>
 <script>
-// Nav panel toggle for diagram page
+// Nav + User panel toggles
 (function(){
-  var navBtn = document.getElementById('dgm-nav-btn');
-  var panel = document.getElementById('navPanel');
-  if(navBtn && panel){
-    navBtn.addEventListener('click', function(e){
-      e.stopPropagation();
-      panel.classList.toggle('open');
-    });
-    document.addEventListener('click', function(){ panel.classList.remove('open'); });
-    panel.addEventListener('click', function(e){ e.stopPropagation(); });
+  var navBtn=document.getElementById('dgm-nav-btn');
+  var navPanel=document.getElementById('navPanel');
+  var userBtn=document.getElementById('dgm-user-btn');
+  var userPanel=document.getElementById('dgmUserPanel');
+  function closeAll(){if(navPanel)navPanel.classList.remove('open');if(userPanel)userPanel.classList.remove('open');}
+  if(navBtn&&navPanel){
+    navBtn.addEventListener('click',function(e){e.stopPropagation();var o=navPanel.classList.contains('open');closeAll();if(!o)navPanel.classList.add('open');});
+    navPanel.addEventListener('click',function(e){e.stopPropagation();});
   }
+  if(userBtn&&userPanel){
+    userBtn.addEventListener('click',function(e){e.stopPropagation();var o=userPanel.classList.contains('open');closeAll();if(!o)userPanel.classList.add('open');});
+    userPanel.addEventListener('click',function(e){e.stopPropagation();});
+  }
+  document.addEventListener('click',closeAll);
 })();
 </script>
 
@@ -955,7 +1081,10 @@
   let dgm_mode='view';
   let dgm_drawState={active:false,pts:[],cursorPt:null};
   let dgm_allPaths=[];
-  let dgm_selColor='#ef4444',dgm_selWidth=2,dgm_selDash='12,7';
+  // separate settings per tool
+  let dgm_drawColor='#ef4444',dgm_drawWidth=2,dgm_drawDash='0';
+  let dgm_arrowColor='#ef4444',dgm_arrowWidth=2,dgm_arrowDash='0';
+  let dgm_eraserSize=20;
   let dgm_selectedIdx=null;
   let dgm_handleDrag={active:false,pathIdx:-1,ptIdx:-1};
   let dgm_lastClickTime=0,dgm_lastClickPos=null;
@@ -992,13 +1121,13 @@
   }
   function dgm_ptStr(pts){return pts.map(function(p){return p.x.toFixed(1)+','+p.y.toFixed(1);}).join(' ');}
 
-  function dgm_makeLine(pts,color,width,dash,preview){
+  function dgm_makeLine(pts,color,width,dash,preview,arrow){
     if(pts.length<2)return null;
     const el=document.createElementNS('http://www.w3.org/2000/svg','polyline');
     el.setAttribute('points',dgm_ptStr(pts));el.setAttribute('stroke',color);
     el.setAttribute('stroke-width',width);el.setAttribute('fill','none');
     el.setAttribute('stroke-linecap','round');el.setAttribute('stroke-linejoin','round');
-    el.setAttribute('marker-end',width<=3?'url(#dgm-ah-sm)':'url(#dgm-ah)');
+    if(arrow!==false)el.setAttribute('marker-end',width<=3?'url(#dgm-ah-sm)':'url(#dgm-ah)');
     if(dash!=='0')el.setAttribute('stroke-dasharray',dash);
     if(preview)el.setAttribute('opacity','0.6');
     return el;
@@ -1007,7 +1136,7 @@
   function dgm_renderAll(){
     dgm_pathsLayer.innerHTML='';
     dgm_allPaths.forEach(function(p,i){
-      const el=dgm_makeLine(p.pts,p.color,p.width,p.dash,false);
+      const el=dgm_makeLine(p.pts,p.color,p.width,p.dash,false,p.arrow);
       if(!el)return;
       el.dataset.idx=i;
       if(dgm_mode==='edit'){
@@ -1019,7 +1148,7 @@
         dgm_pathsLayer.appendChild(hit);
         if(i===dgm_selectedIdx){
           el.setAttribute('stroke-width',p.width+3);
-          const sel=dgm_makeLine(p.pts,'#7c3aed',p.width+6,'0',false);
+          const sel=dgm_makeLine(p.pts,'#7c3aed',p.width+6,'0',false,false);
           if(sel){sel.setAttribute('opacity','0.35');dgm_pathsLayer.appendChild(sel);}
         }
       }
@@ -1054,12 +1183,16 @@
   function dgm_renderPreview(){
     dgm_previewLayer.innerHTML='';
     if(!dgm_drawState.active||dgm_drawState.pts.length===0)return;
+    const isArrow=dgm_mode==='arrow';
+    const col=isArrow?dgm_arrowColor:dgm_drawColor;
+    const wid=isArrow?dgm_arrowWidth:dgm_drawWidth;
+    const dsh=isArrow?dgm_arrowDash:dgm_drawDash;
     const pts=dgm_drawState.cursorPt?dgm_drawState.pts.concat([dgm_drawState.cursorPt]):dgm_drawState.pts;
-    if(pts.length>=2){const el=dgm_makeLine(pts,dgm_selColor,dgm_selWidth,dgm_selDash,true);if(el)dgm_previewLayer.appendChild(el);}
+    if(pts.length>=2){const el=dgm_makeLine(pts,col,wid,dsh,true,isArrow);if(el)dgm_previewLayer.appendChild(el);}
     dgm_drawState.pts.forEach(function(p,i){
       const c=document.createElementNS('http://www.w3.org/2000/svg','circle');
-      c.setAttribute('cx',p.x);c.setAttribute('cy',p.y);c.setAttribute('r',Math.max(3,dgm_selWidth+1));
-      c.setAttribute('fill',dgm_selColor);c.setAttribute('opacity',i===0?'1':'0.7');
+      c.setAttribute('cx',p.x);c.setAttribute('cy',p.y);c.setAttribute('r',Math.max(3,wid+1));
+      c.setAttribute('fill',col);c.setAttribute('opacity',i===0?'1':'0.7');
       dgm_previewLayer.appendChild(c);
     });
   }
@@ -1079,16 +1212,23 @@
     dgm_mode=m;
     D('dgm-btn-view').classList.toggle('active',m==='view');
     D('dgm-btn-draw').classList.toggle('draw-active',m==='draw');
+    D('dgm-btn-arrow').classList.toggle('draw-active',m==='arrow');
+    D('dgm-btn-eraser').classList.toggle('erase-active',m==='erase');
     D('dgm-btn-edit').classList.toggle('edit-active',m==='edit');
-    dgm_wrap.classList.toggle('draw-mode',m==='draw');
+    var isDrawing=m==='draw'||m==='arrow';
+    dgm_wrap.classList.toggle('draw-mode',isDrawing||m==='erase');
     dgm_wrap.classList.toggle('edit-mode',m==='edit');
-    dgm_overlay.classList.toggle('draw-mode',m==='draw');
+    dgm_overlay.classList.toggle('draw-mode',isDrawing||m==='erase');
     dgm_overlay.classList.toggle('edit-mode',m==='edit');
-    if(m!=='draw')dgm_cancelDraw();
+    var ew=D('dgm-eraser-wrap');
+    if(ew)ew.classList.toggle('show',m==='erase');
+    if(!isDrawing)dgm_cancelDraw();
     if(m!=='edit')dgm_clearSelection();
     dgm_renderAll();
     if(m==='view')dgm_showHint('보기 모드 — 드래그로 이동, 휠로 확대/축소');
     if(m==='draw')dgm_showHint('클릭: 경유점 추가 · 더블클릭: 경로 완성 · ESC: 취소');
+    if(m==='arrow')dgm_showHint('클릭: 경유점 추가 · 더블클릭: 화살표 완성 · ESC: 취소');
+    if(m==='erase')dgm_showHint('경로를 클릭해 삭제 — 경로 전체가 삭제됩니다');
     if(m==='edit')dgm_showHint('경로를 클릭해 선택 · 핸들 드래그로 이동 · Delete: 삭제');
   }
   function dgm_showHint(msg,ms){
@@ -1098,7 +1238,7 @@
   }
 
   function dgm_handleDrawClick(e){
-    if(dgm_mode!=='draw')return;
+    if(dgm_mode!=='draw'&&dgm_mode!=='arrow')return;
     e.preventDefault();e.stopPropagation();
     const pt=dgm_toImg(e.clientX,e.clientY),now=Date.now();
     const isDouble=(now-dgm_lastClickTime<400)&&dgm_lastClickPos&&
@@ -1110,12 +1250,43 @@
     dgm_renderPreview();
   }
   function dgm_handleDrawMove(e){
-    if(dgm_mode!=='draw'||!dgm_drawState.active)return;
+    if((dgm_mode!=='draw'&&dgm_mode!=='arrow')||!dgm_drawState.active)return;
     dgm_drawState.cursorPt=dgm_toImg(e.clientX,e.clientY);dgm_renderPreview();
+  }
+  function dgm_handleEraserClick(e){
+    if(dgm_mode!=='erase')return;
+    e.preventDefault();e.stopPropagation();
+    const pt=dgm_toImg(e.clientX,e.clientY);
+    const r=dgm_eraserSize/dgm_scale;
+    var removed=false;
+    for(var i=dgm_allPaths.length-1;i>=0;i--){
+      const p=dgm_allPaths[i];
+      for(var j=0;j<p.pts.length-1;j++){
+        if(dgm_ptSegDist(pt,p.pts[j],p.pts[j+1])<r){
+          dgm_allPaths.splice(i,1);removed=true;break;
+        }
+      }
+      if(removed)break;
+    }
+    if(removed){dgm_renderAll();dgm_showHint('경로 삭제됨');}
+  }
+  function dgm_ptSegDist(p,a,b){
+    const dx=b.x-a.x,dy=b.y-a.y;
+    if(dx===0&&dy===0)return Math.sqrt(Math.pow(p.x-a.x,2)+Math.pow(p.y-a.y,2));
+    var t=((p.x-a.x)*dx+(p.y-a.y)*dy)/(dx*dx+dy*dy);
+    t=Math.max(0,Math.min(1,t));
+    return Math.sqrt(Math.pow(p.x-(a.x+t*dx),2)+Math.pow(p.y-(a.y+t*dy),2));
   }
   function dgm_finishDraw(){
     if(!dgm_drawState.active||dgm_drawState.pts.length<2){dgm_cancelDraw();return;}
-    dgm_allPaths.push({pts:dgm_drawState.pts.slice(),color:dgm_selColor,width:dgm_selWidth,dash:dgm_selDash});
+    const isArrow=dgm_mode==='arrow';
+    dgm_allPaths.push({
+      pts:dgm_drawState.pts.slice(),
+      color:isArrow?dgm_arrowColor:dgm_drawColor,
+      width:isArrow?dgm_arrowWidth:dgm_drawWidth,
+      dash:isArrow?dgm_arrowDash:dgm_drawDash,
+      arrow:isArrow
+    });
     dgm_renderAll();dgm_cancelDraw();dgm_showHint('경로 저장 ✓ — 계속 클릭해서 새 경로를 추가하세요');
   }
   function dgm_cancelDraw(){dgm_drawState.active=false;dgm_drawState.pts=[];dgm_drawState.cursorPt=null;dgm_previewLayer.innerHTML='';}
@@ -1124,7 +1295,7 @@
   function dgm_movePan(cx,cy){if(!dgm_panDragging)return;dgm_tx=dgm_pdstx+(cx-dgm_pdsx);dgm_ty=dgm_pdsty+(cy-dgm_pdsy);dgm_applyTransform();}
   function dgm_endPan(){dgm_panDragging=false;dgm_wrap.classList.remove('drag-mode');}
 
-  function dgm_isActive(){return D('view-diagram').classList.contains('active');}
+  function dgm_isActive(){return true;}
 
   dgm_wrap.addEventListener('wheel',function(e){
     e.preventDefault();
@@ -1146,7 +1317,7 @@
       dgm_renderAll();return;
     }
     dgm_movePan(e.clientX,e.clientY);
-    if(dgm_mode==='draw')dgm_handleDrawMove(e);
+    if(dgm_mode==='draw'||dgm_mode==='arrow')dgm_handleDrawMove(e);
   });
 
   window.addEventListener('mouseup',function(){
@@ -1155,7 +1326,10 @@
     dgm_endPan();
   });
 
-  dgm_overlay.addEventListener('click',dgm_handleDrawClick);
+  dgm_overlay.addEventListener('click',function(e){
+    dgm_handleDrawClick(e);
+    dgm_handleEraserClick(e);
+  });
   dgm_overlay.addEventListener('dblclick',function(e){e.preventDefault();dgm_finishDraw();});
 
   window.addEventListener('keydown',function(e){
@@ -1165,19 +1339,19 @@
     if((e.key==='Delete'||e.key==='Backspace')&&dgm_mode==='edit'){e.preventDefault();dgm_deleteSelected();}
     if(e.key==='v'||e.key==='V')dgm_setMode('view');
     if(e.key==='d'||e.key==='D')dgm_setMode('draw');
+    if(e.key==='a'||e.key==='A')dgm_setMode('arrow');
+    if(e.key==='x'||e.key==='X')dgm_setMode('erase');
     if(e.key==='e'||e.key==='E')dgm_setMode('edit');
     if((e.ctrlKey||e.metaKey)&&e.key==='z'){e.preventDefault();dgm_undoLast();}
   });
 
   D('dgm-btn-view').onclick=function(){dgm_setMode('view');};
-  D('dgm-btn-draw').onclick=function(){dgm_setMode('draw');};
   D('dgm-btn-edit').onclick=function(){dgm_setMode('edit');};
+  D('dgm-btn-eraser').onclick=function(){dgm_setMode('erase');};
   D('dgm-btn-del-sel').onclick=dgm_deleteSelected;
   D('dgm-btn-zi').onclick=function(){var rc=dgm_wrap.getBoundingClientRect();dgm_zoomAt(1.3,rc.width/2,rc.height/2);};
   D('dgm-btn-zo').onclick=function(){var rc=dgm_wrap.getBoundingClientRect();dgm_zoomAt(0.77,rc.width/2,rc.height/2);};
   D('dgm-btn-fit').onclick=dgm_fitToWindow;
-  D('dgm-back-btn').onclick=function(){ window.location.href='index.html'; };
-  D('dgm-prev-btn').onclick=function(){ window.location.href='index.html'; };
 
   function dgm_undoLast(){
     if(dgm_drawState.active){dgm_cancelDraw();return;}
@@ -1192,22 +1366,74 @@
     dgm_allPaths=[];dgm_selectedIdx=null;dgm_cancelDraw();dgm_renderAll();
   };
 
-  document.querySelectorAll('#view-diagram .dgm-swatch').forEach(function(sw){
+  // Dropdown toggle
+  function dgm_closeDropdowns(){
+    document.getElementById('dgm-draw-dd-panel').classList.remove('open');
+    document.getElementById('dgm-arrow-dd-panel').classList.remove('open');
+  }
+  D('dgm-btn-draw').addEventListener('click',function(e){
+    e.stopPropagation();
+    var panel=D('dgm-draw-dd-panel');
+    var wasOpen=panel.classList.contains('open');
+    dgm_closeDropdowns();
+    if(!wasOpen){panel.classList.add('open');}
+    else{dgm_setMode('draw');}
+  });
+  D('dgm-btn-arrow').addEventListener('click',function(e){
+    e.stopPropagation();
+    var panel=D('dgm-arrow-dd-panel');
+    var wasOpen=panel.classList.contains('open');
+    dgm_closeDropdowns();
+    if(!wasOpen){panel.classList.add('open');}
+    else{dgm_setMode('arrow');}
+  });
+  document.addEventListener('click',dgm_closeDropdowns);
+  D('dgm-draw-dd-panel').addEventListener('click',function(e){e.stopPropagation();});
+  D('dgm-arrow-dd-panel').addEventListener('click',function(e){e.stopPropagation();});
+
+  // Dropdown option buttons — selecting any option applies setting and starts drawing
+  document.querySelectorAll('.dgm-dd-opt[data-dash]').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var tool=btn.dataset.tool;
+      document.querySelectorAll('.dgm-dd-opt[data-tool="'+tool+'"][data-dash]').forEach(function(b){b.classList.remove('sel');});
+      btn.classList.add('sel');
+      if(tool==='draw')dgm_drawDash=btn.dataset.dash;
+      else dgm_arrowDash=btn.dataset.dash;
+      dgm_closeDropdowns();
+      dgm_setMode(tool==='draw'?'draw':'arrow');
+    });
+  });
+  document.querySelectorAll('.dgm-dd-opt[data-w]').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var tool=btn.dataset.tool;
+      document.querySelectorAll('.dgm-dd-opt[data-tool="'+tool+'"][data-w]').forEach(function(b){b.classList.remove('sel');});
+      btn.classList.add('sel');
+      if(tool==='draw')dgm_drawWidth=Number(btn.dataset.w);
+      else dgm_arrowWidth=Number(btn.dataset.w);
+      dgm_closeDropdowns();
+      dgm_setMode(tool==='draw'?'draw':'arrow');
+    });
+  });
+
+  // Dropdown color swatches
+  document.querySelectorAll('.dgm-dd-swatch').forEach(function(sw){
     sw.addEventListener('click',function(){
-      document.querySelectorAll('#view-diagram .dgm-swatch').forEach(function(s){s.classList.remove('sel');});
-      sw.classList.add('sel');dgm_selColor=sw.dataset.color;
+      var tool=sw.dataset.tool;
+      document.querySelectorAll('.dgm-dd-swatch[data-tool="'+tool+'"]').forEach(function(s){s.classList.remove('sel');});
+      sw.classList.add('sel');
+      if(tool==='draw')dgm_drawColor=sw.dataset.color;
+      else dgm_arrowColor=sw.dataset.color;
+      dgm_closeDropdowns();
+      dgm_setMode(tool==='draw'?'draw':'arrow');
     });
   });
-  document.querySelectorAll('#view-diagram .dgm-wbtn').forEach(function(wb){
-    wb.addEventListener('click',function(){
-      document.querySelectorAll('#view-diagram .dgm-wbtn').forEach(function(b){b.classList.remove('sel');});
-      wb.classList.add('sel');dgm_selWidth=Number(wb.dataset.w);
-    });
-  });
-  document.querySelectorAll('#view-diagram .dgm-dbtn').forEach(function(db){
-    db.addEventListener('click',function(){
-      document.querySelectorAll('#view-diagram .dgm-dbtn').forEach(function(b){b.classList.remove('sel');});
-      db.classList.add('sel');dgm_selDash=db.dataset.dash;
+
+  // Eraser size buttons
+  document.querySelectorAll('.dgm-esz-btn').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      document.querySelectorAll('.dgm-esz-btn').forEach(function(b){b.classList.remove('sel');});
+      btn.classList.add('sel');
+      dgm_eraserSize=Number(btn.dataset.esz);
     });
   });
 
@@ -1243,11 +1469,11 @@
 
   var dgm_lt=null;
   dgm_wrap.addEventListener('touchstart',function(e){
-    if(dgm_mode==='draw')return;
+    if(dgm_mode==='draw'||dgm_mode==='arrow'||dgm_mode==='erase')return;
     if(e.touches.length===1)dgm_startPan(e.touches[0].clientX,e.touches[0].clientY);
   },{passive:true});
   dgm_wrap.addEventListener('touchmove',function(e){
-    if(dgm_mode==='draw')return;
+    if(dgm_mode==='draw'||dgm_mode==='arrow'||dgm_mode==='erase')return;
     if(e.touches.length===1){dgm_movePan(e.touches[0].clientX,e.touches[0].clientY);}
     else if(e.touches.length===2){
       var d=Math.sqrt(Math.pow(e.touches[0].clientX-e.touches[1].clientX,2)+Math.pow(e.touches[0].clientY-e.touches[1].clientY,2));
