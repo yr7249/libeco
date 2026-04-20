@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LLNL POC — 시험장비 목록</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#ffffff;
+      --surface:#ffffff;
+      --surface2:#f1f5f9;
+      --border:rgba(15,23,42,.12);
+      --text:#0f172a;
+      --text2:#334155;
+      --accent:#166534;
+      --accent-strong:#14532d;
+      --accent-wash:rgba(22,101,52,.12);
+      --accent-wash2:rgba(22,101,52,.08);
+      --glow:0 10px 26px rgba(15,23,42,.10);
+      --hs:#16a34a;
+      --font-heading:'Outfit',sans-serif;
+      --font-mono:'IBM Plex Mono',monospace;
+    }
+    body{font-family:var(--font-heading);color:var(--text);background:var(--bg);min-height:100vh;line-height:1.6;font-weight:600}
+    .container{max-width:1540px;margin:0 auto;padding:0 24px;position:relative;z-index:1}
+
+    /* ── Header ── */
+    .header{padding:28px 0 18px;border-bottom:1px solid var(--border);position:relative;overflow:hidden}
+    .header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--accent),transparent)}
+    .header-inner{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:14px}
+    .header-left{display:flex;align-items:center;gap:14px}
+    .h2-icon{width:42px;height:42px;flex-shrink:0}
+    .header h1{font-size:clamp(1.4rem,2.6vw,2.1rem);font-weight:800;letter-spacing:-.02em;color:var(--text)}
+    .header h1 span{color:var(--accent)}
+    .header-sub{font-size:.92rem;color:var(--text2);margin-top:4px;font-weight:400}
+
+    /* ── KPI ── */
+    .kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;padding:20px 0 16px}
+    .kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 20px;position:relative;overflow:hidden}
+    .kpi-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:14px 0 0 14px}
+    .kpi-card:nth-child(1)::before{background:#166534}
+    .kpi-card:nth-child(2)::before{background:#0f766e}
+    .kpi-card:nth-child(3)::before{background:#6d28d9}
+    .kpi-card:nth-child(4)::before{background:#b45309}
+    .kpi-card:nth-child(5)::before{background:#1d4ed8}
+    .kpi-label{font-size:.76rem;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+    .kpi-value{font-family:var(--font-mono);font-size:1.55rem;font-weight:700;color:var(--text)}
+    .kpi-sub{font-size:.73rem;color:var(--text2);margin-top:4px;font-family:var(--font-mono)}
+
+    /* ── Table controls ── */
+    .table-controls{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px}
+    .filter-bar{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+    .section-title{font-size:1.0rem;font-weight:800;color:var(--text);display:flex;align-items:center;gap:10px}
+    .section-title::before{content:'';width:3px;height:18px;background:var(--accent);border-radius:2px}
+    .search-input{
+      background:rgba(255,255,255,.96);border:1px solid var(--border);border-radius:10px;
+      padding:9px 16px 9px 38px;color:var(--text);font-size:.86rem;width:min(320px,100%);
+      font-family:var(--font-heading);transition:border-color .3s;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.868-3.834zm-5.242.156a5 5 0 1 1 0-10 5 5 0 0 1 0 10z'/%3E%3C/svg%3E");
+      background-repeat:no-repeat;background-position:12px center;
+    }
+    .search-input:focus{outline:none;border-color:rgba(22,101,52,.55);box-shadow:0 0 0 3px rgba(22,101,52,.12)}
+    .tab-btn{padding:6px 13px;border:1px solid var(--border);border-radius:999px;background:rgba(255,255,255,.86);color:var(--text2);cursor:pointer;font-size:.78rem;font-weight:800;transition:background .15s,border-color .15s,color .15s;font-family:var(--font-heading)}
+    .tab-btn:hover{border-color:rgba(22,101,52,.35);color:var(--text)}
+    .tab-btn.active{background:var(--accent-wash);border-color:rgba(22,101,52,.55);color:var(--accent-strong)}
+    .item-count{font-size:.8rem;color:var(--text2);font-family:var(--font-mono)}
+
+    /* ── Table ── */
+    .table-wrap{background:var(--surface);border:1px solid var(--border)}
+    .table-scroll{overflow-x:auto}
+    table{width:100%;border-collapse:collapse;min-width:1400px}
+    thead{position:sticky;top:0;z-index:2}
+    thead th{background:#166534;padding:6px 8px;text-align:center;font-size:.70rem;color:#fff;text-transform:uppercase;letter-spacing:.05em;font-weight:750;border-bottom:1px solid var(--border);white-space:nowrap}
+    tbody tr{border-bottom:1px solid rgba(15,23,42,.05);transition:background .2s}
+    tbody tr:nth-child(even){background:rgba(15,23,42,.016)}
+    tbody tr:hover td{background:rgba(22,101,52,.07)}
+    tbody tr.group-row:hover td{background:transparent !important}
+    .group-row td{background:#fffbeb;color:#111827;padding:6px 10px;font-weight:950;border-top:2px solid #9ca3af;line-height:1.2}
+    .group-row .group-meta{color:var(--accent);font-weight:800;font-size:.72rem;margin-left:8px}
+    tbody td{padding:0;font-size:.83rem;color:var(--text);vertical-align:middle}
+    tbody td:nth-child(4) .cell-inner{font-size:.92rem}
+    .cell-inner{display:block;padding:5px 7px;min-height:26px;outline:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:text;font-weight:650}
+    .cell-inner:hover{background:rgba(15,23,42,.03)}
+    .cell-inner:focus{background:rgba(255,255,255,.96);box-shadow:inset 0 0 0 2px rgba(22,101,52,.55);white-space:normal;overflow:visible;border-radius:6px}
+    td.mono .cell-inner{font-family:var(--font-mono);font-size:.78rem;font-weight:600}
+    td.align-center .cell-inner{text-align:center}
+    td.align-right .cell-inner{text-align:right}
+
+    /* ── 드래그 ── */
+    tbody tr.row-dragging{opacity:.4;background:rgba(22,101,52,.06) !important}
+    tbody tr.drag-over-top td{border-top:2px solid var(--accent) !important}
+    tbody tr.drag-over-bot td{border-bottom:2px solid var(--accent) !important}
+    #eq-float-drag{position:fixed;display:none;z-index:9000;cursor:grab;color:rgba(100,116,139,.85);font-size:15px;user-select:none;padding:4px 7px;border-radius:6px;background:rgba(255,255,255,.96);border:1px solid rgba(15,23,42,.18);box-shadow:0 2px 8px rgba(0,0,0,.18);line-height:1;transform:translateY(-50%);align-items:center}
+    #eq-float-drag:hover{color:var(--accent);border-color:rgba(22,101,52,.5)}
+    #eq-float-star{position:fixed;display:none;z-index:9000;cursor:pointer;font-size:14px;padding:4px 8px;border-radius:6px;background:rgba(255,255,255,.96);border:1px solid rgba(15,23,42,.18);box-shadow:0 2px 8px rgba(0,0,0,.18);line-height:1;transform:translateY(-50%);color:#94a3b8;align-items:center;transition:color .15s,border-color .15s}
+    #eq-float-star:hover{color:#f59e0b;border-color:rgba(245,158,11,.4)}
+    #eq-float-star.on{color:#f59e0b;border-color:rgba(245,158,11,.5);background:rgba(245,158,11,.06)}
+    tbody tr.row-highlight td{background:rgba(245,158,11,.09) !important;border-top:1px solid rgba(245,158,11,.25) !important;border-bottom:1px solid rgba(245,158,11,.25) !important}
+    tbody tr.row-highlight:hover td{background:rgba(245,158,11,.16) !important}
+
+    /* ── 용도 배지 ── */
+    .usage-badge{display:inline-flex;align-items:center;padding:2px 9px;border-radius:99px;font-size:.68rem;font-weight:700;white-space:nowrap;font-family:var(--font-mono)}
+    .usage-계측{background:rgba(22,163,74,.12);color:#15803d;border:1px solid rgba(22,163,74,.28)}
+    .usage-제어{background:rgba(59,130,246,.12);color:#2563eb;border:1px solid rgba(59,130,246,.28)}
+    .usage-방폭{background:rgba(239,68,68,.12);color:#dc2626;border:1px solid rgba(239,68,68,.28)}
+    .usage-데이터수집{background:rgba(139,92,246,.12);color:#7c3aed;border:1px solid rgba(139,92,246,.28)}
+    .usage-전원공급{background:rgba(245,158,11,.12);color:#d97706;border:1px solid rgba(245,158,11,.28)}
+
+    /* ── 컨텍스트 메뉴 ── */
+    #eq-ctx-menu{position:fixed;z-index:9999;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:4px 0;min-width:140px;box-shadow:0 8px 24px rgba(0,0,0,.2);display:none}
+    #eq-ctx-menu button{display:block;width:100%;padding:8px 16px;background:none;border:none;color:var(--text);font-size:.82rem;text-align:left;cursor:pointer;font-family:var(--font-heading);font-weight:600}
+    #eq-ctx-menu button:hover{background:var(--accent-wash2)}
+    #eq-ctx-menu hr{border:none;border-top:1px solid var(--border);margin:4px 0}
+
+    /* ── Topbar ── */
+    .pg-topbar{display:flex;align-items:center;justify-content:space-between;padding:0 14px;height:50px;background:#fff;border-bottom:1px solid rgba(15,23,42,.12);box-shadow:0 1px 4px rgba(0,0,0,.08);flex-shrink:0;gap:8px;position:sticky;top:0;z-index:100;width:100vw;margin-left:calc((100% - 100vw)/2)}
+    .pg-topbar-l,.pg-topbar-r{display:flex;align-items:center;gap:5px;flex-shrink:0}
+    .pg-topbar-l{flex:1;min-width:0;overflow:hidden}
+    .pg-vdiv{width:1px;height:22px;background:rgba(15,23,42,.12);margin:0 3px;flex-shrink:0}
+    .pg-title{font-size:.88rem;font-weight:800;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .pg-title span{color:#166534}
+    .pg-badge{font-family:var(--font-mono);font-size:.66rem;background:rgba(22,101,52,.1);color:#166534;padding:2px 7px;border-radius:5px;font-weight:600;flex-shrink:0}
+    .pg-btn{padding:5px 11px;border-radius:7px;border:1px solid rgba(15,23,42,.12);background:#fff;cursor:pointer;font-size:.75rem;font-weight:600;font-family:'Outfit',sans-serif;display:inline-flex;align-items:center;gap:4px;transition:background .12s,border-color .12s,color .12s;white-space:nowrap;flex-shrink:0}
+    .pg-btn:hover{background:rgba(22,101,52,.1);border-color:#166534}
+    .pg-btn:disabled{opacity:.4;cursor:not-allowed}
+    .pg-btn-export{background:rgba(22,101,52,.08);border-color:rgba(22,101,52,.3);color:#166534}
+    .pg-btn-export:hover{background:rgba(22,101,52,.15)!important}
+
+    /* ── Nav panel ── */
+    .nav-panel{position:fixed;z-index:9998;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:10px;box-shadow:0 8px 32px rgba(15,23,42,.14);min-width:240px;display:none}
+    .nav-panel.open{display:block;animation:navFadeIn .15s ease}
+    @keyframes navFadeIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+    .nav-panel-title{font-family:var(--font-mono);font-size:.65rem;color:var(--text2);font-weight:700;letter-spacing:.1em;padding:4px 10px 8px;text-transform:uppercase}
+    .nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;cursor:pointer;text-decoration:none;color:var(--text);transition:background .12s}
+    .nav-item:hover{background:var(--accent-wash2)}
+    .nav-item.active{background:var(--accent-wash);color:var(--accent-strong)}
+    .nav-item.disabled{opacity:.45;cursor:default;pointer-events:none}
+    .nav-icon{font-size:.9rem;width:22px;text-align:center;flex-shrink:0}
+    .nav-label{font-size:.83rem;font-weight:700}
+    .nav-sub{font-size:.67rem;color:var(--text2);font-weight:500;margin-top:1px;font-family:var(--font-mono)}
+    .nav-soon-tag{font-family:var(--font-mono);font-size:.6rem;color:#94a3b8;background:rgba(148,163,184,.12);border:1px solid rgba(148,163,184,.2);padding:1px 6px;border-radius:4px;margin-left:auto}
+    .nav-sep{height:1px;background:var(--border);margin:6px 2px}
+
+    /* ── User panel ── */
+    .user-panel{position:fixed;top:54px;right:12px;z-index:9999;width:200px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 32px rgba(15,23,42,.14);padding:8px 0;display:none;flex-direction:column}
+    .user-panel.open{display:flex}
+    .user-panel-info{padding:8px 14px 6px}
+    .user-panel-name{font-size:.82rem;font-weight:700}
+    .user-panel-sub{font-size:.68rem;color:var(--text2);margin-top:2px}
+    .user-panel-sep{height:1px;background:var(--border);margin:6px 0}
+    .user-panel-item{display:flex;align-items:center;width:100%;padding:7px 14px;background:none;border:none;cursor:pointer;font-size:.78rem;font-weight:600;font-family:var(--font-heading);color:var(--text);text-align:left;transition:background .12s}
+    .user-panel-item:hover{background:var(--accent-wash2)}
+    .user-panel-logout{color:#dc2626}
+    .user-panel-logout:hover{background:#fee2e2 !important}
+
+    /* ── Footer ── */
+    .footer{text-align:center;padding:9px 0;border-top:1px solid var(--border);font-size:.78rem;color:var(--text2);position:relative;margin-top:8px}
+    .footer::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--accent),transparent)}
+    .footer span{color:var(--accent)}
+
+    /* ── 세션 배너 ── */
+    #eq-session-banner{display:none;position:fixed;bottom:20px;right:20px;z-index:9000;background:#0f172a;color:#fff;border-radius:12px;padding:12px 16px;gap:10px;font-size:.84rem;box-shadow:0 4px 24px rgba(0,0,0,.3);align-items:center}
+
+    @media(max-width:640px){
+      .no-mobile{display:none!important}
+      .pg-topbar{padding:0 8px;gap:4px}
+      .pg-btn{padding:5px 8px;font-size:.7rem}
+    }
+    @page{size:A4 landscape;margin:6mm}
+    @media print{
+      html,body{font-size:9pt!important;line-height:1.25!important}
+      body{background:#fff!important}
+      *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      .pg-topbar,.filter-bar,.table-controls,#eq-ctx-menu,.nav-panel,.user-panel,#eq-float-drag,#eq-float-star,#eq-session-banner{display:none!important}
+      .kpi-row{display:none!important}
+      .container{max-width:100%;padding:0 6mm}
+      .header{padding:0 0 8px;border-bottom:2px solid #111827}
+      thead{position:static}
+      thead th{background:#166534!important;color:#fff!important;font-size:6.5pt!important;padding:3px 5px}
+      table{min-width:0;font-size:7.5pt!important;table-layout:auto}
+      .table-scroll{overflow:visible}
+      .cell-inner{padding:2px 4px;white-space:nowrap;overflow:hidden;text-overflow:clip;min-height:auto}
+      .group-row td{border-top:2px solid #9ca3af!important}
+      .footer{border-top:1px solid #e5e7eb;color:#4b5563}
+    }
+  </style>
+</head>
+<body>
+<script>(function(){
+  const token=localStorage.getItem("supa_token")||"";
+  if(!token){location.href="login.html";return;}
+  const _ta=sessionStorage.getItem("libeco_tab_active");
+  if(_ta&&Date.now()>Number(_ta)){localStorage.removeItem("supa_token");location.href="login.html";return;}
+  if(!_ta) sessionStorage.setItem("libeco_tab_active",String(Date.now()+7200000));
+})()</script>
+
+<!-- User panel -->
+<div class="user-panel" id="eqUserPanel">
+  <div class="user-panel-info">
+    <div class="user-panel-name" id="eq-upanel-name">--</div>
+    <div class="user-panel-sub" id="eq-upanel-sub"></div>
+  </div>
+  <div class="user-panel-sep"></div>
+  <button class="user-panel-item user-panel-logout" onclick="(function(){localStorage.removeItem('supa_token');localStorage.removeItem('supa_refresh');sessionStorage.removeItem('libeco_tab_active');location.href='login.html';})()">로그아웃</button>
+</div>
+
+<!-- Nav panel -->
+<div class="nav-panel" id="navPanel">
+  <div class="nav-panel-title">페이지 이동</div>
+  <a class="nav-item" href="index.html">
+    <span class="nav-icon">🏠</span>
+    <div><div class="nav-label">홈</div><div class="nav-sub">메인 화면</div></div>
+  </a>
+  <div class="nav-sep"></div>
+  <a class="nav-item" href="purchase.html">
+    <span class="nav-icon">📋</span>
+    <div><div class="nav-label">구매리스트</div><div class="nav-sub">구매 필요내역</div></div>
+  </a>
+  <a class="nav-item" href="diagram.html">
+    <span class="nav-icon">📐</span>
+    <div><div class="nav-label">구성도</div><div class="nav-sub">P&amp;ID Schematic</div></div>
+  </a>
+  <div class="nav-sep"></div>
+  <div class="nav-item active"><span class="nav-icon">🔬</span><div><div class="nav-label">시험장비</div><div class="nav-sub">계측/제어 장비 목록</div></div></div>
+  <a class="nav-item" href="incoming.html"><span class="nav-icon">📦</span><div><div class="nav-label">입고관리</div><div class="nav-sub">장비 일정관리</div></div></a>
+  <div class="nav-item disabled"><span class="nav-icon">📖</span><div><div class="nav-label">시험절차서</div><div class="nav-sub">준비중</div></div><span class="nav-soon-tag">SOON</span></div>
+  <div class="nav-item disabled"><span class="nav-icon">💬</span><div><div class="nav-label">기타 공유사항</div><div class="nav-sub">준비중</div></div><span class="nav-soon-tag">SOON</span></div>
+</div>
+
+<!-- Context menu -->
+<div id="eq-ctx-menu">
+  <button id="eq-ctx-above">위에 행 추가</button>
+  <button id="eq-ctx-below">아래에 행 추가</button>
+  <hr>
+  <button id="eq-ctx-del" style="color:#f87171">행 삭제</button>
+</div>
+
+<!-- Topbar -->
+<div class="pg-topbar">
+  <div class="pg-topbar-l">
+    <a href="index.html" style="color:#16a34a;font-weight:800;font-size:.95rem;letter-spacing:-.02em;font-family:inherit;text-decoration:none;cursor:pointer;flex-shrink:0">LIBECO E&amp;C</a>
+    <div class="pg-vdiv"></div>
+    <button class="pg-btn" id="eq-nav-btn">이동 ▾</button>
+    <div class="pg-vdiv no-mobile"></div>
+    <span class="pg-title no-mobile">LLNL POC <span>시험장비</span></span>
+    <span class="pg-badge no-mobile">EQUIPMENT</span>
+  </div>
+  <div class="pg-topbar-r">
+    <span id="eq-session-display" style="font-family:var(--font-mono);font-size:.68rem;color:var(--text2);padding:0 4px">⏱ --</span>
+    <button class="pg-btn" id="eq-extend-topbar">연장하기</button>
+    <div class="pg-vdiv"></div>
+    <button class="pg-btn" id="eq-undoBtn" title="Ctrl+Z" disabled>↩ 취소</button>
+    <button class="pg-btn" id="eq-redoBtn" title="Ctrl+Y" disabled>↪ 다시</button>
+    <div class="pg-vdiv no-mobile"></div>
+    <button class="pg-btn pg-btn-export no-mobile" id="eq-export-pdf">📄 PDF저장</button>
+    <button class="pg-btn no-mobile" onclick="window.print()">🖨 인쇄</button>
+    <div class="pg-vdiv no-mobile"></div>
+    <span id="eq-user-display" class="no-mobile" style="font-size:.75rem;font-weight:600;color:var(--text)"></span>
+    <button class="pg-btn" id="eq-user-btn">👤</button>
+  </div>
+</div>
+
+<div class="container">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-inner">
+      <div class="header-left">
+        <svg class="h2-icon" viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="42" height="42" rx="10" fill="rgba(22,101,52,.12)"/>
+          <circle cx="21" cy="16" r="6" stroke="#166534" stroke-width="1.8" fill="rgba(22,101,52,.12)"/>
+          <path d="M21 22v8M16 30h10" stroke="#166534" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M12 16c0-5 4-8 9-8s9 3 9 8" stroke="#166534" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+        </svg>
+        <div>
+          <h1>LLNL POC <span>시험장비 목록</span></h1>
+          <p class="header-sub"><span id="eq-gen-time">--</span> update</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI -->
+  <div class="kpi-row" id="eq-kpi-row">
+    <div class="kpi-card"><div class="kpi-label">총 장비 수</div><div class="kpi-value" id="kpi-total">--</div><div class="kpi-sub">items</div></div>
+    <div class="kpi-card"><div class="kpi-label">계측 장비</div><div class="kpi-value" id="kpi-measure">--</div><div class="kpi-sub">usage: 계측</div></div>
+    <div class="kpi-card"><div class="kpi-label">방폭 장비</div><div class="kpi-value" id="kpi-exproof">--</div><div class="kpi-sub">usage: 방폭</div></div>
+    <div class="kpi-card"><div class="kpi-label">제어 장비</div><div class="kpi-value" id="kpi-control">--</div><div class="kpi-sub">usage: 제어</div></div>
+    <div class="kpi-card"><div class="kpi-label">데이터 수집</div><div class="kpi-value" id="kpi-daq">--</div><div class="kpi-sub">usage: 데이터수집</div></div>
+  </div>
+
+  <!-- Controls -->
+  <div class="table-controls" style="margin-top:10px">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <div class="section-title">장비 세부목록</div>
+      <div class="filter-bar" id="eq-cat-filter">
+        <button class="tab-btn active" data-cat="ALL">전체</button>
+        <button class="tab-btn" data-cat="LT">LT</button>
+        <button class="tab-btn" data-cat="HS">HS</button>
+        <button class="tab-btn" data-cat="CC">CC</button>
+        <button class="tab-btn" data-cat="CM">CM</button>
+        <button class="tab-btn" data-cat="PC">PC</button>
+        <button class="tab-btn" data-cat="SV">SV</button>
+      </div>
+      <span class="item-count" id="eq-item-count"></span>
+    </div>
+    <input type="text" class="search-input" id="eq-search" placeholder="장비명, 부품번호, 신호, 위치 검색...">
+  </div>
+
+  <!-- Table -->
+  <div class="table-wrap" style="margin-top:8px">
+    <div class="table-scroll">
+      <table id="eq-table">
+        <thead>
+          <tr>
+            <th style="width:52px">구분</th>
+            <th style="min-width:100px">부품번호</th>
+            <th style="width:50px">수량</th>
+            <th style="min-width:140px">장비명</th>
+            <th style="min-width:130px">사양</th>
+            <th style="min-width:130px">제품명</th>
+            <th style="min-width:90px">입력신호</th>
+            <th style="min-width:100px">입력대상</th>
+            <th style="min-width:90px">출력신호</th>
+            <th style="min-width:100px">출력대상</th>
+            <th style="width:90px">용도</th>
+            <th style="min-width:220px">신호경로</th>
+            <th style="min-width:110px">설치위치</th>
+            <th style="min-width:100px">비고</th>
+          </tr>
+        </thead>
+        <tbody id="eq-tbody">
+          <tr><td colspan="14" style="text-align:center;padding:40px;color:#94a3b8;font-size:.9rem">⏳ 데이터 불러오는 중...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <footer class="footer">© 2026 LIBECO E&amp;C · All Rights Reserved</footer>
+
+  <!-- 세션 배너 -->
+  <div id="eq-session-banner" style="display:none;position:fixed;bottom:20px;right:20px;z-index:9000;background:#0f172a;color:#fff;border-radius:12px;padding:12px 16px;gap:10px;font-size:.84rem;box-shadow:0 4px 24px rgba(0,0,0,.3);align-items:center">
+    ⏰ 세션이 <strong id="eq-session-remaining">--</strong> 후 만료됩니다&nbsp;
+    <button id="eq-extend-btn" style="background:#16a34a;color:#fff;border:none;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:.8rem;font-weight:700">연장하기</button>
+    <button onclick="(function(){localStorage.removeItem('supa_token');localStorage.removeItem('supa_refresh');sessionStorage.removeItem('libeco_tab_active');location.href='login.html';})()" style="background:#dc2626;color:#fff;border:none;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:.8rem;font-weight:700">로그아웃</button>
+  </div>
+</div>
+
+<div id="eq-float-drag" title="드래그로 순서 변경" draggable="true">⠿</div>
+<div id="eq-float-star" title="강조">☆</div>
+
+<script>
+(function(){
+  /* ── Supabase ── */
+  const SUPA_URL = "https://ikfjpzdzrgsmhaobqnai.supabase.co";
+  const SUPA_KEY = "sb_publishable_fbbdwjCZCL9AFD-eUIs0bg_XwdlhxFN";
+  const SUPA_TABLE = "equipment";
+  const EQ_LS = "equipment_v1";
+
+  async function supaFetch(method, path, body){
+    const token = localStorage.getItem("supa_token") || SUPA_KEY;
+    const opts = {
+      method,
+      headers: {
+        "apikey": SUPA_KEY,
+        "Authorization": "Bearer " + token,
+        "Content-Type": "application/json",
+        "Prefer": method === "POST" ? "resolution=merge-duplicates" : ""
+      }
+    };
+    if(body) opts.body = JSON.stringify(body);
+    const res = await fetch(SUPA_URL + "/rest/v1/" + SUPA_TABLE + path, opts);
+    if(!res.ok) throw new Error(await res.text());
+    return method === "GET" ? res.json() : res;
+  }
+
+  async function supaLoad(){
+    try{
+      const rows = await supaFetch("GET", "?select=*&order=sort_order.asc");
+      if(rows && rows.length > 0){
+        eqItems = rows.map(r => {
+          const item = {};
+          ["part_no","qty","name","spec","product","input_signal","input_target","output_signal","output_target","usage","signal_path","location","remark","_cat","_group","_label","_color","_bg"].forEach(k=>{
+            if(r[k] !== undefined && r[k] !== null) item[k] = r[k];
+          });
+          item._supa_id = r.id;
+          item._sort = r.sort_order;
+          return item;
+        });
+        return true;
+      }
+    }catch(e){ console.warn("Supabase load failed:", e); }
+    return false;
+  }
+
+  async function supaUpsertAll(){
+    try{
+      const token = localStorage.getItem("supa_token") || SUPA_KEY;
+      const headers = { "apikey":SUPA_KEY, "Authorization":"Bearer "+token, "Content-Type":"application/json" };
+      const existing = [], newRows = [];
+      eqItems.forEach((r,i)=>{
+        const obj = {
+          part_no: r.part_no||"", qty: r.qty||"", name: r.name||"",
+          spec: r.spec||"", product: r.product||"",
+          input_signal: r.input_signal||"", input_target: r.input_target||"",
+          output_signal: r.output_signal||"", output_target: r.output_target||"",
+          usage: r.usage||"", signal_path: r.signal_path||"",
+          location: r.location||"", remark: r.remark||"",
+          sort_order: i,
+          _cat: r._cat||"", _group: r._group||false, _label: r._label||"", _color: r._color||"", _bg: r._bg||""
+        };
+        if(r._supa_id){ obj.id = r._supa_id; existing.push(obj); }
+        else newRows.push(obj);
+      });
+      if(existing.length > 0){
+        await fetch(SUPA_URL+"/rest/v1/"+SUPA_TABLE, {
+          method:"POST",
+          headers:{...headers, "Prefer":"resolution=merge-duplicates,return=representation"},
+          body:JSON.stringify(existing)
+        });
+      }
+      if(newRows.length > 0){
+        const res = await fetch(SUPA_URL+"/rest/v1/"+SUPA_TABLE, {
+          method:"POST",
+          headers:{...headers, "Prefer":"return=representation"},
+          body:JSON.stringify(newRows)
+        });
+        if(res.ok){
+          const inserted = await res.json();
+          let ni = 0;
+          eqItems.forEach(r=>{ if(!r._supa_id && inserted[ni]){ r._supa_id=inserted[ni].id; ni++; } });
+        }
+      }
+    }catch(e){ console.warn("Supabase save failed:", e); }
+  }
+
+  async function supaDeleteRow(id){
+    try{
+      const token = localStorage.getItem("supa_token") || SUPA_KEY;
+      await fetch(SUPA_URL+"/rest/v1/"+SUPA_TABLE+"?id=eq."+id, {
+        method:"DELETE",
+        headers:{"apikey":SUPA_KEY,"Authorization":"Bearer "+token}
+      });
+    }catch(e){ console.warn("Supabase delete failed:", e); }
+  }
+
+  /* ── 실시간 동기화 ── */
+  function startRealtime(){
+    const wsUrl = SUPA_URL.replace("https://","wss://") + "/realtime/v1/websocket?apikey="+SUPA_KEY+"&vsn=1.0.0";
+    let ws;
+    function connect(){
+      ws = new WebSocket(wsUrl);
+      ws.onopen = () => ws.send(JSON.stringify({topic:"realtime:public:"+SUPA_TABLE,event:"phx_join",payload:{},ref:"1"}));
+      ws.onmessage = async (e) => {
+        const msg = JSON.parse(e.data);
+        if(msg.event==="postgres_changes"||msg.payload?.data?.type){
+          const ok = await supaLoad();
+          if(ok) build();
+        }
+      };
+      ws.onclose = () => setTimeout(connect, 3000);
+    }
+    connect();
+  }
+
+  /* ── 상태 ── */
+  let eqItems = [];
+  let _saveTimer = null;
+  let activeCat = "ALL";
+  let eqUndoStack = [], eqRedoStack = [];
+
+  function save(){
+    try{ localStorage.setItem(EQ_LS, JSON.stringify(eqItems)); }catch(e){}
+    clearTimeout(_saveTimer);
+    _saveTimer = setTimeout(()=> supaUpsertAll(), 500);
+  }
+
+  function loadLocal(){
+    try{
+      const s = localStorage.getItem(EQ_LS);
+      if(s){ const p=JSON.parse(s); if(p&&p.length>0){ eqItems=p; return true; } }
+    }catch(e){}
+    return false;
+  }
+
+  function newRow(){
+    return {part_no:"",qty:"1",name:"",spec:"",product:"",input_signal:"",input_target:"",output_signal:"",output_target:"",usage:"계측",signal_path:"",location:"",remark:""};
+  }
+
+  function esc(s){ return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+
+  function setTime(){
+    const now=new Date(), kst=new Date(now.getTime()+9*3600*1000);
+    const s=kst.getUTCFullYear()+"/"+String(kst.getUTCMonth()+1).padStart(2,"0")+"/"+
+      String(kst.getUTCDate()).padStart(2,"0")+" "+
+      String(kst.getUTCHours()).padStart(2,"0")+":"+String(kst.getUTCMinutes()).padStart(2,"0");
+    const el=document.getElementById("eq-gen-time"); if(el) el.textContent=s;
+  }
+
+  /* ── CAT 색상 ── */
+  const CAT_COLORS = {
+    LT:"#0f766e", HS:"#1d4ed8", CC:"#b45309", CM:"#6d28d9", PC:"#374151",
+    t:"#5eead4", s:"#93c5fd", c:"#fcd34d", SV:"#be123c"
+  };
+
+  function usageBadge(u){
+    if(!u) return "-";
+    const cls = "usage-"+u.replace(/\s/g,"");
+    return `<span class="usage-badge ${cls}">${esc(u)}</span>`;
+  }
+
+  /* ── Build ── */
+  function build(){
+    const tbody = document.getElementById("eq-tbody");
+    if(!tbody) return;
+    const q = (document.getElementById("eq-search")||{}).value||"";
+    const lq = q.toLowerCase();
+
+    // Filter by category
+    let rows = activeCat === "ALL"
+      ? eqItems
+      : eqItems.filter(r => r._group || (r._cat||"").toUpperCase() === activeCat);
+
+    // Search filter (keep group headers if children match)
+    if(lq){
+      const fields = ["part_no","name","spec","product","input_signal","input_target","output_signal","output_target","usage","signal_path","location","remark"];
+      const matchedCats = new Set();
+      rows.forEach(r=>{
+        if(!r._group && fields.some(k=>String(r[k]||"").toLowerCase().includes(lq))){
+          matchedCats.add((r._cat||"").toUpperCase());
+        }
+      });
+      rows = rows.filter(r=>{
+        if(r._group) return matchedCats.has((r._cat||"").toUpperCase());
+        return fields.some(k=>String(r[k]||"").toLowerCase().includes(lq));
+      });
+    }
+
+    tbody.innerHTML = "";
+    let displayCount = 0;
+    rows.forEach(r=>{
+      if(r._group){
+        const tr = document.createElement("tr");
+        tr.className = "group-row";
+        tr.innerHTML = `<td colspan="14" style="background:${r._bg||'#fffbeb'};color:${r._color||'#111827'}">${esc(r._label||"")}<span class="group-meta">· ${(r._cat||"").toUpperCase()}</span></td>`;
+        tbody.appendChild(tr);
+        return;
+      }
+      displayCount++;
+      const gi = eqItems.indexOf(r);
+      const catKey = (r._cat||"").toUpperCase();
+      const catColor = CAT_COLORS[(r._cat||"")] || "#475569";
+      const catBadge = catKey
+        ? `<span style="background:${catColor};color:#fff;border-radius:6px;padding:2px 7px;font-size:.7rem;font-weight:800;letter-spacing:.04em">${catKey}</span>`
+        : "-";
+
+      const tr = document.createElement("tr");
+      tr.dataset.idx = gi;
+      if(r._highlight) tr.classList.add("row-highlight");
+
+      tr.innerHTML =
+        `<td class="align-center" style="white-space:nowrap"><div class="cell-inner" style="padding:4px 6px;justify-content:center">${catBadge}</div></td>` +
+        `<td class="mono"><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="part_no">${esc(r.part_no)}</div></td>` +
+        `<td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="qty">${esc(r.qty)}</div></td>` +
+        `<td><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="name">${esc(r.name)}</div></td>` +
+        `<td><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="spec">${esc(r.spec)}</div></td>` +
+        `<td class="mono"><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="product">${esc(r.product)}</div></td>` +
+        `<td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="input_signal">${esc(r.input_signal)}</div></td>` +
+        `<td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="input_target">${esc(r.input_target)}</div></td>` +
+        `<td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="output_signal">${esc(r.output_signal)}</div></td>` +
+        `<td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="output_target">${esc(r.output_target)}</div></td>` +
+        `<td class="align-center"><div class="cell-inner" style="padding:3px 4px" data-idx="${gi}" data-field="usage">${usageBadge(r.usage)}</div></td>` +
+        `<td><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="signal_path" style="min-width:180px">${esc(r.signal_path)}</div></td>` +
+        `<td><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="location">${esc(r.location)}</div></td>` +
+        `<td><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="remark">${esc(r.remark)}</div></td>`;
+      tbody.appendChild(tr);
+    });
+
+    // item count
+    const countEl = document.getElementById("eq-item-count");
+    if(countEl) countEl.textContent = displayCount + "개 항목";
+
+    // contenteditable events
+    tbody.querySelectorAll('.cell-inner[contenteditable="true"]').forEach(el=>{
+      el.addEventListener("blur",()=>{
+        const idx=Number(el.dataset.idx), f=el.dataset.field;
+        if(eqItems[idx] !== undefined && f){
+          eqItems[idx][f] = el.textContent.trim();
+          save();
+        }
+      });
+      el.addEventListener("keydown",e=>{
+        if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); el.blur(); }
+        if(e.key==="Escape") el.blur();
+      });
+    });
+
+    // usage 클릭 → 드롭다운
+    tbody.querySelectorAll('.cell-inner[data-field="usage"]').forEach(el=>{
+      el.addEventListener("click",e=>{
+        e.stopPropagation();
+        showUsageDrop(el, Number(el.dataset.idx));
+      });
+    });
+
+    // Drag & drop on rows
+    tbody.querySelectorAll("tr[data-idx]").forEach(tr=>{
+      tr.addEventListener("dragover",e=>{
+        e.preventDefault();
+        tbody.querySelectorAll(".drag-over-top,.drag-over-bot").forEach(r=>r.classList.remove("drag-over-top","drag-over-bot"));
+        const rect=tr.getBoundingClientRect(), mid=rect.top+rect.height/2;
+        tr.classList.add(e.clientY<mid?"drag-over-top":"drag-over-bot");
+      });
+      tr.addEventListener("drop",e=>{
+        e.preventDefault();
+        const targetIdx=Number(tr.dataset.idx);
+        if(eqFloatDragSrc===null||eqFloatDragSrc===targetIdx) return;
+        const rect=tr.getBoundingClientRect(), mid=rect.top+rect.height/2, before=e.clientY<mid;
+        saveUndo();
+        const moved=eqItems.splice(eqFloatDragSrc,1)[0];
+        const nt=targetIdx>eqFloatDragSrc?targetIdx-1:targetIdx;
+        eqItems.splice(before?nt:nt+1,0,moved);
+        eqFloatDragSrc=null;
+        save(); build();
+      });
+    });
+
+    updateKpi();
+    setTime();
+  }
+
+  /* ── KPI ── */
+  function updateKpi(){
+    const items = eqItems.filter(r=>!r._group);
+    document.getElementById("kpi-total").textContent = items.length;
+    document.getElementById("kpi-measure").textContent = items.filter(r=>r.usage==="계측").length;
+    document.getElementById("kpi-exproof").textContent = items.filter(r=>r.usage==="방폭").length;
+    document.getElementById("kpi-control").textContent = items.filter(r=>r.usage==="제어").length;
+    document.getElementById("kpi-daq").textContent = items.filter(r=>r.usage==="데이터수집").length;
+  }
+
+  /* ── Usage dropdown ── */
+  const USAGES = ["계측","제어","방폭","데이터수집","전원공급"];
+  let usageDropEl = null, usageDropIdx = null;
+  function showUsageDrop(el, idx){
+    if(usageDropEl){ usageDropEl.remove(); usageDropEl=null; }
+    usageDropIdx = idx;
+    const drop = document.createElement("div");
+    drop.style.cssText="position:fixed;z-index:9999;background:#fff;border:1px solid var(--border);border-radius:8px;padding:4px 0;min-width:110px;box-shadow:0 8px 24px rgba(0,0,0,.15)";
+    USAGES.forEach(u=>{
+      const btn=document.createElement("button");
+      btn.style.cssText="display:block;width:100%;padding:7px 14px;background:none;border:none;cursor:pointer;font-size:.82rem;font-weight:600;text-align:left;font-family:inherit;color:var(--text)";
+      btn.textContent=u;
+      btn.addEventListener("mouseover",()=>btn.style.background="var(--accent-wash2)");
+      btn.addEventListener("mouseout",()=>btn.style.background="none");
+      btn.addEventListener("click",()=>{
+        eqItems[usageDropIdx].usage=u;
+        save(); build();
+        drop.remove(); usageDropEl=null;
+      });
+      drop.appendChild(btn);
+    });
+    const r=el.getBoundingClientRect();
+    drop.style.left=Math.min(r.left,window.innerWidth-130)+"px";
+    drop.style.top=(r.bottom+2)+"px";
+    document.body.appendChild(drop);
+    usageDropEl=drop;
+    requestAnimationFrame(()=>{
+      document.addEventListener("click", function onClose(){ drop.remove(); usageDropEl=null; document.removeEventListener("click",onClose); }, {once:false});
+    });
+  }
+  document.addEventListener("click",e=>{
+    if(usageDropEl && !usageDropEl.contains(e.target)){ usageDropEl.remove(); usageDropEl=null; }
+  });
+
+  /* ── Category filter ── */
+  document.getElementById("eq-cat-filter").addEventListener("click",e=>{
+    const btn=e.target.closest(".tab-btn");
+    if(!btn) return;
+    activeCat=btn.dataset.cat;
+    document.querySelectorAll("#eq-cat-filter .tab-btn").forEach(b=>b.classList.toggle("active",b===btn));
+    build();
+  });
+
+  /* ── Search ── */
+  document.getElementById("eq-search").addEventListener("input", build);
+
+  /* ── Nav ── */
+  const navBtn=document.getElementById("eq-nav-btn");
+  navBtn.addEventListener("click",e=>{
+    e.stopPropagation();
+    const p=document.getElementById("navPanel");
+    const r=navBtn.getBoundingClientRect();
+    p.style.left=r.left+"px"; p.style.top=(r.bottom+4)+"px";
+    p.classList.toggle("open");
+    document.getElementById("eqUserPanel").classList.remove("open");
+  });
+  document.getElementById("eq-user-btn").addEventListener("click",e=>{
+    e.stopPropagation();
+    document.getElementById("eqUserPanel").classList.toggle("open");
+    document.getElementById("navPanel").classList.remove("open");
+  });
+  document.addEventListener("click",()=>{
+    document.getElementById("navPanel").classList.remove("open");
+    document.getElementById("eqUserPanel").classList.remove("open");
+  });
+  document.getElementById("navPanel").addEventListener("click",e=>e.stopPropagation());
+  document.getElementById("eqUserPanel").addEventListener("click",e=>e.stopPropagation());
+
+  /* ── User info ── */
+  (async()=>{
+    try{
+      const tok=localStorage.getItem("supa_token")||"";
+      if(!tok) return;
+      const ur=await fetch(SUPA_URL+"/auth/v1/user",{headers:{"apikey":SUPA_KEY,"Authorization":"Bearer "+tok}});
+      if(!ur.ok) return;
+      const u=await ur.json();
+      const pr=await fetch(SUPA_URL+"/rest/v1/profiles?id=eq."+u.id+"&select=name,department,position",{headers:{"apikey":SUPA_KEY,"Authorization":"Bearer "+tok}});
+      const prof=(await pr.json())?.[0]||{};
+      const nm=prof.name||(u.email||"").split("@")[0];
+      const sb=[prof.department,prof.position].filter(Boolean).join(" · ");
+      const ud=document.getElementById("eq-user-display"); if(ud) ud.textContent=nm;
+      const upN=document.getElementById("eq-upanel-name"); if(upN) upN.textContent=nm;
+      const upS=document.getElementById("eq-upanel-sub"); if(upS) upS.textContent=sb;
+    }catch(e){}
+  })();
+
+  /* ── Undo/Redo ── */
+  function saveUndo(){ eqRedoStack=[]; eqUndoStack.push(JSON.parse(JSON.stringify(eqItems))); if(eqUndoStack.length>30) eqUndoStack.shift(); updateUndoBtns(); }
+  function eqUndo(){ if(!eqUndoStack.length)return; eqRedoStack.push(JSON.parse(JSON.stringify(eqItems))); eqItems=eqUndoStack.pop(); save(); build(); updateUndoBtns(); }
+  function eqRedo(){ if(!eqRedoStack.length)return; eqUndoStack.push(JSON.parse(JSON.stringify(eqItems))); eqItems=eqRedoStack.pop(); save(); build(); updateUndoBtns(); }
+  function updateUndoBtns(){ const u=document.getElementById("eq-undoBtn"),r=document.getElementById("eq-redoBtn"); if(u)u.disabled=!eqUndoStack.length; if(r)r.disabled=!eqRedoStack.length; }
+  document.getElementById("eq-undoBtn").addEventListener("click", eqUndo);
+  document.getElementById("eq-redoBtn").addEventListener("click", eqRedo);
+  document.addEventListener("keydown",e=>{
+    if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&e.key==="z"){ e.preventDefault(); eqUndo(); }
+    if((e.ctrlKey||e.metaKey)&&(e.key==="y"||(e.shiftKey&&e.key==="z"))){ e.preventDefault(); eqRedo(); }
+  });
+
+  /* ── Context menu ── */
+  (function(){
+    const menu=document.getElementById("eq-ctx-menu");
+    const tbody=document.getElementById("eq-tbody");
+    let ctxIdx=-1;
+    tbody.addEventListener("contextmenu",e=>{
+      const tr=e.target.closest("tr[data-idx]");
+      if(!tr)return;
+      e.preventDefault();
+      ctxIdx=parseInt(tr.dataset.idx);
+      menu.style.display="block";
+      menu.style.left=Math.min(e.clientX,window.innerWidth-160)+"px";
+      menu.style.top=Math.min(e.clientY,window.innerHeight-130)+"px";
+    });
+    document.addEventListener("click",()=>menu.style.display="none");
+    document.getElementById("eq-ctx-above").addEventListener("click",()=>{ if(ctxIdx>=0)addRow(ctxIdx,"above"); ctxIdx=-1; });
+    document.getElementById("eq-ctx-below").addEventListener("click",()=>{ if(ctxIdx>=0)addRow(ctxIdx,"below"); ctxIdx=-1; });
+    document.getElementById("eq-ctx-del").addEventListener("click",()=>{ if(ctxIdx>=0)delRow(ctxIdx); ctxIdx=-1; });
+  })();
+
+  function addRow(refIdx, where){
+    saveUndo();
+    const ref=eqItems[refIdx];
+    const nr=newRow();
+    nr._cat=(ref&&ref._cat)||"";
+    eqItems.splice(where==="above"?refIdx:refIdx+1,0,nr);
+    save(); build(); updateUndoBtns();
+  }
+  async function delRow(idx){
+    if(!eqItems[idx]||eqItems[idx]._group)return;
+    if(!confirm("행을 삭제할까요?"))return;
+    saveUndo();
+    const item=eqItems[idx];
+    eqItems.splice(idx,1);
+    save(); build(); updateUndoBtns();
+    if(item._supa_id) await supaDeleteRow(item._supa_id);
+  }
+
+  /* ── 플로팅 핸들 ── */
+  const eqFloatDrag=document.getElementById("eq-float-drag");
+  const eqFloatStar=document.getElementById("eq-float-star");
+  const tableWrap=document.querySelector(".table-wrap");
+  let eqFloatTargetTr=null;
+  let eqFloatDragSrc=null;
+
+  function positionFloats(tr){
+    const rect=tr.getBoundingClientRect();
+    const midY=rect.top+rect.height/2;
+    const wrapRect=tableWrap?tableWrap.getBoundingClientRect():{left:0,right:window.innerWidth};
+    if(eqFloatDrag){ eqFloatDrag.style.left=Math.max(2,wrapRect.left-34)+"px"; eqFloatDrag.style.top=midY+"px"; eqFloatDrag.style.display="flex"; }
+    if(eqFloatStar){
+      eqFloatStar.style.left=Math.min(window.innerWidth-46,wrapRect.right+4)+"px"; eqFloatStar.style.top=midY+"px"; eqFloatStar.style.display="flex";
+      const idx=Number(tr.dataset.idx);
+      const on=!!(eqItems[idx]&&eqItems[idx]._highlight);
+      eqFloatStar.classList.toggle("on",on);
+      eqFloatStar.textContent=on?"★":"☆";
+    }
+  }
+  function hideFloats(){ if(eqFloatDrag)eqFloatDrag.style.display="none"; if(eqFloatStar)eqFloatStar.style.display="none"; eqFloatTargetTr=null; }
+
+  const eqTbodyEl=document.getElementById("eq-tbody");
+  eqTbodyEl.addEventListener("mouseover",e=>{
+    const tr=e.target.closest("tr[data-idx]");
+    if(!tr)return;
+    eqFloatTargetTr=tr;
+    positionFloats(tr);
+  });
+  eqTbodyEl.addEventListener("mouseleave",()=>{
+    setTimeout(()=>{ if(eqFloatDrag&&!eqFloatDrag.matches(":hover")&&eqFloatStar&&!eqFloatStar.matches(":hover")) hideFloats(); },300);
+  });
+  if(eqFloatDrag){
+    eqFloatDrag.addEventListener("mouseleave",()=>{ if(!eqFloatTargetTr?.matches(":hover")&&(!eqFloatStar||!eqFloatStar.matches(":hover"))) hideFloats(); });
+    eqFloatDrag.addEventListener("dragstart",e=>{
+      if(!eqFloatTargetTr){e.preventDefault();return;}
+      eqFloatDragSrc=Number(eqFloatTargetTr.dataset.idx);
+      e.dataTransfer.effectAllowed="move";
+      e.dataTransfer.setData("text/plain",String(eqFloatDragSrc));
+      eqFloatTargetTr.classList.add("row-dragging");
+      requestAnimationFrame(()=>{ eqFloatDrag.style.display="none"; });
+    });
+    eqFloatDrag.addEventListener("dragend",()=>{
+      eqFloatDragSrc=null;
+      document.querySelectorAll("tr.row-dragging").forEach(r=>r.classList.remove("row-dragging"));
+      document.querySelectorAll(".drag-over-top,.drag-over-bot").forEach(r=>r.classList.remove("drag-over-top","drag-over-bot"));
+      hideFloats();
+    });
+  }
+  if(eqFloatStar){
+    eqFloatStar.addEventListener("mouseleave",()=>{ if(!eqFloatTargetTr?.matches(":hover")&&(!eqFloatDrag||!eqFloatDrag.matches(":hover"))) hideFloats(); });
+    eqFloatStar.addEventListener("click",()=>{
+      if(!eqFloatTargetTr)return;
+      const idx=Number(eqFloatTargetTr.dataset.idx);
+      if(eqItems[idx]!==undefined){
+        eqItems[idx]._highlight=!eqItems[idx]._highlight;
+        save(); build();
+        setTimeout(()=>{
+          const newTr=document.querySelector(`#eq-tbody tr[data-idx="${idx}"]`);
+          if(newTr){ eqFloatTargetTr=newTr; positionFloats(newTr); }
+        },0);
+      }
+    });
+  }
+
+  /* ── 세션 타이머 ── */
+  (function(){
+    const SESSION_MS=7200000;
+    const banner=document.getElementById("eq-session-banner");
+    const remEl=document.getElementById("eq-session-remaining");
+    async function refreshSession(){
+      const refresh=localStorage.getItem("supa_refresh"); if(!refresh)return false;
+      try{
+        const res=await fetch(SUPA_URL+"/auth/v1/token?grant_type=refresh_token",{method:"POST",headers:{"apikey":SUPA_KEY,"Content-Type":"application/json"},body:JSON.stringify({refresh_token:refresh})});
+        if(!res.ok)return false;
+        const data=await res.json();
+        if(data.access_token){ localStorage.setItem("supa_token",data.access_token); if(data.refresh_token)localStorage.setItem("supa_refresh",data.refresh_token); return true; }
+        return false;
+      }catch(e){return false;}
+    }
+    async function doExtend(btn){
+      if(btn){btn.disabled=true;btn.textContent="연장 중...";}
+      await refreshSession();
+      sessionStorage.setItem("libeco_tab_active",String(Date.now()+SESSION_MS));
+      if(banner)banner.style.display="none";
+      sessionTick();
+      if(btn){btn.disabled=false;btn.textContent="연장하기";}
+    }
+    document.getElementById("eq-extend-btn").addEventListener("click",()=>doExtend(document.getElementById("eq-extend-btn")));
+    document.getElementById("eq-extend-topbar").addEventListener("click",()=>doExtend(document.getElementById("eq-extend-topbar")));
+    function sessionTick(){
+      const exp=Number(sessionStorage.getItem("libeco_tab_active")||0);
+      if(!exp||Date.now()>exp){ localStorage.removeItem("supa_token");localStorage.removeItem("supa_refresh");sessionStorage.removeItem("libeco_tab_active");location.href="login.html";return; }
+      const rem=exp-Date.now();
+      const disp=document.getElementById("eq-session-display");
+      if(disp){ const h=Math.floor(rem/3600000),m=Math.floor((rem%3600000)/60000); disp.textContent="⏱ "+(h>0?h+"h ":"")+m+"분"; disp.style.color=rem<=600000?"#dc2626":""; }
+      if(rem<=600000){ if(remEl)remEl.textContent=Math.ceil(rem/60000)+"분"; if(banner)banner.style.display="flex"; }
+      else{ if(banner)banner.style.display="none"; }
+    }
+    sessionTick();
+    setInterval(sessionTick,60000);
+  })();
+
+  /* ── PDF 저장 ── */
+  document.getElementById("eq-export-pdf").addEventListener("click",()=>{
+    document.body.classList.add("report-print-mode");
+    window.print();
+    setTimeout(()=>document.body.classList.remove("report-print-mode"),1000);
+  });
+
+  /* ── Init ── */
+  (async()=>{
+    try{
+      const ok = await supaLoad();
+      if(!ok) loadLocal();
+    }catch(e){
+      console.warn("초기화 실패, 로컬 사용:", e);
+      loadLocal();
+    }
+    build();
+    startRealtime();
+  })();
+
+})();
+</script>
+</body>
+</html>
