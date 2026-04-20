@@ -719,6 +719,10 @@
     @media print{
       #view-incoming .pg-topbar-r,#view-incoming .inc-alert{display:none !important}
     }
+    /* Excel-like cell states */
+    .cell-inner{cursor:default}
+    .cell-inner.cell-sel{background:rgba(37,99,235,.07)!important;box-shadow:inset 0 0 0 2px #2563eb!important;white-space:nowrap!important;overflow:hidden!important;border-radius:0!important}
+    .cell-inner.cell-edit{cursor:text!important;background:rgba(255,255,255,.97)!important;box-shadow:inset 0 0 0 2px rgba(22,101,52,.55)!important;white-space:pre-wrap!important;overflow:visible!important;border-radius:6px!important}
   </style>
 </head>
 <body>
@@ -1683,33 +1687,81 @@
     return Array.from(document.querySelectorAll("#tableBody .cell-inner[data-idx]"));
   }
 
+  function enterCellEdit(el) {
+    el._origHTML = el.innerHTML;
+    el.contentEditable = "true";
+    el.classList.remove("cell-sel");
+    el.classList.add("cell-edit");
+    const r = document.createRange();
+    r.selectNodeContents(el);
+    const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+  }
+
+  function getNextCell(fromEl, dc, dr) {
+    const tr = fromEl.closest("tr"); if (!tr) return null;
+    const trCells = Array.from(tr.querySelectorAll(".cell-inner[data-idx]"));
+    const col = trCells.indexOf(fromEl);
+    if (dc !== 0) {
+      const nc = col + dc;
+      if (nc >= 0 && nc < trCells.length) return {idx: trCells[nc].dataset.idx, field: trCells[nc].dataset.field};
+      return null;
+    }
+    if (dr !== 0) {
+      const allRows = Array.from(document.querySelectorAll("#tableBody tr:not(.group-row)"));
+      const ri = allRows.indexOf(tr); const nr = ri + dr;
+      if (nr < 0 || nr >= allRows.length) return null;
+      const nCells = Array.from(allRows[nr].querySelectorAll(".cell-inner[data-idx]"));
+      const t = nCells[Math.min(col, nCells.length - 1)];
+      return t ? {idx: t.dataset.idx, field: t.dataset.field} : null;
+    }
+    return null;
+  }
+
+  function blurAndGo(el, dc, dr) {
+    const next = getNextCell(el, dc, dr);
+    el.blur(); // triggers save + possible buildTable
+    if (next) {
+      const target = document.querySelector(`#tableBody .cell-inner[data-idx="${next.idx}"][data-field="${next.field}"]`);
+      if (target) target.focus();
+    }
+  }
+
   function onCellKeydown(e){
-    if (e.key === "Enter"){
-      e.preventDefault();
-      e.target.blur();
-      // Enter → 아래로 이동
-      moveFocus(e.target, 0, 1);
+    const isEdit = e.target.contentEditable === "true";
+    const isRemark = e.target.dataset.field === "remark";
+
+    if (!isEdit) {
+      // 선택 모드 — 편집 없이 이동
+      if (e.key === "F2") { e.preventDefault(); enterCellEdit(e.target); return; }
+      if (e.key === "Enter") { e.preventDefault(); moveFocus(e.target, 0, 1); return; }
+      if (e.key === "Tab") { e.preventDefault(); moveFocus(e.target, e.shiftKey ? -1 : 1, 0); return; }
+      if (e.key === "Escape") { e.target.blur(); return; }
+      if (e.key === "ArrowDown") { e.preventDefault(); moveFocus(e.target, 0, 1); return; }
+      if (e.key === "ArrowUp") { e.preventDefault(); moveFocus(e.target, 0, -1); return; }
+      if (e.key === "ArrowRight") { e.preventDefault(); moveFocus(e.target, 1, 0); return; }
+      if (e.key === "ArrowLeft") { e.preventDefault(); moveFocus(e.target, -1, 0); return; }
       return;
     }
-    if (e.key === "Tab"){
+
+    // 편집 모드
+    if (e.key === "Enter") {
+      if (e.altKey && isRemark) return; // Alt+Enter = 줄바꿈
+      e.preventDefault(); blurAndGo(e.target, 0, 1); return;
+    }
+    if (e.key === "Tab") { e.preventDefault(); blurAndGo(e.target, e.shiftKey ? -1 : 1, 0); return; }
+    if (e.key === "Escape") {
       e.preventDefault();
-      moveFocus(e.target, e.shiftKey ? -1 : 1, 0);
+      if (e.target._origHTML != null) { e.target.innerHTML = e.target._origHTML; e.target._origHTML = null; }
+      e.target.contentEditable = "false";
+      e.target.classList.remove("cell-edit");
+      e.target.classList.add("cell-sel");
       return;
     }
-    if (e.key === "ArrowDown" && !e.target.textContent.includes("\n")){
-      e.preventDefault(); e.target.blur(); moveFocus(e.target, 0, 1); return;
-    }
-    if (e.key === "ArrowUp"){
-      e.preventDefault(); e.target.blur(); moveFocus(e.target, 0, -1); return;
-    }
-    if (e.key === "ArrowRight" && getSelection()?.toString() === "" &&
-        getSelection()?.anchorOffset === e.target.textContent.length){
-      e.preventDefault(); e.target.blur(); moveFocus(e.target, 1, 0); return;
-    }
-    if (e.key === "ArrowLeft" && getSelection()?.toString() === "" &&
-        getSelection()?.anchorOffset === 0){
-      e.preventDefault(); e.target.blur(); moveFocus(e.target, -1, 0); return;
-    }
+    if (e.key === "ArrowDown" && !e.target.textContent.includes("\n")) { e.preventDefault(); blurAndGo(e.target, 0, 1); return; }
+    if (e.key === "ArrowUp") { e.preventDefault(); blurAndGo(e.target, 0, -1); return; }
+    const sel = getSelection();
+    if (e.key === "ArrowRight" && sel?.toString() === "" && sel?.anchorOffset === e.target.textContent.length) { e.preventDefault(); blurAndGo(e.target, 1, 0); return; }
+    if (e.key === "ArrowLeft" && sel?.toString() === "" && sel?.anchorOffset === 0) { e.preventDefault(); blurAndGo(e.target, -1, 0); return; }
   }
 
   function moveFocus(fromEl, dc, dr){
@@ -1836,7 +1888,23 @@
 
 
     tbody.querySelectorAll(".cell-inner[contenteditable='true']").forEach(el => {
-      el.addEventListener("blur", () => onCellBlur(el));
+      el.contentEditable = "false";
+      el.tabIndex = 0;
+      el.addEventListener("focus", () => {
+        if (el.contentEditable !== "true") el.classList.add("cell-sel");
+      });
+      el.addEventListener("dblclick", (e) => {
+        e.preventDefault();
+        enterCellEdit(el);
+      });
+      el.addEventListener("blur", () => {
+        el.classList.remove("cell-sel");
+        if (el.contentEditable === "true") {
+          el.contentEditable = "false";
+          el.classList.remove("cell-edit");
+          onCellBlur(el);
+        }
+      });
       el.addEventListener("keydown", onCellKeydown);
     });
     // 단가/필요수량 실시간 소계 계산
