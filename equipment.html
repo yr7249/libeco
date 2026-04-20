@@ -190,13 +190,30 @@
   </style>
 </head>
 <body>
-<script>(function(){
+<div id="eq-access-overlay" style="display:none;position:fixed;inset:0;background:rgba(255,255,255,.97);z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:14px">
+  <div style="font-size:2.8rem">🔒</div>
+  <div style="font-size:1.25rem;font-weight:800;color:#0f172a;font-family:'Outfit',sans-serif">접근 불가합니다.</div>
+  <a href="index.html" style="margin-top:6px;padding:9px 22px;background:#166534;color:#fff;border-radius:8px;text-decoration:none;font-size:.85rem;font-weight:700">홈으로 돌아가기</a>
+</div>
+<script>(async function(){
+  const SU="https://ikfjpzdzrgsmhaobqnai.supabase.co", SK="sb_publishable_fbbdwjCZCL9AFD-eUIs0bg_XwdlhxFN";
   const token=localStorage.getItem("supa_token")||"";
   if(!token){location.href="login.html";return;}
   const _ta=sessionStorage.getItem("libeco_tab_active");
   if(_ta&&Date.now()>Number(_ta)){localStorage.removeItem("supa_token");location.href="login.html";return;}
   if(!_ta) sessionStorage.setItem("libeco_tab_active",String(Date.now()+7200000));
-})()</script>
+  let isAdmin=false;
+  try{
+    const ur=await fetch(SU+"/auth/v1/user",{headers:{"apikey":SK,"Authorization":"Bearer "+token}});
+    if(ur.ok){
+      const u=await ur.json();
+      const pr=await fetch(SU+"/rest/v1/profiles?id=eq."+u.id+"&select=role",{headers:{"apikey":SK,"Authorization":"Bearer "+token}});
+      const profiles=await pr.json();
+      if((profiles&&profiles[0]&&profiles[0].role==="admin")||u.email==="yr@libeco.kr") isAdmin=true;
+    }
+  }catch(e){}
+  if(!isAdmin){const ov=document.getElementById("eq-access-overlay");if(ov)ov.style.display="flex";}
+})();</script>
 
 <!-- User panel -->
 <div class="user-panel" id="eqUserPanel">

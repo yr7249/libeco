@@ -305,19 +305,21 @@
       const upN=document.getElementById("upanel-name");const upS=document.getElementById("upanel-sub");
       if(upN)upN.textContent=displayName;if(upS)upS.textContent=displaySub;
       window._authUser={id:u.id,email:u.email,...p};
-      // 비관리자: 구매리스트 카드 비활성화
+      // 비관리자: 관리자 전용 카드 비활성화
       if(!isAdmin){
-        const pc=document.getElementById("card-purchase");
-        if(pc){
-          pc.removeAttribute("href");
-          pc.classList.remove("live");
-          pc.classList.add("soon");
-          pc.querySelector(".svc-status").textContent="비공개";
-          pc.querySelector(".svc-status").className="svc-status";
-          pc.querySelector(".svc-status").style.cssText="background:rgba(100,116,139,.12);color:#64748b;border:1px solid rgba(100,116,139,.28)";
-          const arr=pc.querySelector(".svc-arr");
-          if(arr) arr.remove();
-        }
+        ["card-purchase","card-equipment"].forEach(id=>{
+          const pc=document.getElementById(id);
+          if(pc){
+            pc.removeAttribute("href");
+            pc.classList.remove("live");
+            pc.classList.add("soon");
+            pc.querySelector(".svc-status").textContent="비공개";
+            pc.querySelector(".svc-status").className="svc-status";
+            pc.querySelector(".svc-status").style.cssText="background:rgba(100,116,139,.12);color:#64748b;border:1px solid rgba(100,116,139,.28)";
+            const arr=pc.querySelector(".svc-arr");
+            if(arr) arr.remove();
+          }
+        });
       }
       startSessionTimer();
       const userBtn=document.getElementById("home-user-btn");
@@ -382,8 +384,8 @@
             <span class="svc-arr">→</span>
           </a>
 
-          <!-- 1행-2: 시험장비 (LIVE) -->
-          <a class="svc-card live" href="equipment.html" aria-label="시험장비 열기">
+          <!-- 1행-2: 시험장비 (LIVE, admin only) -->
+          <a id="card-equipment" class="svc-card live" href="equipment.html" aria-label="시험장비 열기">
             <div class="svc-card-head">
               <div class="svc-icon" style="background:rgba(22,101,52,.1)">🔬</div>
               <span class="svc-status status-live">LIVE</span>
