@@ -533,7 +533,7 @@
 
     /* ── Sitemap / 이동 panel ── */
     .nav-panel{
-      position:fixed;top:54px;right:16px;z-index:9998;
+      position:fixed;top:54px;left:14px;z-index:9998;
       background:var(--surface);border:1px solid var(--border);
       border-radius:16px;padding:10px;
       box-shadow:0 8px 32px rgba(15,23,42,.14);
@@ -805,7 +805,7 @@
     /* Override: diagram fills full page */
     html, body { margin:0; padding:0; height:100%; overflow:hidden; }
     #view-diagram { position:fixed !important; inset:0 !important; display:flex !important; }
-    .nav-panel { position:fixed; top:54px; right:16px; z-index:9998; background:#fff; border:1px solid rgba(15,23,42,.12); border-radius:16px; padding:10px; box-shadow:0 8px 32px rgba(15,23,42,.14); min-width:240px; display:none; }
+    .nav-panel { position:fixed; top:54px; left:14px; z-index:9998; background:#fff; border:1px solid rgba(15,23,42,.12); border-radius:16px; padding:10px; box-shadow:0 8px 32px rgba(15,23,42,.14); min-width:240px; display:none; }
     .nav-panel.open { display:block; }
     .nav-item { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:10px; cursor:pointer; text-decoration:none; color:#0f172a; transition:background .12s; }
     .nav-item:hover { background:rgba(22,101,52,.08); }
@@ -857,7 +857,7 @@
       <div><div style="font-size:.83rem;font-weight:700">입고관리</div><div style="font-size:.67rem;color:#64748b;font-family:monospace">장비 일정관리</div></div>
     </a>
     <div class="nav-item disabled"><span style="font-size:.9rem;width:22px;text-align:center">📖</span><div><div style="font-size:.83rem;font-weight:700">시험절차서</div><div style="font-size:.67rem;color:#64748b;font-family:monospace">준비중</div></div><span class="nav-soon-tag">SOON</span></div>
-    <div class="nav-item disabled"><span style="font-size:.9rem;width:22px;text-align:center">💬</span><div><div style="font-size:.83rem;font-weight:700">기타 공유사항</div><div style="font-size:.67rem;color:#64748b;font-family:monospace">준비중</div></div><span class="nav-soon-tag">SOON</span></div>
+    <a class="nav-item" href="share.html"><span style="font-size:.9rem;width:22px;text-align:center">💬</span><div><div style="font-size:.83rem;font-weight:700">기타 공유사항</div><div style="font-size:.67rem;color:#64748b;font-family:monospace">팀 공지 · 공유 자료</div></div></a>
   </div>
 
   <div id="view-diagram">

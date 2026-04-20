@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LLNL POC — 기타공유사항</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#ffffff;--surface:#ffffff;--surface2:#f1f5f9;
+      --border:rgba(15,23,42,.12);--text:#0f172a;--text2:#334155;
+      --accent:#166534;--accent-strong:#14532d;
+      --accent-wash:rgba(22,101,52,.12);--accent-wash2:rgba(22,101,52,.08);
+      --glow:0 10px 26px rgba(15,23,42,.10);--hs:#16a34a;
+      --font-heading:'Outfit',sans-serif;--font-mono:'IBM Plex Mono',monospace;
+    }
+    body{font-family:var(--font-heading);color:var(--text);background:var(--bg);min-height:100vh;line-height:1.6;font-weight:600}
+    .container{max-width:1100px;margin:0 auto;padding:0 24px;position:relative;z-index:1}
+
+    /* ── Topbar ── */
+    .pg-topbar{display:flex;align-items:center;justify-content:space-between;padding:0 14px;height:50px;background:#fff;border-bottom:1px solid rgba(15,23,42,.12);box-shadow:0 1px 4px rgba(0,0,0,.08);gap:8px;position:sticky;top:0;z-index:100;width:100vw;margin-left:calc((100% - 100vw)/2)}
+    .pg-topbar-l,.pg-topbar-r{display:flex;align-items:center;gap:5px;flex-shrink:0}
+    .pg-topbar-l{flex:1;min-width:0;overflow:hidden}
+    .pg-vdiv{width:1px;height:22px;background:rgba(15,23,42,.12);margin:0 3px;flex-shrink:0}
+    .pg-title{font-size:.88rem;font-weight:800;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .pg-title span{color:#166534}
+    .pg-badge{font-family:var(--font-mono);font-size:.66rem;background:rgba(22,101,52,.1);color:#166534;padding:2px 7px;border-radius:5px;font-weight:600;flex-shrink:0}
+    .pg-btn{padding:5px 11px;border-radius:7px;border:1px solid rgba(15,23,42,.12);background:#fff;cursor:pointer;font-size:.75rem;font-weight:600;font-family:'Outfit',sans-serif;display:inline-flex;align-items:center;gap:4px;transition:background .12s,border-color .12s,color .12s;white-space:nowrap;flex-shrink:0}
+    .pg-btn:hover{background:rgba(22,101,52,.1);border-color:#166634}
+    .pg-btn:disabled{opacity:.4;cursor:not-allowed}
+    .pg-btn-write{background:#166534;border-color:#14532d;color:#fff}
+    .pg-btn-write:hover{background:#14532d!important;color:#fff}
+    .pg-btn-export{background:rgba(22,101,52,.08);border-color:rgba(22,101,52,.3);color:#166534}
+    .pg-btn-export:hover{background:rgba(22,101,52,.15)!important}
+
+    /* ── Nav panel ── */
+    .nav-panel{position:fixed;top:54px;left:14px;z-index:9998;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:10px;box-shadow:0 8px 32px rgba(15,23,42,.14);min-width:240px;display:none}
+    .nav-panel.open{display:block;animation:navFadeIn .15s ease}
+    @keyframes navFadeIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+    .nav-panel-title{font-family:var(--font-mono);font-size:.65rem;color:var(--text2);font-weight:700;letter-spacing:.1em;padding:4px 10px 8px;text-transform:uppercase}
+    .nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;cursor:pointer;text-decoration:none;color:var(--text);transition:background .12s}
+    .nav-item:hover{background:var(--accent-wash2)}
+    .nav-item.active{background:var(--accent-wash);color:var(--accent-strong)}
+    .nav-item.disabled{opacity:.45;cursor:default;pointer-events:none}
+    .nav-icon{font-size:.9rem;width:22px;text-align:center;flex-shrink:0}
+    .nav-label{font-size:.83rem;font-weight:700}
+    .nav-sub{font-size:.67rem;color:var(--text2);font-weight:500;margin-top:1px;font-family:var(--font-mono)}
+    .nav-soon-tag{font-family:var(--font-mono);font-size:.6rem;color:#94a3b8;background:rgba(148,163,184,.12);border:1px solid rgba(148,163,184,.2);padding:1px 6px;border-radius:4px;margin-left:auto}
+    .nav-sep{height:1px;background:var(--border);margin:6px 2px}
+
+    /* ── User panel ── */
+    .user-panel{position:fixed;top:54px;right:12px;z-index:9999;width:200px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 32px rgba(15,23,42,.14);padding:8px 0;display:none;flex-direction:column}
+    .user-panel.open{display:flex}
+    .user-panel-info{padding:8px 14px 6px}
+    .user-panel-name{font-size:.82rem;font-weight:700}
+    .user-panel-sub{font-size:.68rem;color:var(--text2);margin-top:2px}
+    .user-panel-sep{height:1px;background:var(--border);margin:6px 0}
+    .user-panel-item{display:flex;align-items:center;width:100%;padding:7px 14px;background:none;border:none;cursor:pointer;font-size:.78rem;font-weight:600;font-family:var(--font-heading);color:var(--text);text-align:left;transition:background .12s}
+    .user-panel-item:hover{background:var(--accent-wash2)}
+    .user-panel-logout{color:#dc2626}
+    .user-panel-logout:hover{background:#fee2e2!important}
+
+    /* ── Page header ── */
+    .header{padding:28px 0 18px;border-bottom:1px solid var(--border);position:relative;overflow:hidden}
+    .header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--accent),transparent)}
+    .header-inner{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:14px}
+    .header-left{display:flex;align-items:center;gap:14px}
+    .h2-icon{width:42px;height:42px;flex-shrink:0}
+    .header h1{font-size:clamp(1.4rem,2.6vw,2.1rem);font-weight:800;letter-spacing:-.02em;color:var(--text)}
+    .header h1 span{color:var(--accent)}
+    .header-sub{font-size:.88rem;color:var(--text2);margin-top:4px;font-weight:400}
+
+    /* ── Section ── */
+    .section-title{font-size:1.0rem;font-weight:800;color:var(--text);display:flex;align-items:center;gap:10px}
+    .section-title::before{content:'';width:3px;height:18px;background:var(--accent);border-radius:2px}
+    .tab-btn{padding:6px 13px;border:1px solid var(--border);border-radius:999px;background:rgba(255,255,255,.86);color:var(--text2);cursor:pointer;font-size:.78rem;font-weight:800;transition:background .15s,border-color .15s,color .15s;font-family:var(--font-heading)}
+    .tab-btn:hover{border-color:rgba(22,101,52,.35);color:var(--text)}
+    .tab-btn.active{background:var(--accent-wash);border-color:rgba(22,101,52,.55);color:var(--accent-strong)}
+    .search-input{background:rgba(255,255,255,.96);border:1px solid var(--border);border-radius:10px;padding:9px 16px 9px 38px;color:var(--text);font-size:.86rem;width:min(280px,100%);font-family:var(--font-heading);transition:border-color .3s;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.868-3.834zm-5.242.156a5 5 0 1 1 0-10 5 5 0 0 1 0 10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:12px center}
+    .search-input:focus{outline:none;border-color:rgba(22,101,52,.55);box-shadow:0 0 0 3px rgba(22,101,52,.12)}
+
+    /* ── Post list ── */
+    .post-table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-top:10px}
+    .post-row{display:flex;align-items:center;gap:0;padding:13px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s;color:inherit;user-select:none}
+    .post-row:last-child{border-bottom:none}
+    .post-row:hover{background:var(--accent-wash2)}
+    .post-row.pinned{background:rgba(245,158,11,.04)}
+    .post-row.pinned:hover{background:rgba(245,158,11,.10)}
+    .post-pin{font-size:.78rem;margin-right:8px;color:#f59e0b;width:18px;text-align:center;flex-shrink:0}
+    .post-cat{display:inline-flex;align-items:center;padding:2px 8px;border-radius:99px;font-size:.64rem;font-weight:700;white-space:nowrap;font-family:var(--font-mono);margin-right:10px;flex-shrink:0}
+    .cat-공지{background:rgba(239,68,68,.1);color:#dc2626;border:1px solid rgba(239,68,68,.25)}
+    .cat-자료공유{background:rgba(22,101,52,.1);color:#166534;border:1px solid rgba(22,101,52,.25)}
+    .cat-회의록{background:rgba(59,130,246,.1);color:#2563eb;border:1px solid rgba(59,130,246,.25)}
+    .cat-기타{background:rgba(100,116,139,.1);color:#475569;border:1px solid rgba(100,116,139,.25)}
+    .post-title-cell{flex:1;min-width:0}
+    .post-title-txt{font-size:.9rem;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .post-preview-txt{font-size:.74rem;color:var(--text2);font-weight:400;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .post-meta{font-size:.71rem;color:var(--text2);font-family:var(--font-mono);white-space:nowrap;margin-left:16px;flex-shrink:0}
+    .post-file-ct{display:inline-flex;align-items:center;gap:3px;font-size:.66rem;font-family:var(--font-mono);color:#64748b;background:rgba(100,116,139,.08);border:1px solid rgba(100,116,139,.18);padding:1px 6px;border-radius:99px;margin-left:8px;flex-shrink:0}
+    .post-empty{text-align:center;padding:56px 0;color:#94a3b8;font-size:.88rem;font-weight:400}
+
+    /* ── Detail view ── */
+    .detail-back{display:inline-flex;align-items:center;gap:6px;font-size:.82rem;font-weight:700;color:var(--text2);cursor:pointer;background:none;border:none;padding:14px 0 12px;transition:color .12s;font-family:var(--font-heading)}
+    .detail-back:hover{color:var(--accent)}
+    .detail-header{padding:16px 0 14px;border-bottom:1px solid var(--border)}
+    .detail-cat-pin{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+    .detail-title{font-size:clamp(1.25rem,2.2vw,1.8rem);font-weight:800;color:var(--text);letter-spacing:-.01em;line-height:1.3}
+    .detail-meta{display:flex;align-items:center;gap:16px;margin-top:10px;font-size:.77rem;color:var(--text2);font-family:var(--font-mono);flex-wrap:wrap}
+    .detail-actions{display:flex;align-items:center;gap:8px;margin-top:14px;flex-wrap:wrap}
+    .article-body{padding:28px 0;min-height:160px}
+    .article-body .ql-editor{padding:0;font-family:var(--font-heading);font-size:.96rem;line-height:1.82;color:var(--text)}
+    .article-body .ql-editor h1{font-size:1.55rem;font-weight:800;margin:1.1em 0 .5em;color:var(--text)}
+    .article-body .ql-editor h2{font-size:1.25rem;font-weight:700;margin:.9em 0 .4em;color:var(--text)}
+    .article-body .ql-editor h3{font-size:1.05rem;font-weight:700;margin:.8em 0 .3em;color:var(--text)}
+    .article-body .ql-editor p{margin-bottom:.55em}
+    .article-body .ql-editor ul,.article-body .ql-editor ol{padding-left:1.5em;margin-bottom:.6em}
+    .article-body .ql-editor blockquote{border-left:4px solid var(--accent);margin:1em 0;padding:.4em 1em;color:var(--text2);background:var(--surface2);border-radius:0 6px 6px 0}
+    .article-body .ql-editor pre{background:var(--surface2);border-radius:8px;padding:.8em 1.2em;font-family:var(--font-mono);font-size:.85rem;overflow-x:auto;line-height:1.6}
+    .article-body .ql-editor img{max-width:100%;border-radius:8px;height:auto}
+
+    /* ── Attachments ── */
+    .attach-section{border-top:1px solid var(--border);padding-top:18px;margin-top:4px}
+    .attach-title{font-size:.82rem;font-weight:800;color:var(--text2);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+    .attach-list{display:flex;flex-direction:column;gap:6px}
+    .attach-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);transition:border-color .12s}
+    .attach-item:hover{border-color:rgba(22,101,52,.3)}
+    .attach-icon{font-size:1.05rem;flex-shrink:0}
+    .attach-name{flex:1;font-size:.83rem;font-weight:600;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .attach-size{font-size:.7rem;color:var(--text2);font-family:var(--font-mono);flex-shrink:0}
+    .attach-dl{padding:4px 10px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;font-size:.72rem;font-weight:700;font-family:var(--font-heading);color:var(--text);transition:background .12s;text-decoration:none;flex-shrink:0}
+    .attach-dl:hover{background:var(--accent-wash);border-color:rgba(22,101,52,.35);color:var(--accent)}
+
+    /* ── Editor ── */
+    .editor-header{padding:14px 0 12px;border-bottom:1px solid var(--border);margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .editor-back{display:inline-flex;align-items:center;gap:6px;font-size:.82rem;font-weight:700;color:var(--text2);cursor:pointer;background:none;border:none;padding:0;font-family:var(--font-heading);transition:color .12s}
+    .editor-back:hover{color:var(--accent)}
+    .editor-title-input{width:100%;padding:11px 16px;border:1px solid var(--border);border-radius:10px;font-size:1.05rem;font-weight:700;font-family:var(--font-heading);color:var(--text);background:#fff;outline:none;transition:border-color .2s;margin-bottom:10px}
+    .editor-title-input:focus{border-color:rgba(22,101,52,.55);box-shadow:0 0 0 3px rgba(22,101,52,.1)}
+    .editor-title-input::placeholder{color:#94a3b8;font-weight:400}
+    .editor-meta-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+    .editor-select{padding:7px 28px 7px 12px;border:1px solid var(--border);border-radius:8px;font-size:.82rem;font-weight:600;font-family:var(--font-heading);color:var(--text);background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E") no-repeat right 10px center;appearance:none;cursor:pointer;outline:none}
+    .editor-select:focus{border-color:rgba(22,101,52,.55);box-shadow:0 0 0 3px rgba(22,101,52,.1)}
+    .editor-pin-label{display:flex;align-items:center;gap:6px;font-size:.82rem;font-weight:600;cursor:pointer;user-select:none}
+    .editor-pin-label input[type=checkbox]{accent-color:var(--accent);width:15px;height:15px;cursor:pointer}
+
+    /* ── Quill overrides ── */
+    .ql-toolbar.ql-snow{border:1px solid var(--border);border-radius:10px 10px 0 0;background:var(--surface2);font-family:var(--font-heading);padding:8px 10px}
+    .ql-container.ql-snow{border:1px solid var(--border);border-top:none;border-radius:0 0 10px 10px;font-family:var(--font-heading);font-size:.95rem}
+    .ql-editor{min-height:320px;font-family:var(--font-heading);line-height:1.75;font-size:.95rem}
+    .ql-editor.ql-blank::before{color:#94a3b8;font-style:normal}
+    .ql-toolbar.ql-snow button:hover,.ql-toolbar.ql-snow button.ql-active{color:var(--accent)!important}
+    .ql-toolbar.ql-snow button:hover .ql-stroke,.ql-toolbar.ql-snow button.ql-active .ql-stroke{stroke:var(--accent)!important}
+    .ql-toolbar.ql-snow button:hover .ql-fill,.ql-toolbar.ql-snow button.ql-active .ql-fill{fill:var(--accent)!important}
+    .ql-snow.ql-toolbar .ql-picker-label:hover{color:var(--accent)!important}
+
+    /* ── File upload area ── */
+    .file-upload-area{margin-top:14px;border:1px solid var(--border);border-radius:10px;padding:14px}
+    .file-upload-title{font-size:.82rem;font-weight:800;color:var(--text2);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+    .file-upload-btn-label{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border:1px dashed rgba(22,101,52,.4);border-radius:8px;background:rgba(22,101,52,.04);color:var(--accent);font-size:.8rem;font-weight:700;font-family:var(--font-heading);cursor:pointer;transition:background .12s,border-color .12s}
+    .file-upload-btn-label:hover{background:rgba(22,101,52,.1);border-color:rgba(22,101,52,.6)}
+    .file-upload-list{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+    .fup-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:7px;background:#fff}
+    .fup-name{flex:1;font-size:.8rem;font-weight:600;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .fup-size{font-size:.7rem;color:var(--text2);font-family:var(--font-mono);flex-shrink:0}
+    .fup-del{background:none;border:none;cursor:pointer;color:#94a3b8;font-size:.85rem;padding:2px 5px;line-height:1;transition:color .12s;flex-shrink:0}
+    .fup-del:hover{color:#dc2626}
+
+    /* ── Editor actions ── */
+    .editor-actions{display:flex;align-items:center;gap:10px;margin-top:20px;justify-content:flex-end;flex-wrap:wrap}
+    .btn-cancel{padding:8px 18px;border:1px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;font-size:.83rem;font-weight:700;font-family:var(--font-heading);color:var(--text2);transition:background .12s}
+    .btn-cancel:hover{background:var(--surface2)}
+    .btn-save{padding:8px 22px;border:1px solid #14532d;border-radius:8px;background:#166534;cursor:pointer;font-size:.83rem;font-weight:700;font-family:var(--font-heading);color:#fff;transition:background .12s}
+    .btn-save:hover{background:#14532d}
+    .btn-save:disabled{opacity:.5;cursor:not-allowed}
+
+    /* ── Footer ── */
+    .footer{text-align:center;padding:9px 0;border-top:1px solid var(--border);font-size:.78rem;color:var(--text2);position:relative;margin-top:12px}
+    .footer::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--accent),transparent)}
+    .footer span{color:var(--accent)}
+
+    /* ── Toast ── */
+    .sh-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;border-radius:10px;padding:10px 22px;font-size:.84rem;font-weight:600;z-index:9999;display:none;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.25)}
+    .sh-toast.show{display:block;animation:toastIn .2s ease}
+    @keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+    /* ── Delete modal ── */
+    #sh-del-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center}
+    #sh-del-modal.open{display:flex}
+    #sh-del-inner{background:#fff;border-radius:14px;padding:28px;width:320px;max-width:90vw;box-shadow:0 8px 40px rgba(0,0,0,.22);text-align:center}
+    #sh-del-inner h3{font-size:1rem;font-weight:800;margin-bottom:8px}
+    #sh-del-inner p{font-size:.84rem;color:var(--text2);font-weight:400;margin-bottom:20px}
+    .del-btns{display:flex;gap:10px;justify-content:center}
+    .btn-del-no{padding:8px 18px;border:1px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;font-size:.83rem;font-weight:700;font-family:var(--font-heading);color:var(--text2)}
+    .btn-del-yes{padding:8px 18px;border:1px solid #dc2626;border-radius:8px;background:#dc2626;cursor:pointer;font-size:.83rem;font-weight:700;font-family:var(--font-heading);color:#fff}
+
+    @media(max-width:640px){
+      .no-mobile{display:none!important}
+      .pg-topbar{padding:0 8px;gap:4px}
+      .pg-btn{padding:5px 8px;font-size:.7rem}
+      .post-meta{margin-left:8px;font-size:.67rem}
+    }
+  </style>
+</head>
+<body>
+
+<!-- Quick auth redirect -->
+<script>(function(){
+  const token=localStorage.getItem("supa_token")||"";
+  if(!token){location.href="login.html";return;}
+  const _ta=sessionStorage.getItem("libeco_tab_active");
+  if(_ta&&Date.now()>Number(_ta)){localStorage.removeItem("supa_token");location.href="login.html";return;}
+  if(!_ta) sessionStorage.setItem("libeco_tab_active",String(Date.now()+7200000));
+})()</script>
+
+<!-- Admin + user info check -->
+<script>(async function(){
+  const SU="https://ikfjpzdzrgsmhaobqnai.supabase.co",SK="sb_publishable_fbbdwjCZCL9AFD-eUIs0bg_XwdlhxFN";
+  const token=localStorage.getItem("supa_token")||"";
+  let isAdmin=false;
+  try{
+    const ur=await fetch(SU+"/auth/v1/user",{headers:{"apikey":SK,"Authorization":"Bearer "+token}});
+    if(ur.ok){
+      const u=await ur.json();
+      const pr=await fetch(SU+"/rest/v1/profiles?id=eq."+u.id+"&select=role,name,department,position",{headers:{"apikey":SK,"Authorization":"Bearer "+token}});
+      const profiles=await pr.json();
+      const p=profiles?.[0]||{};
+      if((p.role==="admin")||u.email==="yr@libeco.kr") isAdmin=true;
+      const dname=p.name||(u.email||"").split("@")[0];
+      const dsub=[p.department,p.position].filter(Boolean).join(" · ");
+      window._shUser={id:u.id,email:u.email,...p,displayName:dname,isAdmin};
+      const dispEl=document.getElementById("sh-user-display");
+      const upN=document.getElementById("sh-upanel-name");
+      const upS=document.getElementById("sh-upanel-sub");
+      if(dispEl)dispEl.textContent=dname;
+      if(upN)upN.textContent=dname;
+      if(upS)upS.textContent=dsub;
+    }
+  }catch(e){}
+  window._isAdmin=isAdmin;
+  if(!isAdmin){
+    ["nav-purchase","nav-equipment"].forEach(function(id){
+      const el=document.getElementById(id);if(!el)return;
+      el.removeAttribute("href");el.classList.add("disabled");
+      const t=document.createElement("span");t.className="nav-soon-tag";t.textContent="비공개";el.appendChild(t);
+    });
+  }
+})()</script>
+
+<!-- User panel -->
+<div class="user-panel" id="shUserPanel">
+  <div class="user-panel-info">
+    <div class="user-panel-name" id="sh-upanel-name">--</div>
+    <div class="user-panel-sub" id="sh-upanel-sub"></div>
+  </div>
+  <div class="user-panel-sep"></div>
+  <button class="user-panel-item user-panel-logout" onclick="(function(){localStorage.removeItem('supa_token');localStorage.removeItem('supa_refresh');sessionStorage.removeItem('libeco_tab_active');location.href='login.html';})()">로그아웃</button>
+</div>
+
+<!-- Nav panel -->
+<div class="nav-panel" id="shNavPanel">
+  <div class="nav-panel-title">페이지 이동</div>
+  <a class="nav-item" href="index.html"><span class="nav-icon">🏠</span><div><div class="nav-label">홈</div><div class="nav-sub">메인 화면</div></div></a>
+  <div class="nav-sep"></div>
+  <a class="nav-item" href="diagram.html"><span class="nav-icon">📐</span><div><div class="nav-label">구성도</div><div class="nav-sub">P&amp;ID Schematic</div></div></a>
+  <a id="nav-equipment" class="nav-item" href="equipment.html"><span class="nav-icon">🔬</span><div><div class="nav-label">시험장비</div><div class="nav-sub">계측/제어 장비 목록</div></div></a>
+  <a id="nav-purchase" class="nav-item" href="purchase.html"><span class="nav-icon">📋</span><div><div class="nav-label">구매리스트</div><div class="nav-sub">구매 필요내역</div></div></a>
+  <div class="nav-sep"></div>
+  <a class="nav-item" href="incoming.html"><span class="nav-icon">📦</span><div><div class="nav-label">입고관리</div><div class="nav-sub">장비 일정관리</div></div></a>
+  <div class="nav-item disabled"><span class="nav-icon">📖</span><div><div class="nav-label">시험절차서</div><div class="nav-sub">준비중</div></div><span class="nav-soon-tag">SOON</span></div>
+  <div class="nav-item active"><span class="nav-icon">💬</span><div><div class="nav-label">기타 공유사항</div><div class="nav-sub">팀 공지 · 공유 자료</div></div></div>
+</div>
+
+<!-- Topbar -->
+<div class="pg-topbar">
+  <div class="pg-topbar-l">
+    <a href="index.html" style="color:#16a34a;font-weight:800;font-size:.95rem;letter-spacing:-.02em;font-family:inherit;text-decoration:none;flex-shrink:0">LIBECO E&amp;C</a>
+    <div class="pg-vdiv"></div>
+    <button class="pg-btn" id="sh-nav-btn">이동 ▾</button>
+    <div class="pg-vdiv no-mobile"></div>
+    <span class="pg-title no-mobile">LLNL POC <span>기타공유사항</span></span>
+    <span class="pg-badge no-mobile">SHARED</span>
+  </div>
+  <div class="pg-topbar-r">
+    <span id="sh-session-display" style="font-family:var(--font-mono);font-size:.68rem;color:var(--text2);padding:0 4px">⏱ --</span>
+    <button class="pg-btn" id="sh-extend-topbar">연장하기</button>
+    <div class="pg-vdiv"></div>
+    <button class="pg-btn pg-btn-write" id="sh-btn-write">✏️ 글쓰기</button>
+    <div class="pg-vdiv no-mobile"></div>
+    <span id="sh-user-display" class="no-mobile" style="font-size:.75rem;font-weight:600;color:var(--text)"></span>
+    <button class="pg-btn" id="sh-user-btn">👤</button>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ══════════════ LIST VIEW ══════════════ -->
+  <div id="sh-view-list">
+    <div class="header">
+      <div class="header-inner">
+        <div class="header-left">
+          <svg class="h2-icon" viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="42" height="42" rx="10" fill="rgba(22,101,52,.12)"/>
+            <path d="M10 14h22M10 21h16M10 28h12" stroke="#166534" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="32" cy="27" r="5.5" fill="rgba(22,101,52,.18)" stroke="#166534" stroke-width="1.6"/>
+            <path d="M32 24.5v5M29.5 27h5" stroke="#166534" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+          <div>
+            <h1>기타 <span>공유사항</span></h1>
+            <p class="header-sub">팀 공지 및 자료 공유 게시판</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin:14px 0 0;flex-wrap:wrap;gap:8px">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <div class="section-title">게시물</div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px" id="sh-cat-filter">
+          <button class="tab-btn active" data-cat="ALL">전체</button>
+          <button class="tab-btn" data-cat="공지">공지</button>
+          <button class="tab-btn" data-cat="자료공유">자료공유</button>
+          <button class="tab-btn" data-cat="회의록">회의록</button>
+          <button class="tab-btn" data-cat="기타">기타</button>
+        </div>
+        <span id="sh-post-count" style="font-size:.78rem;color:var(--text2);font-family:var(--font-mono)"></span>
+      </div>
+      <input type="text" class="search-input" id="sh-search" placeholder="제목, 내용 검색...">
+    </div>
+
+    <div class="post-table-wrap" id="sh-post-list">
+      <div class="post-empty">⏳ 불러오는 중...</div>
+    </div>
+
+    <footer class="footer">© 2026 LIBECO E&amp;C · All Rights Reserved</footer>
+  </div>
+
+  <!-- ══════════════ DETAIL VIEW ══════════════ -->
+  <div id="sh-view-detail" style="display:none;padding-bottom:48px">
+    <button class="detail-back" id="sh-detail-back">← 목록으로</button>
+    <div class="detail-header">
+      <div class="detail-cat-pin" id="sh-detail-catpin"></div>
+      <div class="detail-title" id="sh-detail-title"></div>
+      <div class="detail-meta" id="sh-detail-meta"></div>
+      <div class="detail-actions" id="sh-detail-actions"></div>
+    </div>
+    <div class="article-body">
+      <div class="ql-editor" id="sh-detail-body"></div>
+    </div>
+    <div id="sh-detail-attach" style="display:none">
+      <div class="attach-section">
+        <div class="attach-title">📎 첨부파일</div>
+        <div class="attach-list" id="sh-detail-attach-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ EDITOR VIEW ══════════════ -->
+  <div id="sh-view-editor" style="display:none;padding-bottom:60px">
+    <div class="editor-header">
+      <button class="editor-back" id="sh-editor-back">← 취소</button>
+      <span id="sh-editor-label" style="font-size:.9rem;font-weight:800;color:var(--text)">새 글 작성</span>
+    </div>
+    <input type="text" class="editor-title-input" id="sh-title-input" placeholder="제목을 입력하세요" maxlength="200">
+    <div class="editor-meta-row">
+      <select class="editor-select" id="sh-cat-select">
+        <option value="기타">기타</option>
+        <option value="공지">공지</option>
+        <option value="자료공유">자료공유</option>
+        <option value="회의록">회의록</option>
+      </select>
+      <label class="editor-pin-label" id="sh-pin-wrap" style="display:none">
+        <input type="checkbox" id="sh-pin-check"> 공지 고정
+      </label>
+    </div>
+    <div id="sh-quill-editor"></div>
+    <div class="file-upload-area">
+      <div class="file-upload-title">📎 첨부파일 <span style="font-size:.7rem;font-weight:400;color:var(--text2)">(파일당 50MB · 최대 5개)</span></div>
+      <label class="file-upload-btn-label" for="sh-file-input">＋ 파일 추가<input type="file" id="sh-file-input" style="display:none" multiple></label>
+      <div class="file-upload-list" id="sh-fup-list"></div>
+    </div>
+    <div class="editor-actions">
+      <button class="btn-cancel" id="sh-btn-cancel">취소</button>
+      <button class="btn-save" id="sh-btn-save">저장하기</button>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<!-- Session banner -->
+<div id="sh-session-banner" style="display:none;position:fixed;bottom:20px;right:20px;z-index:9000;background:#0f172a;color:#fff;border-radius:12px;padding:12px 16px;gap:10px;font-size:.84rem;box-shadow:0 4px 24px rgba(0,0,0,.3);align-items:center">
+  ⏰ 세션이 <strong id="sh-session-rem">--</strong> 후 만료됩니다&nbsp;
+  <button id="sh-extend-btn" style="background:#16a34a;color:#fff;border:none;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:.8rem;font-weight:700">연장하기</button>
+  <button onclick="(function(){localStorage.removeItem('supa_token');localStorage.removeItem('supa_refresh');sessionStorage.removeItem('libeco_tab_active');location.href='login.html';})()" style="background:#dc2626;color:#fff;border:none;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:.8rem;font-weight:700">로그아웃</button>
+</div>
+
+<!-- Toast -->
+<div class="sh-toast" id="sh-toast"></div>
+
+<!-- Delete modal -->
+<div id="sh-del-modal">
+  <div id="sh-del-inner">
+    <h3>게시물을 삭제하시겠습니까?</h3>
+    <p>이 작업은 되돌릴 수 없습니다.</p>
+    <div class="del-btns">
+      <button class="btn-del-no" id="sh-del-no">취소</button>
+      <button class="btn-del-yes" id="sh-del-yes">삭제</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+<script>
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   CONSTANTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+const SH_SU="https://ikfjpzdzrgsmhaobqnai.supabase.co";
+const SH_SK="sb_publishable_fbbdwjCZCL9AFD-eUIs0bg_XwdlhxFN";
+const SH_SESSION_MS=7200000;
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   STATE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+let sh_posts=[], sh_filterCat="ALL", sh_searchQ="";
+let sh_currentId=null, sh_editingId=null;
+let sh_quill=null;
+let sh_pendingFiles=[], sh_existingFiles=[], sh_deletedFileIds=[];
+let sh_deleteCb=null;
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   HELPERS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function sh_token(){ return localStorage.getItem("supa_token")||""; }
+function sh_user(){ return window._shUser||{}; }
+
+async function sh_api(path, opts={}){
+  const h={"apikey":SH_SK,"Authorization":"Bearer "+sh_token()};
+  if(!(opts.body instanceof Blob||opts.body instanceof ArrayBuffer||opts.body instanceof FormData)){
+    h["Content-Type"]="application/json";
+  }
+  Object.assign(h, opts.headers||{});
+  return fetch(SH_SU+path, {...opts, headers:h});
+}
+
+function sh_esc(s){ return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+
+function sh_fmtDate(s){
+  if(!s)return"";
+  const d=new Date(s);
+  return d.getFullYear()+"."+(d.getMonth()+1).toString().padStart(2,"0")+"."+d.getDate().toString().padStart(2,"0");
+}
+function sh_fmtDT(s){
+  if(!s)return"";
+  const d=new Date(s);
+  return sh_fmtDate(s)+" "+d.getHours().toString().padStart(2,"0")+":"+d.getMinutes().toString().padStart(2,"0");
+}
+function sh_fmtSize(b){
+  if(!b||b<0)return"";
+  if(b<1024)return b+"B";
+  if(b<1048576)return(b/1024).toFixed(1)+"KB";
+  return(b/1048576).toFixed(1)+"MB";
+}
+function sh_fileIcon(name){
+  const ext=(name||"").split(".").pop().toLowerCase();
+  if(["jpg","jpeg","png","gif","webp","svg","bmp"].includes(ext))return"🖼";
+  if(ext==="pdf")return"📄";
+  if(["xlsx","xls","csv"].includes(ext))return"📊";
+  if(["docx","doc","hwp","hwpx"].includes(ext))return"📝";
+  if(["pptx","ppt"].includes(ext))return"📋";
+  if(["zip","rar","7z","tar","gz"].includes(ext))return"🗜";
+  return"📎";
+}
+function sh_catBadge(cat){
+  const c=cat||"기타";
+  return `<span class="post-cat cat-${sh_esc(c)}">${sh_esc(c)}</span>`;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   TOAST
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+let _toastT=null;
+function sh_toast(msg,dur=2400){
+  const el=document.getElementById("sh-toast");
+  el.textContent=msg; el.classList.add("show");
+  clearTimeout(_toastT);
+  _toastT=setTimeout(()=>el.classList.remove("show"),dur);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   SESSION TIMER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function sh_startSession(){
+  function tick(){
+    const exp=Number(sessionStorage.getItem("libeco_tab_active")||0);
+    if(!exp||Date.now()>exp){ location.href="login.html"; return; }
+    const rem=exp-Date.now();
+    const disp=document.getElementById("sh-session-display");
+    if(disp){
+      const h=Math.floor(rem/3600000), m=Math.floor((rem%3600000)/60000);
+      disp.textContent="⏱ "+(h>0?h+"h ":"")+m+"분";
+      disp.style.color=rem<=600000?"#dc2626":"";
+    }
+    const banner=document.getElementById("sh-session-banner");
+    if(!banner) return;
+    if(rem<=600000){
+      const re=document.getElementById("sh-session-rem");
+      if(re) re.textContent=Math.ceil(rem/60000)+"분";
+      banner.style.display="flex";
+    } else { banner.style.display="none"; }
+  }
+  setInterval(tick,30000); tick();
+}
+async function sh_extend(){
+  const refresh=localStorage.getItem("supa_refresh");
+  if(refresh){
+    try{
+      const r=await fetch(SH_SU+"/auth/v1/token?grant_type=refresh_token",{method:"POST",headers:{"apikey":SH_SK,"Content-Type":"application/json"},body:JSON.stringify({refresh_token:refresh})});
+      if(r.ok){const d=await r.json();if(d.access_token){localStorage.setItem("supa_token",d.access_token);if(d.refresh_token)localStorage.setItem("supa_refresh",d.refresh_token);}}
+    }catch(e){}
+  }
+  sessionStorage.setItem("libeco_tab_active",String(Date.now()+SH_SESSION_MS));
+  document.getElementById("sh-session-banner").style.display="none";
+  sh_toast("세션이 연장되었습니다.");
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   VIEW SWITCHING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function sh_show(v){
+  ["sh-view-list","sh-view-detail","sh-view-editor"].forEach(id=>{
+    document.getElementById(id).style.display=(id===v)?"block":"none";
+  });
+  window.scrollTo({top:0,behavior:"instant"});
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   LOAD & RENDER LIST
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+async function sh_loadPosts(){
+  try{
+    const r=await sh_api("/rest/v1/posts?select=id,title,content,author_id,author_name,category,pinned,created_at,updated_at&order=pinned.desc,created_at.desc");
+    if(!r.ok) throw new Error(await r.text());
+    sh_posts=await r.json();
+    sh_renderList();
+  }catch(e){
+    document.getElementById("sh-post-list").innerHTML=`<div class="post-empty" style="color:#dc2626">⚠ 불러오기 실패</div>`;
+  }
+}
+
+function sh_renderList(){
+  const list=document.getElementById("sh-post-list");
+  const cnt=document.getElementById("sh-post-count");
+  const q=sh_searchQ.trim().toLowerCase();
+  let data=sh_posts;
+  if(sh_filterCat!=="ALL") data=data.filter(p=>p.category===sh_filterCat);
+  if(q) data=data.filter(p=>(p.title||"").toLowerCase().includes(q)||(p.content||"").replace(/<[^>]*>/g,"").toLowerCase().includes(q));
+  if(cnt) cnt.textContent=data.length+"건";
+  if(!data.length){
+    list.innerHTML=`<div class="post-empty">${sh_posts.length?"검색 결과가 없습니다.":"첫 글을 작성해보세요!"}</div>`;
+    return;
+  }
+  list.innerHTML=data.map(p=>{
+    const preview=(p.content||"").replace(/<[^>]*>/g,"").trim().slice(0,90);
+    const pinDot=p.pinned?`<span class="post-pin">📌</span>`:`<span class="post-pin" style="visibility:hidden">·</span>`;
+    const isMine=(sh_user().id&&sh_user().id===p.author_id);
+    return `<div class="post-row${p.pinned?" pinned":""}" data-id="${p.id}" tabindex="0" role="button">
+      ${pinDot}
+      ${sh_catBadge(p.category)}
+      <div class="post-title-cell">
+        <div class="post-title-txt">${sh_esc(p.title||"(제목 없음)")}</div>
+        ${preview?`<div class="post-preview-txt">${sh_esc(preview)}</div>`:""}
+      </div>
+      <div class="post-meta no-mobile">${isMine?'<span style="color:var(--accent);font-weight:700">나 · </span>':""}${sh_esc(p.author_name||"")} · ${sh_fmtDate(p.created_at)}</div>
+    </div>`;
+  }).join("");
+  list.querySelectorAll(".post-row").forEach(row=>{
+    row.addEventListener("click",()=>sh_openPost(row.dataset.id));
+    row.addEventListener("keydown",e=>{if(e.key==="Enter")sh_openPost(row.dataset.id);});
+  });
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   DETAIL VIEW
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+async function sh_openPost(id){
+  sh_currentId=id;
+  let post=sh_posts.find(p=>p.id===id)||{};
+  // Fetch full content
+  try{
+    const r=await sh_api("/rest/v1/posts?id=eq."+id+"&select=*");
+    if(r.ok){const arr=await r.json();if(arr[0])post={...post,...arr[0]};}
+  }catch(e){}
+
+  document.getElementById("sh-detail-catpin").innerHTML=
+    sh_catBadge(post.category)+(post.pinned?`<span style="font-size:.78rem;color:#f59e0b;font-weight:700">📌 공지 고정</span>`:"");
+  document.getElementById("sh-detail-title").textContent=post.title||"(제목 없음)";
+  document.getElementById("sh-detail-meta").innerHTML=
+    `<span>👤 ${sh_esc(post.author_name||"")}</span>`+
+    `<span>🗓 ${sh_fmtDT(post.created_at)}</span>`+
+    (post.updated_at&&post.updated_at!==post.created_at?`<span style="color:#94a3b8">(수정: ${sh_fmtDT(post.updated_at)})</span>`:"");
+  document.getElementById("sh-detail-body").innerHTML=post.content||"";
+
+  const isOwner=(window._shUser&&window._shUser.id===post.author_id);
+  const canEdit=isOwner||window._isAdmin;
+  document.getElementById("sh-detail-actions").innerHTML=
+    `<button class="pg-btn pg-btn-export" onclick="sh_printPost()">🖨 인쇄/PDF</button>`+
+    (canEdit?`<button class="pg-btn" onclick="sh_openEditor('${id}')">✏️ 수정</button>`:"")+
+    (canEdit?`<button class="pg-btn" style="color:#dc2626;border-color:rgba(220,38,38,.3)" onclick="sh_askDelete('${id}')">🗑 삭제</button>`:"");
+
+  // Attachments
+  await sh_loadAttach(id);
+  sh_show("sh-view-detail");
+}
+
+async function sh_loadAttach(postId){
+  const wrap=document.getElementById("sh-detail-attach");
+  const flist=document.getElementById("sh-detail-attach-list");
+  try{
+    const r=await sh_api("/rest/v1/post_files?post_id=eq."+postId+"&select=*&order=created_at.asc");
+    if(!r.ok){wrap.style.display="none";return;}
+    const files=await r.json();
+    if(!files||!files.length){wrap.style.display="none";return;}
+    wrap.style.display="block";
+    flist.innerHTML=files.map(f=>`
+      <div class="attach-item">
+        <span class="attach-icon">${sh_fileIcon(f.original_name)}</span>
+        <span class="attach-name">${sh_esc(f.original_name)}</span>
+        <span class="attach-size">${sh_fmtSize(f.file_size)}</span>
+        <a class="attach-dl" href="#" onclick="sh_dlFile(event,'${sh_esc(f.storage_path)}','${sh_esc(f.original_name)}')">다운로드</a>
+      </div>`).join("");
+  }catch(e){wrap.style.display="none";}
+}
+
+async function sh_dlFile(e,path,name){
+  e.preventDefault();
+  sh_toast("다운로드 중...",60000);
+  try{
+    const r=await sh_api("/storage/v1/object/authenticated/assets/"+path);
+    if(!r.ok) throw new Error(await r.text());
+    const blob=await r.blob();
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a"); a.href=url; a.download=name; a.click();
+    setTimeout(()=>URL.revokeObjectURL(url),4000);
+    sh_toast("다운로드 완료");
+  }catch(err){sh_toast("다운로드 실패: "+err.message,4000);}
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   PRINT / PDF
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function sh_printPost(){
+  const post=sh_posts.find(p=>p.id===sh_currentId)||{};
+  const bodyHtml=document.getElementById("sh-detail-body").innerHTML;
+  const win=window.open("","_blank","width=820,height=680");
+  win.document.write(`<!DOCTYPE html><html lang="ko"><head>
+<meta charset="UTF-8"><title>${sh_esc(post.title||"")}</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Outfit',sans-serif;padding:20mm;line-height:1.75;color:#111;font-size:11pt}
+.ph{border-bottom:2px solid #166534;padding-bottom:14pt;margin-bottom:18pt}
+.pt{font-size:18pt;font-weight:800;color:#0f172a;margin-bottom:6pt;line-height:1.25}
+.pm{font-size:9pt;color:#64748b;font-weight:600}
+.ql-editor{font-size:11pt;padding:0;line-height:1.75}
+.ql-editor img{max-width:100%;height:auto;border-radius:4pt}
+.ql-snow .ql-editor pre.ql-syntax{background:#f1f5f9;padding:8pt;border-radius:4pt;font-size:9pt;font-family:monospace}
+.ql-editor blockquote{border-left:4pt solid #166534;margin:10pt 0;padding:4pt 10pt;color:#475569;background:#f8fafc}
+.ql-editor h1{font-size:16pt;font-weight:800;margin:14pt 0 6pt}
+.ql-editor h2{font-size:14pt;font-weight:700;margin:12pt 0 5pt}
+.ql-editor h3{font-size:12pt;font-weight:700;margin:10pt 0 4pt}
+@media print{body{padding:15mm}}
+</style></head><body>
+<div class="ph">
+  <div class="pt">${sh_esc(post.title||"")}</div>
+  <div class="pm">${sh_esc(post.author_name||"")} · ${sh_esc(post.category||"")} · ${sh_fmtDT(post.created_at)}</div>
+</div>
+<div class="ql-editor">${bodyHtml}</div>
+<script>window.onload=function(){window.print();}<\/script>
+</body></html>`);
+  win.document.close();
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   DELETE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function sh_askDelete(id){
+  sh_deleteCb=async function(){
+    try{
+      // Delete files metadata
+      await sh_api("/rest/v1/post_files?post_id=eq."+id,{method:"DELETE"});
+      // Delete post
+      const r=await sh_api("/rest/v1/posts?id=eq."+id,{method:"DELETE"});
+      if(!r.ok) throw new Error(await r.text());
+      sh_posts=sh_posts.filter(p=>p.id!==id);
+      sh_renderList();
+      sh_show("sh-view-list");
+      sh_toast("삭제되었습니다.");
+    }catch(e){sh_toast("삭제 실패: "+e.message,4000);}
+  };
+  document.getElementById("sh-del-modal").classList.add("open");
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   EDITOR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function sh_openEditor(postId){
+  sh_editingId=postId||null;
+  sh_pendingFiles=[]; sh_existingFiles=[]; sh_deletedFileIds=[];
+  document.getElementById("sh-editor-label").textContent=postId?"글 수정":"새 글 작성";
+  document.getElementById("sh-title-input").value="";
+  document.getElementById("sh-cat-select").value="기타";
+  const pinWrap=document.getElementById("sh-pin-wrap");
+  const pinChk=document.getElementById("sh-pin-check");
+  if(pinWrap) pinWrap.style.display=window._isAdmin?"flex":"none";
+  if(pinChk) pinChk.checked=false;
+
+  // Init Quill once
+  if(!sh_quill){
+    sh_quill=new Quill("#sh-quill-editor",{
+      theme:"snow",
+      modules:{toolbar:[
+        [{header:[1,2,3,false]}],
+        ["bold","italic","underline","strike"],
+        [{color:[]},{background:[]}],
+        [{align:[]}],
+        [{list:"ordered"},{list:"bullet"}],
+        [{indent:"-1"},{indent:"+1"}],
+        ["blockquote","code-block"],
+        ["link","image"],
+        ["clean"]
+      ]},
+      placeholder:"내용을 입력하세요..."
+    });
+    // Custom image handler → Supabase Storage
+    sh_quill.getModule("toolbar").addHandler("image",async function(){
+      const inp=document.createElement("input");
+      inp.type="file"; inp.accept="image/*";
+      inp.onchange=async()=>{
+        const f=inp.files[0]; if(!f) return;
+        if(f.size>10*1024*1024){sh_toast("이미지는 10MB 이하만 가능합니다.",3000);return;}
+        sh_toast("이미지 업로드 중...",60000);
+        const p=`shares/inline/${Date.now()}_${f.name.replace(/[^a-zA-Z0-9._-]/g,"_")}`;
+        try{
+          const r=await sh_api("/storage/v1/object/assets/"+p,{method:"POST",headers:{"Content-Type":f.type,"x-upsert":"true"},body:f});
+          if(!r.ok) throw new Error(await r.text());
+          const url=SH_SU+"/storage/v1/object/public/assets/"+p;
+          const range=sh_quill.getSelection(true);
+          sh_quill.insertEmbed(range.index,"image",url);
+          sh_quill.setSelection(range.index+1);
+          sh_toast("이미지 업로드 완료");
+        }catch(err){sh_toast("이미지 업로드 실패: "+err.message,4000);}
+      };
+      inp.click();
+    });
+  }
+  sh_quill.setContents([]);
+
+  if(postId){
+    const post=sh_posts.find(p=>p.id===postId)||{};
+    document.getElementById("sh-title-input").value=post.title||"";
+    document.getElementById("sh-cat-select").value=post.category||"기타";
+    if(pinChk) pinChk.checked=!!post.pinned;
+    // Load full content
+    sh_api("/rest/v1/posts?id=eq."+postId+"&select=content").then(async r=>{
+      if(r.ok){const arr=await r.json();if(arr[0]?.content) sh_quill.clipboard.dangerouslyPasteHTML(arr[0].content);}
+    });
+    // Load existing files
+    sh_api("/rest/v1/post_files?post_id=eq."+postId+"&select=*").then(async r=>{
+      if(r.ok){sh_existingFiles=await r.json();sh_renderFupList();}
+    });
+  }
+  sh_renderFupList();
+  sh_show("sh-view-editor");
+  setTimeout(()=>document.getElementById("sh-title-input").focus(),80);
+}
+
+/* ── File upload list ── */
+function sh_renderFupList(){
+  const list=document.getElementById("sh-fup-list");
+  const ex=sh_existingFiles.map(f=>`
+    <div class="fup-item">
+      <span>${sh_fileIcon(f.original_name)}</span>
+      <span class="fup-name">${sh_esc(f.original_name)}</span>
+      <span class="fup-size">${sh_fmtSize(f.file_size)}</span>
+      <button class="fup-del" onclick="sh_removeExisting('${f.id}')">✕</button>
+    </div>`).join("");
+  const pend=sh_pendingFiles.map((pf,i)=>`
+    <div class="fup-item">
+      <span>${sh_fileIcon(pf.name)}</span>
+      <span class="fup-name">${sh_esc(pf.name)}</span>
+      <span class="fup-size">${sh_fmtSize(pf.size)}</span>
+      <button class="fup-del" onclick="sh_removePending(${i})">✕</button>
+    </div>`).join("");
+  list.innerHTML=ex+pend;
+}
+function sh_removeExisting(fid){
+  sh_existingFiles=sh_existingFiles.filter(f=>f.id!==fid);
+  sh_deletedFileIds.push(fid);
+  sh_renderFupList();
+}
+function sh_removePending(i){
+  sh_pendingFiles.splice(i,1);
+  sh_renderFupList();
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   SAVE POST
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+async function sh_save(){
+  const title=document.getElementById("sh-title-input").value.trim();
+  if(!title){sh_toast("제목을 입력해주세요.");return;}
+  const cat=document.getElementById("sh-cat-select").value;
+  const pinned=!!(window._isAdmin&&document.getElementById("sh-pin-check")?.checked);
+  const content=sh_quill.root.innerHTML;
+  const u=sh_user();
+  const btn=document.getElementById("sh-btn-save");
+  btn.disabled=true; btn.textContent="저장 중...";
+
+  try{
+    let postId=sh_editingId;
+
+    if(!postId){
+      // INSERT new post
+      const r=await sh_api("/rest/v1/posts",{
+        method:"POST",
+        headers:{"Prefer":"return=representation"},
+        body:JSON.stringify({title,content,category:cat,pinned,
+          author_id:u.id||null,author_name:u.displayName||u.name||u.email||"",
+          created_at:new Date().toISOString(),updated_at:new Date().toISOString()})
+      });
+      if(!r.ok) throw new Error(await r.text());
+      const arr=await r.json();
+      postId=arr[0]?.id;
+    } else {
+      // UPDATE existing post
+      const r=await sh_api("/rest/v1/posts?id=eq."+postId,{
+        method:"PATCH",
+        headers:{"Prefer":"return=minimal"},
+        body:JSON.stringify({title,content,category:cat,pinned,updated_at:new Date().toISOString()})
+      });
+      if(!r.ok) throw new Error(await r.text());
+    }
+
+    // Delete removed files
+    for(const fid of sh_deletedFileIds){
+      await sh_api("/rest/v1/post_files?id=eq."+fid,{method:"DELETE"});
+    }
+
+    // Upload new files
+    for(const pf of sh_pendingFiles){
+      const safe=pf.name.replace(/[^\w.\-가-힣]/g,"_");
+      const path=`shares/${postId}/${Date.now()}_${safe}`;
+      const ur=await sh_api("/storage/v1/object/assets/"+path,{
+        method:"POST",
+        headers:{"Content-Type":pf.type||"application/octet-stream","x-upsert":"true"},
+        body:pf.file
+      });
+      if(!ur.ok){sh_toast("파일 업로드 실패: "+pf.name,3000);continue;}
+      await sh_api("/rest/v1/post_files",{
+        method:"POST",
+        headers:{"Prefer":"return=minimal"},
+        body:JSON.stringify({post_id:postId,original_name:pf.name,storage_path:path,file_size:pf.size,mime_type:pf.type})
+      });
+    }
+
+    sh_toast(sh_editingId?"수정되었습니다.":"등록되었습니다.");
+    sh_pendingFiles=[]; sh_existingFiles=[]; sh_deletedFileIds=[];
+    await sh_loadPosts();
+    sh_show("sh-view-list");
+  }catch(e){
+    sh_toast("저장 실패: "+e.message,4000);
+  }finally{
+    btn.disabled=false; btn.textContent="저장하기";
+  }
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   INIT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+document.addEventListener("DOMContentLoaded",async function(){
+  sh_startSession();
+
+  // Nav panel
+  const navBtn=document.getElementById("sh-nav-btn");
+  const navPanel=document.getElementById("shNavPanel");
+  navBtn.addEventListener("click",e=>{e.stopPropagation();navPanel.classList.toggle("open");});
+  document.addEventListener("click",()=>navPanel.classList.remove("open"));
+  navPanel.addEventListener("click",e=>e.stopPropagation());
+
+  // User panel
+  const userBtn=document.getElementById("sh-user-btn");
+  const userPanel=document.getElementById("shUserPanel");
+  userBtn.addEventListener("click",e=>{e.stopPropagation();userPanel.classList.toggle("open");});
+  document.addEventListener("click",()=>userPanel.classList.remove("open"));
+  userPanel.addEventListener("click",e=>e.stopPropagation());
+
+  // Session
+  document.getElementById("sh-extend-topbar").addEventListener("click",sh_extend);
+  document.getElementById("sh-extend-btn").addEventListener("click",sh_extend);
+
+  // Buttons
+  document.getElementById("sh-btn-write").addEventListener("click",()=>sh_openEditor(null));
+  document.getElementById("sh-detail-back").addEventListener("click",()=>{sh_currentId=null;sh_show("sh-view-list");});
+  document.getElementById("sh-editor-back").addEventListener("click",()=>{
+    sh_currentId?sh_show("sh-view-detail"):sh_show("sh-view-list");
+  });
+  document.getElementById("sh-btn-cancel").addEventListener("click",()=>{
+    sh_currentId?sh_show("sh-view-detail"):sh_show("sh-view-list");
+  });
+  document.getElementById("sh-btn-save").addEventListener("click",sh_save);
+
+  // Category filter
+  document.getElementById("sh-cat-filter").addEventListener("click",e=>{
+    const b=e.target.closest(".tab-btn"); if(!b) return;
+    document.querySelectorAll("#sh-cat-filter .tab-btn").forEach(x=>x.classList.remove("active"));
+    b.classList.add("active");
+    sh_filterCat=b.dataset.cat;
+    sh_renderList();
+  });
+
+  // Search
+  let _st=null;
+  document.getElementById("sh-search").addEventListener("input",e=>{
+    clearTimeout(_st);
+    _st=setTimeout(()=>{sh_searchQ=e.target.value;sh_renderList();},200);
+  });
+
+  // File input
+  document.getElementById("sh-file-input").addEventListener("change",e=>{
+    const files=Array.from(e.target.files);
+    const total=sh_pendingFiles.length+sh_existingFiles.length+files.length;
+    if(total>5){sh_toast("첨부파일은 최대 5개까지 가능합니다.",3000);e.target.value="";return;}
+    for(const f of files){
+      if(f.size>52428800){sh_toast(f.name+": 50MB 초과",3000);continue;}
+      sh_pendingFiles.push({file:f,name:f.name,size:f.size,type:f.type});
+    }
+    e.target.value="";
+    sh_renderFupList();
+  });
+
+  // Delete modal
+  document.getElementById("sh-del-no").addEventListener("click",()=>{
+    document.getElementById("sh-del-modal").classList.remove("open");
+    sh_deleteCb=null;
+  });
+  document.getElementById("sh-del-yes").addEventListener("click",async()=>{
+    document.getElementById("sh-del-modal").classList.remove("open");
+    if(sh_deleteCb){await sh_deleteCb();sh_deleteCb=null;}
+  });
+  document.getElementById("sh-del-modal").addEventListener("click",e=>{
+    if(e.target===document.getElementById("sh-del-modal"))
+      document.getElementById("sh-del-modal").classList.remove("open");
+  });
+
+  // Load posts
+  await sh_loadPosts();
+});
+</script>
+
+<!--
+═══════════════════════════════════════════════════
+  Supabase SQL — run once in Dashboard → SQL Editor
+═══════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS posts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,
+  content TEXT,
+  author_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  author_name TEXT,
+  category TEXT DEFAULT '기타',
+  pinned BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS post_files (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  post_id UUID REFERENCES posts(id) ON DELETE CASCADE,
+  original_name TEXT NOT NULL,
+  storage_path TEXT NOT NULL,
+  file_size BIGINT,
+  mime_type TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE posts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE post_files ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "auth read posts" ON posts FOR SELECT TO authenticated USING (true);
+CREATE POLICY "auth insert posts" ON posts FOR INSERT TO authenticated WITH CHECK (auth.uid() = author_id);
+CREATE POLICY "auth update posts" ON posts FOR UPDATE TO authenticated USING (auth.uid() = author_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
+CREATE POLICY "auth delete posts" ON posts FOR DELETE TO authenticated USING (auth.uid() = author_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
+
+CREATE POLICY "auth read post_files" ON post_files FOR SELECT TO authenticated USING (true);
+CREATE POLICY "auth write post_files" ON post_files FOR INSERT TO authenticated WITH CHECK (true);
+CREATE POLICY "auth delete post_files" ON post_files FOR DELETE TO authenticated USING (true);
+
+═══════════════════════════════════════════════════
+-->
+</body>
+</html>
