@@ -227,14 +227,8 @@
     /* 연속 checked 행: 내부 경계 제거 → 가장 바깥 테두리만 */
     tbody tr.row-checked + tr.row-checked td{border-top:none !important}
     tbody tr.row-checked:has(+ tr.row-checked) td{border-bottom:none !important}
-    /* 품의/발주완료 행 (연한 초록) */
+    /* 품의/발주완료 행 (글씨 색만 연한 초록) */
     tbody tr.row-done td .cell-inner{color:#16a34a !important;font-weight:600}
-    tbody tr.row-done td{background:rgba(22,163,74,.08) !important;border-top:1px solid rgba(22,163,74,.35) !important;border-bottom:1px solid rgba(22,163,74,.35) !important}
-    tbody tr.row-done td:first-child{border-left:2px solid #22c55e !important}
-    tbody tr.row-done td:last-child{border-right:2px solid #22c55e !important}
-    tbody tr.row-done:hover td{background:rgba(22,163,74,.15) !important}
-    tbody tr.row-done + tr.row-done td{border-top:none !important}
-    tbody tr.row-done:has(+ tr.row-done) td{border-bottom:none !important}
     /* 드래그/체크 플로팅 버튼 (표 밖) */
     #float-drag{
       position:fixed;display:none;z-index:9000;
@@ -338,13 +332,8 @@
       /* 연속 checked 행: 내부 경계 제거 */
       tbody tr.row-checked + tr.row-checked td{border-top:none !important;}
       tbody tr.row-checked:has(+ tr.row-checked) td{border-bottom:none !important;}
-      /* Done rows: green border (print) */
+      /* Done rows: text color only (print) */
       tbody tr.row-done td .cell-inner{color:#16a34a !important;}
-      tbody tr.row-done td{border-top:1px solid rgba(22,163,74,.35) !important;border-bottom:1px solid rgba(22,163,74,.35) !important;}
-      tbody tr.row-done td:first-child{border-left:2px solid #22c55e !important;}
-      tbody tr.row-done td:last-child{border-right:2px solid #22c55e !important;}
-      tbody tr.row-done + tr.row-done td{border-top:none !important;}
-      tbody tr.row-done:has(+ tr.row-done) td{border-bottom:none !important;}
       tbody tr.group-row td{padding:4px 6px !important; line-height:1.15 !important;}
       tr.group-row-pb{break-before:page !important;page-break-before:always !important;}
       tbody tr.group-row td .group-meta{font-size:6.5pt !important;}
@@ -358,7 +347,6 @@
       tbody tr.row-checked td .cell-inner{color:#ef4444 !important}
       tbody tr.row-checked{background:rgba(239,68,68,.07) !important}
       tbody tr.row-done td .cell-inner{color:#16a34a !important}
-      tbody tr.row-done{background:rgba(22,163,74,.05) !important}
       #float-check,#float-drag,#float-done{display:none !important}
       body.report-print-mode .cell-inner{cursor:default !important}
       body.report-print-mode .cell-inner:focus{box-shadow:none !important;background:transparent !important;border-radius:0}
