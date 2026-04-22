@@ -220,13 +220,13 @@
 
     /* 체크 강조: 품의용 */
     tbody tr.row-checked td .cell-inner{color:#ef4444 !important;font-weight:700}
-    tbody tr.row-checked td{background:rgba(239,68,68,.12) !important;border-top:1px solid rgba(239,68,68,.55) !important;border-bottom:1px solid rgba(239,68,68,.55) !important}
+    tbody tr.row-checked td{background:rgba(239,68,68,.12) !important}
     tbody tr.row-checked td:first-child{border-left:2px solid #ef4444 !important}
     tbody tr.row-checked td:last-child{border-right:2px solid #ef4444 !important}
     tbody tr.row-checked:hover td{background:rgba(239,68,68,.20) !important}
-    /* 연속 checked 행: 내부 경계 제거 → 가장 바깥 테두리만 */
-    tbody tr.row-checked + tr.row-checked td{border-top:none !important}
-    tbody tr.row-checked:has(+ tr.row-checked) td{border-bottom:none !important}
+    /* 가장 바깥 테두리만: JS가 row-checked-start/end 부여 */
+    tbody tr.row-checked-start td{border-top:1px solid rgba(239,68,68,.55) !important}
+    tbody tr.row-checked-end td{border-bottom:1px solid rgba(239,68,68,.55) !important}
     /* 품의/발주완료 행 (글씨 색만 연한 초록) */
     tbody tr.row-done td .cell-inner{color:#16a34a !important;font-weight:600}
     /* 드래그/체크 플로팅 버튼 (표 밖) */
@@ -284,7 +284,7 @@
       body{background:var(--bg) !important;background-image:none !important;color:var(--text)}
       *{ -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       /* Hide all chrome: topbars, nav panel, fixed overlays, inactive views */
-      .hex-deco,.header-right,.table-controls,.filter-bar,.hint,.toolbar,
+      .hex-deco,.header-right,.header-budget,.table-controls,.filter-bar,.hint,.toolbar,
       #ctx-menu,.nav-panel,
       .view:not(.active){display:none !important}
       .pg-topbar,.site-topbar{display:flex !important;box-shadow:none !important;border-bottom:1.5px solid #111827 !important;padding:3px 0 5px !important;margin-bottom:4px;position:static !important}
@@ -311,27 +311,23 @@
       thead th{font-size:7pt !important;}
       thead th, tbody td{white-space:nowrap}
       thead th{padding:4px 5px}
-      /* Reset all cell borders — only explicit rules below should show */
+      /* Reset ALL cell borders — no vertical column lines */
       table, thead, tbody{outline:none !important; box-shadow:none !important;}
       table{border-spacing:0 !important;}
       th, td{
         border:none !important;
+        border-left:none !important;
+        border-right:none !important;
         outline:none !important;
         box-shadow:none !important;
       }
       /* Group row: thick top divider only */
       .group-row td{border-top:2px solid #9ca3af !important;}
-      /* Row markers: background gradient carries over to print via print-color-adjust:exact */
-      /* Checked rows: red border */
-      tbody tr.row-checked td{
-        border-top:1px solid rgba(239,68,68,.5) !important;
-        border-bottom:1px solid rgba(239,68,68,.5) !important;
-      }
+      /* Checked rows: 가장 바깥 테두리만 (JS가 row-checked-start/end 클래스 부여) */
       tbody tr.row-checked td:first-child{border-left:2px solid #ef4444 !important;}
       tbody tr.row-checked td:last-child{border-right:2px solid #ef4444 !important;}
-      /* 연속 checked 행: 내부 경계 제거 */
-      tbody tr.row-checked + tr.row-checked td{border-top:none !important;}
-      tbody tr.row-checked:has(+ tr.row-checked) td{border-bottom:none !important;}
+      tbody tr.row-checked-start td{border-top:1px solid rgba(239,68,68,.5) !important;}
+      tbody tr.row-checked-end td{border-bottom:1px solid rgba(239,68,68,.5) !important;}
       /* Done rows: text color only (print) */
       tbody tr.row-done td .cell-inner{color:#16a34a !important;}
       tbody tr.group-row td{padding:4px 6px !important; line-height:1.15 !important;}
@@ -1982,6 +1978,16 @@
         buildTable(); updateKpis(); saveLocal();
       });
     });
+    // 연속 checked 행: 가장 바깥 테두리만 표시 (start/end 클래스)
+    const allRows = Array.from(tbody.querySelectorAll("tr[data-gidx]"));
+    allRows.forEach((tr, i) => {
+      if (!tr.classList.contains("row-checked")) return;
+      const prev = allRows[i - 1];
+      const next = allRows[i + 1];
+      if (!prev || !prev.classList.contains("row-checked")) tr.classList.add("row-checked-start");
+      if (!next || !next.classList.contains("row-checked")) tr.classList.add("row-checked-end");
+    });
+
     buildMonthlySummary();
     buildDoneSummary();
     buildCheckedSummary();
@@ -2116,27 +2122,29 @@
     floatTargetTr = null;
   }
 
+  let hideTimer = null;
+  function scheduleHide(){
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(hideFloats, 400);
+  }
+  function cancelHide(){
+    clearTimeout(hideTimer);
+  }
+
   document.getElementById("tableBody").addEventListener("mouseover", e => {
+    cancelHide();
     const tr = e.target.closest("tr[data-gidx]");
     if (!tr) return;
     floatTargetTr = tr;
     positionFloats(tr);
   });
-  document.getElementById("tableBody").addEventListener("mouseleave", () => {
-    // 잠깐 후 체크 — 플로팅 버튼 위로 이동 중일 수 있으므로
-    setTimeout(() => {
-      if (!floatDrag.matches(":hover") && !floatCheck.matches(":hover") && !floatDone.matches(":hover")) hideFloats();
-    }, 300);
-  });
-  floatDrag.addEventListener("mouseleave",  () => {
-    if (!floatTargetTr?.matches(":hover") && !floatCheck.matches(":hover") && !floatDone.matches(":hover")) hideFloats();
-  });
-  floatCheck.addEventListener("mouseleave", () => {
-    if (!floatTargetTr?.matches(":hover") && !floatDrag.matches(":hover") && !floatDone.matches(":hover")) hideFloats();
-  });
-  floatDone.addEventListener("mouseleave", () => {
-    if (!floatTargetTr?.matches(":hover") && !floatDrag.matches(":hover") && !floatCheck.matches(":hover")) hideFloats();
-  });
+  document.getElementById("tableBody").addEventListener("mouseleave", scheduleHide);
+  floatDrag.addEventListener("mouseenter",  cancelHide);
+  floatCheck.addEventListener("mouseenter", cancelHide);
+  floatDone.addEventListener("mouseenter",  cancelHide);
+  floatDrag.addEventListener("mouseleave",  scheduleHide);
+  floatCheck.addEventListener("mouseleave", scheduleHide);
+  floatDone.addEventListener("mouseleave",  scheduleHide);
 
   // 체크 클릭 (☆ 품의 강조)
   floatCheck.addEventListener("click", () => {
