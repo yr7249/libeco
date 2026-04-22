@@ -227,6 +227,14 @@
     /* 연속 checked 행: 내부 경계 제거 → 가장 바깥 테두리만 */
     tbody tr.row-checked + tr.row-checked td{border-top:none !important}
     tbody tr.row-checked:has(+ tr.row-checked) td{border-bottom:none !important}
+    /* 품의/발주완료 행 (연한 초록) */
+    tbody tr.row-done td .cell-inner{color:#16a34a !important;font-weight:600}
+    tbody tr.row-done td{background:rgba(22,163,74,.08) !important;border-top:1px solid rgba(22,163,74,.35) !important;border-bottom:1px solid rgba(22,163,74,.35) !important}
+    tbody tr.row-done td:first-child{border-left:2px solid #22c55e !important}
+    tbody tr.row-done td:last-child{border-right:2px solid #22c55e !important}
+    tbody tr.row-done:hover td{background:rgba(22,163,74,.15) !important}
+    tbody tr.row-done + tr.row-done td{border-top:none !important}
+    tbody tr.row-done:has(+ tr.row-done) td{border-bottom:none !important}
     /* 드래그/체크 플로팅 버튼 (표 밖) */
     #float-drag{
       position:fixed;display:none;z-index:9000;
@@ -239,14 +247,24 @@
     #float-drag:hover{color:var(--accent);border-color:rgba(22,101,52,.5);background:#fff}
     #float-check{
       position:fixed;display:none;z-index:9000;
-      cursor:pointer;font-size:11px;font-weight:700;
-      padding:4px 8px;border-radius:6px;
+      cursor:pointer;font-size:15px;font-weight:400;
+      padding:3px 7px;border-radius:6px;
       background:rgba(255,255,255,.96);border:1px solid rgba(15,23,42,.18);
       box-shadow:0 2px 8px rgba(0,0,0,.18);line-height:1;
       transform:translateY(-50%);white-space:nowrap;
     }
     #float-check:hover{border-color:rgba(239,68,68,.5);color:#ef4444;background:#fff}
     #float-check.checked{background:#ef4444;border-color:#dc2626;color:#fff}
+    #float-done{
+      position:fixed;display:none;z-index:9000;
+      cursor:pointer;font-size:13px;font-weight:700;
+      padding:3px 7px;border-radius:6px;
+      background:rgba(255,255,255,.96);border:1px solid rgba(15,23,42,.18);
+      box-shadow:0 2px 8px rgba(0,0,0,.18);line-height:1;
+      transform:translateY(-50%);white-space:nowrap;color:rgba(100,116,139,.75);
+    }
+    #float-done:hover{border-color:rgba(22,163,74,.5);color:#16a34a;background:#fff}
+    #float-done.done{background:#16a34a;border-color:#15803d;color:#fff}
     tbody tr.row-dragging{opacity:.45;background:rgba(22,101,52,.08) !important}
     tbody tr.drag-over-top td{border-top:2px solid var(--accent) !important}
     tbody tr.drag-over-bot td{border-bottom:2px solid var(--accent) !important}
@@ -317,9 +335,16 @@
       }
       tbody tr.row-checked td:first-child{border-left:2px solid #ef4444 !important;}
       tbody tr.row-checked td:last-child{border-right:2px solid #ef4444 !important;}
-      /* 연속 checked 행: 내부 경계 제거 → 가장 바깥 테두리만 */
+      /* 연속 checked 행: 내부 경계 제거 */
       tbody tr.row-checked + tr.row-checked td{border-top:none !important;}
       tbody tr.row-checked:has(+ tr.row-checked) td{border-bottom:none !important;}
+      /* Done rows: green border (print) */
+      tbody tr.row-done td .cell-inner{color:#16a34a !important;}
+      tbody tr.row-done td{border-top:1px solid rgba(22,163,74,.35) !important;border-bottom:1px solid rgba(22,163,74,.35) !important;}
+      tbody tr.row-done td:first-child{border-left:2px solid #22c55e !important;}
+      tbody tr.row-done td:last-child{border-right:2px solid #22c55e !important;}
+      tbody tr.row-done + tr.row-done td{border-top:none !important;}
+      tbody tr.row-done:has(+ tr.row-done) td{border-bottom:none !important;}
       tbody tr.group-row td{padding:4px 6px !important; line-height:1.15 !important;}
       tr.group-row-pb{break-before:page !important;page-break-before:always !important;}
       tbody tr.group-row td .group-meta{font-size:6.5pt !important;}
@@ -332,7 +357,9 @@
       .footer{border-top:1px solid #e5e7eb;color:#4b5563}
       tbody tr.row-checked td .cell-inner{color:#ef4444 !important}
       tbody tr.row-checked{background:rgba(239,68,68,.07) !important}
-      #float-check,#float-drag{display:none !important}
+      tbody tr.row-done td .cell-inner{color:#16a34a !important}
+      tbody tr.row-done{background:rgba(22,163,74,.05) !important}
+      #float-check,#float-drag,#float-done{display:none !important}
       body.report-print-mode .cell-inner{cursor:default !important}
       body.report-print-mode .cell-inner:focus{box-shadow:none !important;background:transparent !important;border-radius:0}
       tbody td:not(.inc-date-cell) .cell-inner{font-size:7pt !important}
@@ -798,7 +825,8 @@
 
   <!-- Float elements for table -->
   <div id="float-drag" title="드래그로 순서 변경" draggable="true" style="display:none;">⠿</div>
-  <div id="float-check" title="품의 강조" style="display:none;">강조</div>
+  <div id="float-check" title="품의 강조" style="display:none;">☆</div>
+  <div id="float-done" title="품의/발주완료" style="display:none;">✓</div>
 
   <!-- Right-click context menu -->
   <div id="ctx-menu" style="display:none;">
@@ -1485,6 +1513,7 @@
         <div style="font-family:var(--font-mono);font-size:1.05rem;font-weight:800;color:var(--accent)">₩63,325,000</div>
       </div></div>
       </div>
+      <div id="done-summary-slot" style="flex:0 0 auto"></div>
       <div id="checked-summary-slot" style="flex:0 0 auto">
       <div class="monthly-summary" style="margin:0;padding:0">
         <div class="section-title" style="margin-top:0;margin-bottom:10px;color:#ef4444;--accent:#ef4444;font-size:1.0rem;font-weight:800">
@@ -1862,6 +1891,7 @@
         else if (needsPurchase(row)) tr.className = "row-grey-bar";
         else tr.className = "row-no-need";
         if (row.checked) tr.classList.add("row-checked");
+        if (row.done)    tr.classList.add("row-done");
 
         const catMeta = CATS[row.category] || CATS.LT;
         const u = Number(row.unit_price);
@@ -1965,6 +1995,7 @@
       });
     });
     buildMonthlySummary();
+    buildDoneSummary();
     buildCheckedSummary();
     requestAnimationFrame(() => {
       if (typeof autoFitCells === "function") autoFitCells(document);
@@ -2062,6 +2093,7 @@
   /* ── 플로팅 드래그/체크 버튼 ──────────────────────────── */
   const floatDrag  = document.getElementById("float-drag");
   const floatCheck = document.getElementById("float-check");
+  const floatDone  = document.getElementById("float-done");
   const tableWrap  = document.querySelector(".table-wrap");
   let floatTargetTr = null;
   let floatDragSrcIdx = null;
@@ -2075,17 +2107,24 @@
     floatDrag.style.top   = midY + "px";
     floatDrag.style.display = "flex";
 
-    floatCheck.style.left = Math.min(window.innerWidth - 46, wrapRect.right + 4) + "px";
+    const checkLeft = Math.min(window.innerWidth - 90, wrapRect.right + 4);
+    floatCheck.style.left = checkLeft + "px";
     floatCheck.style.top  = midY + "px";
     floatCheck.style.display = "flex";
 
+    floatDone.style.left = (checkLeft + 36) + "px";
+    floatDone.style.top  = midY + "px";
+    floatDone.style.display = "flex";
+
     const idx = Number(tr.dataset.gidx);
     floatCheck.classList.toggle("checked", !!(items[idx] && items[idx].checked));
+    floatDone.classList.toggle("done", !!(items[idx] && items[idx].done));
   }
 
   function hideFloats(){
     floatDrag.style.display  = "none";
     floatCheck.style.display = "none";
+    floatDone.style.display  = "none";
     floatTargetTr = null;
   }
 
@@ -2098,17 +2137,20 @@
   document.getElementById("tableBody").addEventListener("mouseleave", () => {
     // 잠깐 후 체크 — 플로팅 버튼 위로 이동 중일 수 있으므로
     setTimeout(() => {
-      if (!floatDrag.matches(":hover") && !floatCheck.matches(":hover")) hideFloats();
+      if (!floatDrag.matches(":hover") && !floatCheck.matches(":hover") && !floatDone.matches(":hover")) hideFloats();
     }, 300);
   });
   floatDrag.addEventListener("mouseleave",  () => {
-    if (!floatTargetTr?.matches(":hover") && !floatCheck.matches(":hover")) hideFloats();
+    if (!floatTargetTr?.matches(":hover") && !floatCheck.matches(":hover") && !floatDone.matches(":hover")) hideFloats();
   });
   floatCheck.addEventListener("mouseleave", () => {
-    if (!floatTargetTr?.matches(":hover") && !floatDrag.matches(":hover")) hideFloats();
+    if (!floatTargetTr?.matches(":hover") && !floatDrag.matches(":hover") && !floatDone.matches(":hover")) hideFloats();
+  });
+  floatDone.addEventListener("mouseleave", () => {
+    if (!floatTargetTr?.matches(":hover") && !floatDrag.matches(":hover") && !floatCheck.matches(":hover")) hideFloats();
   });
 
-  // 체크 클릭
+  // 체크 클릭 (☆ 품의 강조)
   floatCheck.addEventListener("click", () => {
     if (!floatTargetTr) return;
     const idx = Number(floatTargetTr.dataset.gidx);
@@ -2116,7 +2158,20 @@
     pushUndo();
     items[idx].checked = !items[idx].checked;
     buildTable(); updateKpis(); saveLocal();
-    // 클릭 후 같은 위치 재탐색
+    setTimeout(() => {
+      const newTr = document.querySelector(`#tableBody tr[data-gidx="${idx}"]`);
+      if (newTr){ floatTargetTr = newTr; positionFloats(newTr); }
+    }, 0);
+  });
+
+  // 완료 체크 클릭 (✓ 품의/발주완료)
+  floatDone.addEventListener("click", () => {
+    if (!floatTargetTr) return;
+    const idx = Number(floatTargetTr.dataset.gidx);
+    if (isNaN(idx) || !items[idx]) return;
+    pushUndo();
+    items[idx].done = !items[idx].done;
+    buildTable(); updateKpis(); saveLocal();
     setTimeout(() => {
       const newTr = document.querySelector(`#tableBody tr[data-gidx="${idx}"]`);
       if (newTr){ floatTargetTr = newTr; positionFloats(newTr); }
@@ -2202,7 +2257,7 @@
           const item = {};
           ["no","category","code","equipment","product","supplier",
            "total_qty","purchase_qty","unit_price","subtotal",
-           "status","remark","payment","checked"].forEach(k => {
+           "status","remark","payment","checked","done"].forEach(k => {
             if (r[k] !== undefined && r[k] !== null) item[k] = r[k];
           });
           item._supa_id = r.id;
@@ -2233,6 +2288,7 @@
           remark:       String(r.remark       ?? ""),
           payment:      String(r.payment      ?? ""),
           checked:      !!r.checked,
+          done:         !!r.done,
           sort_order:   i
         };
         if (r._supa_id) obj.id = r._supa_id;
@@ -2362,6 +2418,39 @@
     }
   }
 
+  /* ── 품의/발주완료 소계 ────────────────────────────────── */
+  function buildDoneSummary(){
+    const slot = document.getElementById("done-summary-slot");
+    if (slot) slot.innerHTML = "";
+
+    const doneItems = items.filter(row => row.done);
+    if (!doneItems.length) return;
+
+    const total    = doneItems.reduce((acc, row) => acc + (Number(row.subtotal) || 0), 0);
+    const vatTotal = Math.round(total * 1.1);
+
+    const cardHtml = `
+      <div class="monthly-summary" style="margin:0;padding:0">
+        <div class="section-title" style="margin-top:0;margin-bottom:10px;color:#16a34a;--accent:#16a34a;font-size:1.0rem;font-weight:800">
+          품의/발주완료 소계
+        </div>
+        <div>
+          <div style="background:rgba(22,163,74,.08);border:1px solid rgba(22,163,74,.35);border-radius:12px;padding:8px 16px;min-width:220px;max-width:300px">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:16px;margin-bottom:6px">
+              <span style="font-family:var(--font-mono);font-size:.72rem;color:rgba(22,163,74,.75);white-space:nowrap">${doneItems.length}건.</span>
+              <span style="font-family:var(--font-mono);font-size:.85rem;font-weight:700;color:#16a34a;white-space:nowrap">₩${total.toLocaleString("ko-KR")}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:baseline;border-top:1px solid rgba(22,163,74,.2);padding-top:5px">
+              <span style="font-family:var(--font-mono);font-size:.72rem;color:rgba(22,163,74,.75);white-space:nowrap">VAT포함</span>
+              <span style="font-family:var(--font-mono);font-size:.98rem;font-weight:800;color:#16a34a;white-space:nowrap">₩${vatTotal.toLocaleString("ko-KR")}</span>
+            </div>
+          </div>
+        </div>
+      </div>`;
+
+    if (slot) slot.innerHTML = cardHtml;
+  }
+
   /* ── 월별 합계 ─────────────────────────────────────────── */
   function buildMonthlySummary(){
     const existing = document.getElementById("summary-row-wrap");
@@ -2405,6 +2494,7 @@
         <div class="section-title" style="margin-top:0;margin-bottom:10px">월별 지출 예정</div>
         <div style="display:flex;flex-wrap:wrap;gap:10px">${cards}${totalCard}</div>
       </div>
+      <div id="done-summary-slot" style="flex:0 0 auto"></div>
       <div id="checked-summary-slot" style="flex:0 0 auto"></div>`;
 
     const tableSection = document.querySelector("#view-equip section[aria-label='장비 상세 목록']");
