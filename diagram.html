@@ -830,6 +830,33 @@
     /* ── Toolbar text/select mode cursor adjustments ── */
     #view-diagram .dgm-wrap.text-mode{cursor:text}
     #view-diagram .dgm-wrap.select-mode{cursor:default}
+
+    /* ── 갤러리 뷰 ── */
+    #dgm-gallery-view{flex:1;overflow-y:auto;background:#1e1e1e;padding:20px 24px;display:none;min-height:0}
+    #dgm-gallery-view.show{display:block}
+    .dgm-gallery-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px}
+    .dgm-gallery-title{font-size:.9rem;font-weight:800;color:#f8fafc;font-family:'Outfit',sans-serif}
+    .dgm-gallery-add{background:rgba(22,163,74,.18);border:1px solid rgba(22,163,74,.4);color:#86efac;cursor:pointer;padding:6px 14px;border-radius:8px;font-size:.78rem;font-weight:700;font-family:'Outfit',sans-serif;transition:background .12s;display:inline-flex;align-items:center;gap:5px}
+    .dgm-gallery-add:hover{background:rgba(22,163,74,.28)}
+    .dgm-gallery-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+    .dgm-thumb-card{position:relative;border-radius:10px;overflow:hidden;background:#2a2a3e;border:2px solid rgba(255,255,255,.06);cursor:pointer;transition:transform .15s,box-shadow .15s,border-color .15s;aspect-ratio:16/10}
+    .dgm-thumb-card:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,0,0,.5);border-color:rgba(22,163,74,.55)}
+    .dgm-thumb-card img{width:100%;height:100%;object-fit:cover;display:block}
+    .dgm-thumb-overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.75) 0%,transparent 55%);opacity:0;transition:opacity .18s;display:flex;align-items:flex-end;padding:10px 12px;gap:6px}
+    .dgm-thumb-card:hover .dgm-thumb-overlay{opacity:1}
+    .dgm-thumb-name{font-size:.72rem;font-weight:700;color:#f8fafc;font-family:'Outfit',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+    .dgm-thumb-del{background:rgba(239,68,68,.85);border:none;border-radius:5px;color:#fff;font-size:.65rem;font-weight:700;padding:3px 8px;cursor:pointer;flex-shrink:0;font-family:'Outfit',sans-serif}
+    .dgm-thumb-del:hover{background:#ef4444}
+    .dgm-gallery-empty{grid-column:1/-1;text-align:center;padding:60px 20px;color:rgba(248,250,252,.3);font-family:'Outfit',sans-serif}
+    .dgm-gallery-empty .gi{font-size:2.5rem;margin-bottom:10px}
+    .dgm-gallery-empty .gt{font-size:.95rem;font-weight:700}
+    .dgm-gal-progress{margin-top:14px;padding:10px 14px;background:rgba(22,101,52,.2);border-radius:8px;color:#86efac;font-family:'IBM Plex Mono',monospace;font-size:.8rem;display:none}
+    .dgm-gal-progress.show{display:block}
+    /* ── 에디터 래퍼 ── */
+    #dgm-editor-wrap{flex:1;display:none;flex-direction:column;overflow:hidden;min-height:0}
+    #dgm-editor-wrap.show{display:flex}
+    #dgm-btn-back{display:none}
+    #dgm-btn-back.show{display:inline-flex}
   </style>
 </head>
 <body>
@@ -884,6 +911,7 @@
         <a href="index.html" class="pg-ci-logo" style="color:#16a34a;font-weight:800;font-size:.95rem;letter-spacing:-.02em;font-family:inherit;text-decoration:none;cursor:pointer">LIBECO E&amp;C</a>
         <div class="pg-vdiv"></div>
         <button class="pg-btn pg-btn-nav" id="dgm-nav-btn">이동 ▾</button>
+        <button class="pg-btn" id="dgm-btn-back">← 갤러리</button>
         <div class="pg-vdiv no-mobile"></div>
         <span class="pg-title no-mobile">LLNL POC <span>구성도</span></span>
         <span class="pg-badge no-mobile">SCHEMATIC</span>
@@ -901,6 +929,20 @@
         <button class="pg-btn" id="dgm-user-btn" title="계정">👤</button>
       </div>
     </div>
+  <!-- 갤러리 뷰 -->
+  <div id="dgm-gallery-view" class="show">
+    <div class="dgm-gallery-hdr">
+      <span class="dgm-gallery-title">📸 구성도 갤러리</span>
+      <label class="dgm-gallery-add" id="dgm-gallery-add-btn" style="display:none">
+        ＋ 이미지 추가
+        <input type="file" id="dgm-file-input-gal" accept="image/jpeg,image/png,image/webp" style="display:none">
+      </label>
+    </div>
+    <div class="dgm-gallery-grid" id="dgm-gallery-grid"></div>
+    <div class="dgm-gal-progress" id="dgm-gal-progress">⏳ 업로드 중...</div>
+  </div>
+  <!-- 에디터 뷰 -->
+  <div id="dgm-editor-wrap">
     <!-- feature toolbar -->
     <div class="dgm-toolbar" id="dgm-toolbar">
       <button class="dgm-btn active" id="dgm-btn-view" title="보기 (V)">🖐 보기</button>
@@ -992,8 +1034,6 @@
         <button class="dgm-esz-btn" data-esz="45">중</button>
         <button class="dgm-esz-btn" data-esz="90">대</button>
       </div>
-      <div class="dgm-sep" id="dgm-sep-imgedit" style="display:none"></div>
-      <button class="dgm-btn" id="dgm-btn-imgedit" style="display:none;background:rgba(22,101,52,.08);border-color:rgba(22,101,52,.3);color:#166534">🖼 편집</button>
     </div>
     <div class="dgm-wrap" id="dgm-wrap">
       <div id="dgm-canvas">
@@ -1019,26 +1059,12 @@
       <div id="dgm-hint" class="">보기 모드 — 드래그로 이동, 휠로 확대/축소</div>
     </div>
   </div>
+  </div><!-- /#dgm-editor-wrap -->
   <!-- 텍스트 입력 오버레이 -->
   <div id="dgm-text-input-wrap">
     <textarea id="dgm-text-input" rows="2" placeholder="텍스트 입력 후 Enter (줄바꿈: Shift+Enter)"></textarea>
   </div>
 
-  <!-- 이미지 편집 패널 -->
-  <div id="dgm-img-panel-backdrop"></div>
-  <div id="dgm-img-panel">
-    <div class="dgm-panel-title">🖼 이미지 관리</div>
-    <div class="dgm-panel-status" id="dgm-panel-status">이미지 없음</div>
-    <div id="dgm-upload-progress">⏳ 업로드 중...</div>
-    <div class="dgm-panel-btns">
-      <label class="dgm-panel-btn" style="cursor:pointer" id="dgm-upload-label">
-        📤 이미지 추가/교체
-        <input type="file" id="dgm-file-input" accept="image/jpeg,image/png,image/webp" style="display:none">
-      </label>
-      <button class="dgm-panel-btn dgm-panel-btn-del" id="dgm-delete-img-btn" disabled>🗑 삭제</button>
-    </div>
-    <button class="dgm-panel-btn dgm-panel-btn-close" id="dgm-panel-close">닫기</button>
-  </div>
 
 <script>
 // 관리자 권한 체크 + 유저 표시
@@ -1076,10 +1102,8 @@
   }
   window._isAdmin=isAdmin;
   if(isAdmin){
-    const eb=document.getElementById("dgm-btn-imgedit");
-    const es=document.getElementById("dgm-sep-imgedit");
-    if(eb){eb.style.display="inline-flex";}
-    if(es){es.style.display="block";}
+    const ab=document.getElementById("dgm-gallery-add-btn");
+    if(ab)ab.style.display="inline-flex";
   }
   if(!isAdmin){
     ["nav-purchase","nav-equipment"].forEach(function(id){
@@ -1635,14 +1659,16 @@
   wrap.addEventListener('touchend',function(){endPan();lt=null;});
 
   setMode('view');
+  window.dgm_clearElements=function(){elements=[];selectedIdx=null;isDrawing=false;previewLayer.innerHTML='';penPts=[];renderAll();};
 })();
 
-/* ══════════════ 이미지 관리 ══════════════ */
+/* ══════════════ 이미지 갤러리 관리 ══════════════ */
 (async function(){
   const SU="https://ikfjpzdzrgsmhaobqnai.supabase.co";
   const SK="sb_publishable_fbbdwjCZCL9AFD-eUIs0bg_XwdlhxFN";
   const BUCKET="assets";
-  const STORAGE_KEY="diagram_image";
+  const GALLERY_KEY="diagram_images";
+  const LEGACY_KEY="diagram_image";
 
   function getToken(){ return localStorage.getItem("supa_token")||SK; }
   function authHeaders(extra){
@@ -1666,8 +1692,26 @@
     });
   }
 
-  /* ── 이미지 표시 / 숨김 ── */
-  function showImage(url){
+  /* ── 갤러리 ↔ 에디터 전환 ── */
+  const galleryView=document.getElementById("dgm-gallery-view");
+  const editorWrap=document.getElementById("dgm-editor-wrap");
+  const backBtn=document.getElementById("dgm-btn-back");
+
+  function showGallery(){
+    galleryView.classList.add("show");
+    editorWrap.classList.remove("show");
+    if(backBtn)backBtn.classList.remove("show");
+    if(window.dgm_clearElements)window.dgm_clearElements();
+    const img=document.getElementById("dgm-img");
+    const noImg=document.getElementById("dgm-no-img");
+    if(img){img.src="";img.style.display="none";}
+    if(noImg)noImg.style.display="flex";
+  }
+  function openInEditor(imgData){
+    galleryView.classList.remove("show");
+    editorWrap.classList.add("show");
+    if(backBtn)backBtn.classList.add("show");
+    if(window.dgm_clearElements)window.dgm_clearElements();
     const img=document.getElementById("dgm-img");
     const noImg=document.getElementById("dgm-no-img");
     if(!img)return;
@@ -1676,83 +1720,82 @@
       if(noImg)noImg.style.display="none";
       if(window.dgm_fitToWindow)window.dgm_fitToWindow();
     };
-    img.onerror=function(){
-      img.style.display="none";
-      if(noImg)noImg.style.display="flex";
-    };
-    img.src=url;
+    img.onerror=function(){img.style.display="none";if(noImg)noImg.style.display="flex";};
+    img.src=imgData.url+(imgData.url.includes("?")?"":"?t="+Date.now());
   }
-  function clearImage(){
-    const img=document.getElementById("dgm-img");
-    const noImg=document.getElementById("dgm-no-img");
-    if(img){img.src="";img.style.display="none";}
-    if(noImg)noImg.style.display="flex";
-  }
+  if(backBtn)backBtn.addEventListener("click",showGallery);
 
-  /* ── 패널 상태 업데이트 ── */
-  function updatePanelStatus(imageData){
-    const st=document.getElementById("dgm-panel-status");
-    const delBtn=document.getElementById("dgm-delete-img-btn");
-    if(!st)return;
-    if(imageData&&imageData.filename){
-      st.className="dgm-panel-status has-img";
-      st.textContent="✅ "+imageData.filename;
-      if(delBtn)delBtn.disabled=false;
-    }else{
-      st.className="dgm-panel-status";
-      st.textContent="이미지 없음";
-      if(delBtn)delBtn.disabled=true;
+  /* ── 갤러리 렌더링 ── */
+  function renderGallery(images){
+    const grid=document.getElementById("dgm-gallery-grid");
+    if(!grid)return;
+    const isAdmin=!!window._isAdmin;
+    if(!images||images.length===0){
+      grid.innerHTML='<div class="dgm-gallery-empty"><div class="gi">🖼</div><div class="gt">등록된 이미지 없음</div></div>';
+      return;
     }
+    grid.innerHTML="";
+    images.forEach(function(imgData,i){
+      const card=document.createElement("div");
+      card.className="dgm-thumb-card";
+      const image=document.createElement("img");
+      image.src=imgData.url;
+      image.alt=imgData.label||imgData.filename||("구성도 "+(i+1));
+      image.loading="lazy";
+      const overlay=document.createElement("div");
+      overlay.className="dgm-thumb-overlay";
+      const name=document.createElement("span");
+      name.className="dgm-thumb-name";
+      name.textContent=imgData.label||imgData.filename||("구성도 "+(i+1));
+      overlay.appendChild(name);
+      if(isAdmin){
+        const delBtn=document.createElement("button");
+        delBtn.className="dgm-thumb-del";
+        delBtn.textContent="🗑";
+        delBtn.title="삭제";
+        delBtn.addEventListener("click",function(e){
+          e.stopPropagation();
+          deleteImage(imgData);
+        });
+        overlay.appendChild(delBtn);
+      }
+      card.appendChild(image);
+      card.appendChild(overlay);
+      card.addEventListener("click",function(){openInEditor(imgData);});
+      grid.appendChild(card);
+    });
   }
 
-  /* ── 초기 로드 ── */
-  const imageData=await loadSetting(STORAGE_KEY);
-  if(imageData&&imageData.url){
-    showImage(imageData.url);
-    updatePanelStatus(imageData);
-  }else{
-    updatePanelStatus(null);
+  /* ── 이미지 삭제 ── */
+  async function deleteImage(imgData){
+    if(!confirm("이 이미지를 삭제할까요?\n"+(imgData.label||imgData.filename||"")))return;
+    if(imgData.path){
+      await fetch(SU+"/storage/v1/object/"+BUCKET+"/"+imgData.path,{
+        method:"DELETE",headers:authHeaders()
+      }).catch(()=>{});
+    }
+    const newImages=(window._dgmImages||[]).filter(function(x){return x.id!==imgData.id;});
+    await saveSetting(GALLERY_KEY,newImages);
+    window._dgmImages=newImages;
+    renderGallery(newImages);
   }
-
-  /* ── 편집 버튼 ── */
-  const editBtn=document.getElementById("dgm-btn-imgedit");
-  const panel=document.getElementById("dgm-img-panel");
-  const backdrop=document.getElementById("dgm-img-panel-backdrop");
-  const closeBtn=document.getElementById("dgm-panel-close");
-
-  function openPanel(){
-    if(panel)panel.classList.add("open");
-    if(backdrop)backdrop.classList.add("open");
-  }
-  function closePanel(){
-    if(panel)panel.classList.remove("open");
-    if(backdrop)backdrop.classList.remove("open");
-  }
-  if(editBtn)editBtn.addEventListener("click",openPanel);
-  if(closeBtn)closeBtn.addEventListener("click",closePanel);
-  if(backdrop)backdrop.addEventListener("click",closePanel);
 
   /* ── 업로드 ── */
-  const fileInput=document.getElementById("dgm-file-input");
-  const progress=document.getElementById("dgm-upload-progress");
+  const fileInput=document.getElementById("dgm-file-input-gal");
+  const progress=document.getElementById("dgm-gal-progress");
+  const addBtn=document.getElementById("dgm-gallery-add-btn");
 
   if(fileInput){
     fileInput.addEventListener("change",async function(){
       const file=fileInput.files[0];
       if(!file)return;
       const ext=file.name.split(".").pop().toLowerCase();
-      const path="diagram_image."+ext;
+      const id="img_"+Date.now();
+      const path="diagram_gallery/"+id+"."+ext;
 
       if(progress)progress.classList.add("show");
-      document.getElementById("dgm-upload-label").style.pointerEvents="none";
-      document.getElementById("dgm-delete-img-btn").disabled=true;
-
+      if(addBtn)addBtn.style.pointerEvents="none";
       try{
-        // 기존 이미지 삭제 후 업로드 (덮어쓰기)
-        await fetch(SU+"/storage/v1/object/"+BUCKET+"/"+path,{
-          method:"DELETE",headers:authHeaders()
-        }).catch(()=>{});
-
         const up=await fetch(SU+"/storage/v1/object/"+BUCKET+"/"+path,{
           method:"POST",
           headers:authHeaders({"Content-Type":file.type,"x-upsert":"true"}),
@@ -1761,41 +1804,35 @@
         if(!up.ok)throw new Error(await up.text());
 
         const publicUrl=SU+"/storage/v1/object/public/"+BUCKET+"/"+path;
-        const data={url:publicUrl,filename:file.name,path};
-        await saveSetting(STORAGE_KEY,data);
-        showImage(publicUrl+"?t="+Date.now());
-        updatePanelStatus(data);
-        closePanel();
+        const newImg={id,url:publicUrl,filename:file.name,path};
+        const imgs=window._dgmImages||[];
+        imgs.push(newImg);
+        await saveSetting(GALLERY_KEY,imgs);
+        window._dgmImages=imgs;
+        renderGallery(imgs);
       }catch(e){
         alert("업로드 실패: "+e.message);
       }finally{
         if(progress)progress.classList.remove("show");
-        document.getElementById("dgm-upload-label").style.pointerEvents="";
+        if(addBtn)addBtn.style.pointerEvents="";
         fileInput.value="";
-        const delBtn=document.getElementById("dgm-delete-img-btn");
-        if(delBtn&&document.getElementById("dgm-panel-status").classList.contains("has-img")) delBtn.disabled=false;
       }
     });
   }
 
-  /* ── 삭제 ── */
-  const delBtn=document.getElementById("dgm-delete-img-btn");
-  if(delBtn){
-    delBtn.addEventListener("click",async function(){
-      if(!confirm("이미지를 삭제할까요?"))return;
-      delBtn.disabled=true;
-      const cur=await loadSetting(STORAGE_KEY);
-      if(cur&&cur.path){
-        await fetch(SU+"/storage/v1/object/"+BUCKET+"/"+cur.path,{
-          method:"DELETE",headers:authHeaders()
-        }).catch(()=>{});
-      }
-      await saveSetting(STORAGE_KEY,null);
-      clearImage();
-      updatePanelStatus(null);
-      closePanel();
-    });
+  /* ── 초기 로드 (구버전 마이그레이션 포함) ── */
+  let images=await loadSetting(GALLERY_KEY);
+  if(!Array.isArray(images)||images.length===0){
+    const legacy=await loadSetting(LEGACY_KEY);
+    if(legacy&&legacy.url){
+      images=[{id:"img_legacy",url:legacy.url,filename:legacy.filename||"구성도",path:legacy.path||""}];
+      await saveSetting(GALLERY_KEY,images);
+    }
   }
+  if(!Array.isArray(images))images=[];
+  window._dgmImages=images;
+  renderGallery(images);
+  showGallery();
 
 })();
 </script>
