@@ -10,27 +10,48 @@
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     :root{
+      /* Light theme (high readability) + green accent */
       --bg:#ffffff;
       --surface:#ffffff;
       --surface2:#f1f5f9;
       --border:rgba(15,23,42,.12);
+
       --text:#0f172a;
-      --text2:#334155;
-      --accent:#166534;
-      --accent-strong:#14532d;
+      --text2:#334155; /* secondary text still readable */
+
+      /* Only for "real emphasis" */
+      --accent:#166534;        /* deep green */
+      --accent-strong:#14532d; /* deeper green */
       --accent-wash:rgba(22,101,52,.12);
       --accent-wash2:rgba(22,101,52,.08);
+
       --glow:0 10px 26px rgba(15,23,42,.10);
       --hs:#16a34a;
-      --font-heading:'Outfit',sans-serif;
-      --font-mono:'IBM Plex Mono',monospace;
+      --font-heading:'Outfit',sans-serif;--font-mono:'IBM Plex Mono',monospace;
     }
-    body{font-family:var(--font-heading);color:var(--text);background:var(--bg);min-height:100vh;line-height:1.6;font-weight:600}
-    .container{max-width:1540px;margin:0 auto;padding:0 24px;position:relative;z-index:1}
+    body{
+      font-family:var(--font-heading);color:var(--text);background:var(--bg);
+      min-height:100vh;line-height:1.6;
+      background-image:none;
+      font-weight:600;
+    }
+    .container{max-width:1440px;margin:0 auto;padding:0 24px;position:relative;z-index:1}
+
+    .hex-deco{position:fixed;pointer-events:none;z-index:0;opacity:.03}
+    .hex-deco svg{width:300px;height:300px}
+    .hex-deco.top-right{top:-60px;right:-60px}
+    .hex-deco.bottom-left{bottom:-60px;left:-60px}
 
     /* ── Header ── */
-    .header{padding:28px 0 18px;border-bottom:1px solid var(--border);position:relative;overflow:hidden}
-    .header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--accent),transparent)}
+    .header{
+      padding:32px 0 20px;
+      border-bottom:1px solid var(--border);
+      position:relative;overflow:hidden;
+    }
+    .header::after{
+      content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
+      background:linear-gradient(90deg,transparent,var(--accent),transparent);
+    }
     .header-inner{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:14px}
     .header-left{display:flex;align-items:center;gap:14px}
     .h2-icon{width:42px;height:42px;flex-shrink:0}
@@ -39,14 +60,24 @@
     .header-sub{font-size:.92rem;color:var(--text2);margin-top:4px;font-weight:400}
 
     /* ── KPI ── */
-    .kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;padding:20px 0 16px}
-    .kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 20px;position:relative;overflow:hidden}
+    .kpi-row{
+      display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:18px;
+      padding:24px 0 18px;
+    }
+    .kpi-card{
+      background:var(--surface);
+      border:1px solid var(--border);border-radius:14px;
+      padding:18px 20px;position:relative;overflow:hidden;
+    }
     .kpi-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:14px 0 0 14px}
-    .kpi-card:nth-child(odd)::before{background:#166534}
-    .kpi-card:nth-child(even)::before{background:#334155}
-    .kpi-label{font-size:.76rem;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
-    .kpi-value{font-family:var(--font-mono);font-size:1.55rem;font-weight:700;color:var(--text)}
-    .kpi-sub{font-size:.73rem;color:var(--text2);margin-top:4px;font-family:var(--font-mono)}
+    .kpi-card:nth-child(1)::before{background:var(--accent)}
+    .kpi-card:nth-child(2)::before{background:var(--hs)}
+    .kpi-card:nth-child(3)::before{background:#ef4444}
+    .kpi-card:nth-child(4)::before{background:#2563eb}
+    .kpi-card:nth-child(5)::before{background:#8b5cf6}
+    .kpi-label{font-size:.78rem;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+    .kpi-value{font-family:var(--font-mono);font-size:1.6rem;font-weight:700;color:var(--text)}
+    .kpi-sub{font-size:.75rem;color:var(--text2);margin-top:6px;font-family:var(--font-mono)}
 
     /* ── Table controls ── */
     .table-controls{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px}
@@ -191,6 +222,8 @@
   </style>
 </head>
 <body>
+<div class="hex-deco top-right"><svg viewBox="0 0 300 300" fill="none"><polygon points="150,10 280,80 280,220 150,290 20,220 20,80" stroke="#166534" stroke-width="1" fill="none"/><polygon points="150,40 255,97 255,203 150,260 45,203 45,97" stroke="#166534" stroke-width="1" fill="none"/></svg></div>
+<div class="hex-deco bottom-left"><svg viewBox="0 0 300 300" fill="none"><polygon points="150,10 280,80 280,220 150,290 20,220 20,80" stroke="#166534" stroke-width="1" fill="none"/><polygon points="150,40 255,97 255,203 150,260 45,203 45,97" stroke="#166534" stroke-width="1" fill="none"/></svg></div>
 <div id="eq-access-overlay" style="display:none;position:fixed;inset:0;background:rgba(255,255,255,.97);z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:14px">
   <div style="font-size:2.8rem">🔒</div>
   <div style="font-size:1.25rem;font-weight:800;color:#0f172a;font-family:'Outfit',sans-serif">접근 불가합니다.</div>
