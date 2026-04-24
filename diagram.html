@@ -938,10 +938,13 @@
   <div id="dgm-gallery-view" class="show">
     <div class="dgm-gallery-hdr">
       <span class="dgm-gallery-title">갤러리</span>
-      <label class="dgm-gallery-add" id="dgm-gallery-add-btn" style="display:none">
-        ＋ 이미지 추가
-        <input type="file" id="dgm-file-input-gal" accept="image/jpeg,image/png,image/webp" style="display:none">
-      </label>
+      <div style="display:flex;align-items:center;gap:8px">
+        <label class="dgm-gallery-add" id="dgm-gallery-add-btn" style="display:none">
+          ＋ 이미지 추가
+          <input type="file" id="dgm-file-input-gal" accept="image/jpeg,image/png,image/webp" style="display:none">
+        </label>
+        <span id="dgm-paste-hint" style="display:none;font-size:.75rem;color:var(--text2);font-weight:500;opacity:.7">Ctrl+V로 붙여넣기 가능</span>
+      </div>
     </div>
     <div class="dgm-gallery-grid" id="dgm-gallery-grid"></div>
     <div class="dgm-gal-progress" id="dgm-gal-progress">⏳ 업로드 중...</div>
@@ -1111,6 +1114,8 @@
   if(isAdmin){
     const ab=document.getElementById("dgm-gallery-add-btn");
     if(ab)ab.style.display="inline-flex";
+    const ph=document.getElementById("dgm-paste-hint");
+    if(ph)ph.style.display="inline";
   }
   if(!isAdmin){
     ["nav-purchase","nav-equipment"].forEach(function(id){
@@ -1832,45 +1837,95 @@
     renderGallery(newImages);
   }
 
-  /* ── 업로드 ── */
+  /* ── 공통 업로드 함수 ── */
   const fileInput=document.getElementById("dgm-file-input-gal");
   const progress=document.getElementById("dgm-gal-progress");
   const addBtn=document.getElementById("dgm-gallery-add-btn");
 
+  /* blob을 JPEG로 변환 후 Supabase Storage에 업로드 */
+  async function uploadImageBlob(blob, suggestedName){
+    /* Canvas API로 JPEG 변환 */
+    const jpegBlob = await new Promise(function(resolve, reject){
+      const img = new Image();
+      const url = URL.createObjectURL(blob);
+      img.onload = function(){
+        const canvas = document.createElement("canvas");
+        canvas.width  = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+        URL.revokeObjectURL(url);
+        canvas.toBlob(function(b){ b ? resolve(b) : reject(new Error("JPEG 변환 실패")); }, "image/jpeg", 0.92);
+      };
+      img.onerror = function(){ URL.revokeObjectURL(url); reject(new Error("이미지 로드 실패")); };
+      img.src = url;
+    });
+
+    const id   = "img_" + Date.now();
+    const path = "diagram_gallery/" + id + ".jpg";
+    const filename = (suggestedName || id).replace(/\.[^.]+$/, "") + ".jpg";
+
+    if(progress) progress.classList.add("show");
+    if(addBtn)   addBtn.style.pointerEvents = "none";
+    try{
+      const up = await fetch(SU+"/storage/v1/object/"+BUCKET+"/"+path,{
+        method:"POST",
+        headers:authHeaders({"Content-Type":"image/jpeg","x-upsert":"true"}),
+        body:jpegBlob
+      });
+      if(!up.ok) throw new Error(await up.text());
+
+      const publicUrl = SU+"/storage/v1/object/public/"+BUCKET+"/"+path;
+      const newImg = {id, url:publicUrl, filename, path};
+      const imgs = window._dgmImages || [];
+      imgs.push(newImg);
+      await saveSetting(GALLERY_KEY, imgs);
+      window._dgmImages = imgs;
+      renderGallery(imgs);
+    }catch(e){
+      alert("업로드 실패: " + e.message);
+    }finally{
+      if(progress) progress.classList.remove("show");
+      if(addBtn)   addBtn.style.pointerEvents = "";
+    }
+  }
+
+  /* ── 파일 선택 업로드 ── */
   if(fileInput){
-    fileInput.addEventListener("change",async function(){
-      const file=fileInput.files[0];
-      if(!file)return;
-      const ext=file.name.split(".").pop().toLowerCase();
-      const id="img_"+Date.now();
-      const path="diagram_gallery/"+id+"."+ext;
-
-      if(progress)progress.classList.add("show");
-      if(addBtn)addBtn.style.pointerEvents="none";
-      try{
-        const up=await fetch(SU+"/storage/v1/object/"+BUCKET+"/"+path,{
-          method:"POST",
-          headers:authHeaders({"Content-Type":file.type,"x-upsert":"true"}),
-          body:file
-        });
-        if(!up.ok)throw new Error(await up.text());
-
-        const publicUrl=SU+"/storage/v1/object/public/"+BUCKET+"/"+path;
-        const newImg={id,url:publicUrl,filename:file.name,path};
-        const imgs=window._dgmImages||[];
-        imgs.push(newImg);
-        await saveSetting(GALLERY_KEY,imgs);
-        window._dgmImages=imgs;
-        renderGallery(imgs);
-      }catch(e){
-        alert("업로드 실패: "+e.message);
-      }finally{
-        if(progress)progress.classList.remove("show");
-        if(addBtn)addBtn.style.pointerEvents="";
-        fileInput.value="";
-      }
+    fileInput.addEventListener("change", async function(){
+      const file = fileInput.files[0];
+      if(!file) return;
+      await uploadImageBlob(file, file.name);
+      fileInput.value = "";
     });
   }
+
+  /* ── 클립보드 붙여넣기 업로드 (Ctrl+V / 우클릭 붙여넣기) ── */
+  document.addEventListener("paste", async function(e){
+    /* 갤러리 뷰가 표시 중일 때만 동작 */
+    if(!galleryView || !galleryView.classList.contains("show")) return;
+    /* 업로드 권한 없으면 무시 */
+    if(!window._dgmUserOk) return;
+    /* 텍스트 입력 포커스 중이면 무시 */
+    const tag = (document.activeElement || {}).tagName;
+    if(tag === "INPUT" || tag === "TEXTAREA") return;
+
+    const items = e.clipboardData && e.clipboardData.items;
+    if(!items) return;
+    let imageItem = null;
+    for(let i = 0; i < items.length; i++){
+      if(items[i].type.startsWith("image/")){ imageItem = items[i]; break; }
+    }
+    if(!imageItem) return;
+
+    e.preventDefault();
+    const blob = imageItem.getAsFile();
+    if(!blob) return;
+    const name = "paste_" + new Date().toISOString().replace(/[:.]/g,"-");
+    await uploadImageBlob(blob, name);
+  });
 
   /* ── 초기 로드 (구버전 마이그레이션 포함) ── */
   let images=await loadSetting(GALLERY_KEY);
