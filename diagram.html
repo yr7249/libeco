@@ -937,7 +937,7 @@
   <!-- 갤러리 뷰 -->
   <div id="dgm-gallery-view" class="show">
     <div class="dgm-gallery-hdr">
-      <span class="dgm-gallery-title">📸 구성도 갤러리</span>
+      <span class="dgm-gallery-title">갤러리</span>
       <label class="dgm-gallery-add" id="dgm-gallery-add-btn" style="display:none">
         ＋ 이미지 추가
         <input type="file" id="dgm-file-input-gal" accept="image/jpeg,image/png,image/webp" style="display:none">
@@ -1081,10 +1081,12 @@
   if(_ta&&Date.now()>Number(_ta)){localStorage.removeItem("supa_token");location.href="login.html";}
   if(!_ta) sessionStorage.setItem("libeco_tab_active",String(Date.now()+7200000));
   let isAdmin=false;
+  window._dgmUserOk=false;
   if(token){
     try{
       const ur=await fetch(SUPA_URL+"/auth/v1/user",{headers:{"apikey":SUPA_KEY,"Authorization":"Bearer "+token}});
       if(ur.ok){
+        window._dgmUserOk=true;
         const u=await ur.json();
         const pr=await fetch(SUPA_URL+"/rest/v1/profiles?id=eq."+u.id+"&select=name,department,position,role",{headers:{"apikey":SUPA_KEY,"Authorization":"Bearer "+token}});
         const profiles=await pr.json();
@@ -1116,6 +1118,9 @@
       el.removeAttribute("href");el.classList.add("disabled");
       const t=document.createElement("span");t.className="nav-soon-tag";t.textContent="비공개";el.appendChild(t);
     });
+  }
+  if(typeof window._dgmRerenderGallery==="function"){
+    try{ window._dgmRerenderGallery(); }catch(e){}
   }
 })();
 </script>
@@ -1735,6 +1740,7 @@
     const grid=document.getElementById("dgm-gallery-grid");
     if(!grid)return;
     const isAdmin=!!window._isAdmin;
+    const canRename=!!window._dgmUserOk;
     if(!images||images.length===0){
       grid.innerHTML='<div class="dgm-gallery-empty"><div class="gi">🖼</div><div class="gt">등록된 이미지 없음</div></div>';
       return;
@@ -1774,10 +1780,10 @@
       titleBar.addEventListener("click",function(e){e.stopPropagation();});
 
       const nameSpan=document.createElement("span");
-      nameSpan.className="dgm-thumb-name"+(isAdmin?" editable":"");
+      nameSpan.className="dgm-thumb-name"+(canRename?" editable":"");
       nameSpan.textContent=imgData.label||imgData.filename||("구성도 "+(i+1));
-      if(isAdmin){
-        nameSpan.title="클릭하여 제목 수정";
+      if(canRename){
+        nameSpan.title="클릭하여 이름 수정";
         nameSpan.addEventListener("click",function(e){
           e.stopPropagation();
           const input=document.createElement("input");
@@ -1810,6 +1816,7 @@
       grid.appendChild(card);
     });
   }
+  window._dgmRerenderGallery=function(){ renderGallery(window._dgmImages||[]); };
 
   /* ── 이미지 삭제 ── */
   async function deleteImage(imgData){
