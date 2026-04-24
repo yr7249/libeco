@@ -1168,7 +1168,8 @@
       const trCells=Array.from(tr.querySelectorAll('.cell-inner[data-idx]'));
       const col=trCells.indexOf(fromEl);
       if(dc!==0){
-        const nc=col+dc;
+        let nc=col+dc;
+        while(nc>=0&&nc<trCells.length&&trCells[nc].tabIndex<0) nc+=dc;
         if(nc>=0&&nc<trCells.length){trCells[nc].focus();return;}
       }
       if(dr!==0){
@@ -1187,7 +1188,8 @@
       const trCells=Array.from(tr.querySelectorAll('.cell-inner[data-idx]'));
       const col=trCells.indexOf(fromEl);
       if(dc!==0){
-        const nc=col+dc;
+        let nc=col+dc;
+        while(nc>=0&&nc<trCells.length&&trCells[nc].tabIndex<0) nc+=dc;
         if(nc>=0&&nc<trCells.length) return {idx:trCells[nc].dataset.idx, field:trCells[nc].dataset.field};
         return null;
       }
