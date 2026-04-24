@@ -1760,7 +1760,7 @@
 
     // 편집 모드
     if (e.key === "Enter") {
-      if (e.altKey && isRemark) return; // Alt+Enter = 줄바꿈
+      if (e.altKey) { e.preventDefault(); document.execCommand('insertLineBreak'); return; } // Alt+Enter = 줄바꿈
       e.preventDefault(); blurAndGo(e.target, 0, 1); return;
     }
     if (e.key === "Tab") { e.preventDefault(); blurAndGo(e.target, e.shiftKey ? -1 : 1, 0); return; }
@@ -1892,9 +1892,9 @@
         tr.innerHTML = `
 <td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="${globalIdx}" data-field="no">${escapeHtml(String(row.no ?? ""))}</div></td>
 <td class="mono"><div class="cell-inner" contenteditable="true" data-idx="${globalIdx}" data-field="code">${escapeHtml(row.code)}</div></td>
-<td><div class="cell-inner" contenteditable="true" data-idx="${globalIdx}" data-field="equipment">${escapeHtml(row.equipment)}</div></td>
-<td><div class="cell-inner" contenteditable="true" data-idx="${globalIdx}" data-field="product">${escapeHtml(row.product)}</div></td>
-<td><div class="cell-inner" contenteditable="true" data-idx="${globalIdx}" data-field="supplier">${escapeHtml(row.supplier)}</div></td>
+<td><div class="cell-inner" contenteditable="true" data-idx="${globalIdx}" data-field="equipment">${escapeHtml(row.equipment).replaceAll("\n","<br>")}</div></td>
+<td><div class="cell-inner" contenteditable="true" data-idx="${globalIdx}" data-field="product">${escapeHtml(row.product).replaceAll("\n","<br>")}</div></td>
+<td><div class="cell-inner" contenteditable="true" data-idx="${globalIdx}" data-field="supplier">${escapeHtml(row.supplier).replaceAll("\n","<br>")}</div></td>
 <td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="${globalIdx}" data-field="total_qty">${escapeHtml(String(row.total_qty ?? ""))}</div></td>
 <td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="${globalIdx}" data-field="purchase_qty">${escapeHtml(String(row.purchase_qty ?? ""))}</div></td>
 <td class="mono align-right"><div class="cell-inner" contenteditable="true" data-idx="${globalIdx}" data-field="unit_price">${escapeHtml(unitStr)}</div></td>

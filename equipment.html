@@ -591,16 +591,16 @@
         `<td class="align-center" style="white-space:nowrap"><div class="cell-inner" style="padding:4px 6px;justify-content:center">${catBadge}</div></td>` +
         `<td class="mono"><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="part_no">${esc(r.part_no)}</div></td>` +
         `<td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="qty">${esc(r.qty)}</div></td>` +
-        `<td><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="name">${esc(r.name)}</div></td>` +
-        `<td><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="spec">${esc(r.spec)}</div></td>` +
-        `<td class="mono"><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="product">${esc(r.product)}</div></td>` +
+        `<td><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="name">${esc(r.name).replaceAll("\n","<br>")}</div></td>` +
+        `<td><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="spec">${esc(r.spec).replaceAll("\n","<br>")}</div></td>` +
+        `<td class="mono"><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="product">${esc(r.product).replaceAll("\n","<br>")}</div></td>` +
         `<td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="input_signal">${esc(r.input_signal)}</div></td>` +
         `<td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="input_target">${esc(r.input_target)}</div></td>` +
         `<td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="output_signal">${esc(r.output_signal)}</div></td>` +
         `<td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="output_target">${esc(r.output_target)}</div></td>` +
         `<td class="align-center"><div class="cell-inner" style="padding:3px 4px" data-idx="${gi}" data-field="usage">${usageBadge(r.usage)}</div></td>` +
-        `<td><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="signal_path" style="min-width:180px">${esc(r.signal_path)}</div></td>` +
-        `<td><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="location">${esc(r.location)}</div></td>` +
+        `<td><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="signal_path" style="min-width:180px">${esc(r.signal_path).replaceAll("\n","<br>")}</div></td>` +
+        `<td><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="location">${esc(r.location).replaceAll("\n","<br>")}</div></td>` +
         `<td><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="remark">${esc(r.remark).replaceAll("\n","<br>")}</div></td>`;
       tbody.appendChild(tr);
     });
@@ -615,7 +615,8 @@
       const trCells=Array.from(tr.querySelectorAll('.cell-inner[data-idx]'));
       const col=trCells.indexOf(fromEl);
       if(dc!==0){
-        const nc=col+dc;
+        let nc=col+dc;
+        while(nc>=0&&nc<trCells.length&&trCells[nc].tabIndex<0) nc+=dc;
         if(nc>=0&&nc<trCells.length){trCells[nc].focus();return;}
       }
       if(dr!==0){
@@ -634,7 +635,8 @@
       const trCells=Array.from(tr.querySelectorAll('.cell-inner[data-idx]'));
       const col=trCells.indexOf(fromEl);
       if(dc!==0){
-        const nc=col+dc;
+        let nc=col+dc;
+        while(nc>=0&&nc<trCells.length&&trCells[nc].tabIndex<0) nc+=dc;
         if(nc>=0&&nc<trCells.length) return {idx:trCells[nc].dataset.idx, field:trCells[nc].dataset.field};
         return null;
       }
@@ -689,7 +691,7 @@
         return;
       }
       if(e.key==="Enter"){
-        if(e.altKey&&isRemark) return;
+        if(e.altKey){e.preventDefault();document.execCommand('insertLineBreak');return;}
         e.preventDefault();eqBlurAndGo(el,0,1);return;
       }
       if(e.key==="Tab"){e.preventDefault();eqBlurAndGo(el,e.shiftKey?-1:1,0);return;}

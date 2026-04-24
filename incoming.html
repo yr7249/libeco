@@ -1149,9 +1149,9 @@
       const stageOpts=milestones.map(m=>m.name?`<option value="${esc(m.name)}"${r.deadline_stage===m.name?" selected":""}>${esc(m.name)}</option>`:"").join("");
       tr.innerHTML=
         `<td class="align-center" style="white-space:nowrap"><div class="cell-inner" style="padding:4px 6px;justify-content:center">${catBadge}</div></td>`+
-        `<td><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="equipment" style="min-width:120px">${esc(r.equipment)}</div></td>`+
-        `<td><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="product">${esc(r.product)}</div></td>`+
-        `<td><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="vendor">${esc(r.vendor)}</div></td>`+
+        `<td><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="equipment" style="min-width:120px">${esc(r.equipment).replaceAll("\n","<br>")}</div></td>`+
+        `<td><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="product">${esc(r.product).replaceAll("\n","<br>")}</div></td>`+
+        `<td><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="vendor">${esc(r.vendor).replaceAll("\n","<br>")}</div></td>`+
         `<td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="${gi}" data-field="qty">${esc(r.qty)}</div></td>`+
         `<td class="align-center"><div class="cell-inner" style="padding:2px 4px" data-idx="${gi}">${stepperHtml(r.status,gi)}</div></td>`+
         `<td class="inc-date-cell align-center"><div class="cell-inner" data-idx="${gi}" data-field="order_date">${esc(fmtDate(r.order_date))}</div></td>`+
@@ -1247,7 +1247,7 @@
         return;
       }
       if(e.key==="Enter"){
-        if(e.altKey&&isRemark) return;
+        if(e.altKey){e.preventDefault();document.execCommand('insertLineBreak');return;}
         e.preventDefault();incBlurAndGo(el,0,1);return;
       }
       if(e.key==="Tab"){e.preventDefault();incBlurAndGo(el,e.shiftKey?-1:1,0);return;}
