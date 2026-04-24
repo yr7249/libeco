@@ -1715,9 +1715,9 @@
     const trCells = Array.from(tr.querySelectorAll(".cell-inner[data-idx]"));
     const col = trCells.indexOf(fromEl);
     if (dc !== 0) {
-      // 편집 불가 셀(소계 등) 건너뛰기
+      // tabIndex < 0 인 셀(소계 등 자동계산·읽기전용)은 건너뛰기
       let nc = col + dc;
-      while (nc >= 0 && nc < trCells.length && trCells[nc].contentEditable !== "true") nc += dc;
+      while (nc >= 0 && nc < trCells.length && trCells[nc].tabIndex < 0) nc += dc;
       if (nc >= 0 && nc < trCells.length) return {idx: trCells[nc].dataset.idx, field: trCells[nc].dataset.field};
       return null;
     }
@@ -1789,9 +1789,9 @@
     const col = trCells.indexOf(fromEl);
     const rowCells = trCells.length;
     if (dc !== 0){
-      // 편집 불가 셀(소계 등 자동계산) 건너뛰기
+      // tabIndex < 0 인 셀(소계 등 자동계산·읽기전용)은 건너뛰기
       let newCol = col + dc;
-      while (newCol >= 0 && newCol < rowCells && trCells[newCol].contentEditable !== "true"){
+      while (newCol >= 0 && newCol < rowCells && trCells[newCol].tabIndex < 0){
         newCol += dc;
       }
       if (newCol >= 0 && newCol < rowCells){
