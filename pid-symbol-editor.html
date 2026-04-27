@@ -274,6 +274,12 @@
           </svg>
           타원
         </div>
+        <div class="tool-btn" id="tool-triangle" onclick="setTool('triangle')">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+            <polygon points="10,2 18,18 2,18"/>
+          </svg>
+          삼각형
+        </div>
         <div class="tool-btn" id="tool-polygon" onclick="setTool('polygon')">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
             <polygon points="10,2 18,8 15,18 5,18 2,8"/>
@@ -392,7 +398,7 @@ let groupDragOrigs = {};       // {id: {x,y}} for group drag
 // Handle state
 let activeHandle = null;
 
-const toolNames = { select:'선택', line:'직선', polyline:'꺾인선', rect:'사각형', rrect:'둥근 사각형', circle:'원', ellipse:'타원', polygon:'다각형', text:'텍스트', port:'포트 지정' };
+const toolNames = { select:'선택', line:'직선', polyline:'꺾인선', rect:'사각형', rrect:'둥근 사각형', circle:'원', ellipse:'타원', triangle:'삼각형', polygon:'다각형', text:'텍스트', port:'포트 지정' };
 const hints = {
   select: '클릭: 선택 | Shift+클릭: 다중 선택 | 빈 곳 드래그: 범위 선택',
   line: '클릭해서 시작점 — 다시 클릭해서 끝점',
@@ -401,6 +407,7 @@ const hints = {
   rrect: '드래그해서 둥근 모서리 사각형 그리기 (속성에서 반지름 조절)',
   circle: '드래그해서 원 그리기',
   ellipse: '드래그해서 타원 그리기',
+  triangle: '드래그해서 등변삼각형 그리기',
   polygon: '클릭해서 꼭짓점 추가 — 더블클릭해서 완성',
   text: '클릭해서 텍스트 입력',
   port: '클릭해서 포트(연결점) 지정',
@@ -491,6 +498,11 @@ function onMouseMove(e){
     const w=Math.abs(sp.x-drawStart.x), h=Math.abs(sp.y-drawStart.y);
     const rx = tool==='rrect' ? Math.min(defaultRx, w/2, h/2) : 0;
     drawLayer.innerHTML = `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" ry="${rx}" stroke="#4f9cf9" stroke-width="1.5" stroke-dasharray="4,3" fill="rgba(79,156,249,.05)"/>`;
+  } else if(tool==='triangle'&&drawStart){
+    const x=Math.min(drawStart.x,sp.x), y=Math.min(drawStart.y,sp.y);
+    const w=Math.abs(sp.x-drawStart.x), h=Math.abs(sp.y-drawStart.y);
+    const pts=`${x+w/2},${y} ${x},${y+h} ${x+w},${y+h}`;
+    drawLayer.innerHTML = `<polygon points="${pts}" stroke="#4f9cf9" stroke-width="1.5" stroke-dasharray="4,3" fill="rgba(79,156,249,.05)" stroke-linejoin="round"/>`;
   } else if(tool==='circle'&&drawStart){
     const r=Math.hypot(sp.x-drawStart.x,sp.y-drawStart.y);
     drawLayer.innerHTML = `<circle cx="${drawStart.x}" cy="${drawStart.y}" r="${r}" stroke="#4f9cf9" stroke-width="1.5" stroke-dasharray="4,3" fill="rgba(79,156,249,.05)"/>`;
@@ -521,44 +533,58 @@ function onMouseDown(e){
       showProps(null); updateAlignUI(); renderAll();
       return;
     }
-    // 요소 체크
-    const el = getElementAt(rawPt);
-    if(el){
+    // 요소 체크 (겹침 순환 선택)
+    const allAt = getElementsAt(rawPt);
+    if(allAt.length>0){
       selectedPort = null;
       if(e.shiftKey){
         // Shift: 다중 선택 토글
+        const el=allAt[0];
         if(selectedSet.has(el.id)) selectedSet.delete(el.id);
         else selectedSet.add(el.id);
         selected = selectedSet.size===1 ? [...selectedSet][0] : null;
         showProps(selectedSet.size===1 ? elements.find(x=>x.id===selected) : null);
+        cyclePos=null;
+      } else if(selectedSet.size>1 && allAt.some(e=>selectedSet.has(e.id))){
+        // 다중 선택 중 그룹 드래그
+        groupDragOrigs={};
+        selectedSet.forEach(id=>{ const x=elements.find(x=>x.id===id); if(x) groupDragOrigs[id]=getElementOrigin(x); });
+        isDragging=true; dragStart=sp;
+        updateAlignUI(); renderAll();
+        return;
       } else {
-        // 이미 다중 선택 중에 선택된 것 클릭 → 그룹 드래그
-        if(selectedSet.size>1 && selectedSet.has(el.id)){
-          // 그룹 드래그 준비
-          groupDragOrigs = {};
-          selectedSet.forEach(id=>{
-            const x=elements.find(x=>x.id===id);
-            if(x) groupDragOrigs[id]=getElementOrigin(x);
-          });
-          isDragging=true; dragStart=sp;
-          updateAlignUI(); renderAll();
-          return;
+        // 순환 선택: 같은 위치 클릭 시 다음 겹친 요소로
+        const samePos = cyclePos && Math.hypot(rawPt.x-cyclePos.x, rawPt.y-cyclePos.y)<10;
+        if(samePos && allAt.length>1){
+          cycleIdx = (cycleIdx+1) % allAt.length;
+        } else {
+          cycleIdx = 0;
+          cyclePos = {x:rawPt.x, y:rawPt.y};
         }
+        const el = allAt[cycleIdx];
         selected = el.id;
         selectedSet = new Set([el.id]);
-        isDragging = true; dragStart = sp;
-        dragOrigPos = getElementOrigin(el);
-        groupDragOrigs = {};
+        isDragging=true; dragStart=sp;
+        dragOrigPos=getElementOrigin(el); groupDragOrigs={};
+        // 겹침 힌트 표시
+        if(allAt.length>1){
+          document.getElementById('st-hint').textContent =
+            `[${cycleIdx+1}/${allAt.length}] 반복 클릭으로 아래 요소 선택`;
+        } else {
+          document.getElementById('st-hint').textContent = hints['select'];
+        }
         showProps(el);
       }
       isDragging = true; dragStart = sp;
-      if(selectedSet.size<=1){ dragOrigPos = getElementOrigin(el); groupDragOrigs={}; }
+      if(selectedSet.size<=1){ dragOrigPos = getElementOrigin(elements.find(x=>x.id===selected)); groupDragOrigs={}; }
       else { groupDragOrigs={}; selectedSet.forEach(id=>{ const x=elements.find(x=>x.id===id); if(x) groupDragOrigs[id]=getElementOrigin(x); }); }
       updateAlignUI(); renderAll();
       return;
     }
     // 빈 공간 → 범위 선택 시작 (Shift 아닐 때 기존 선택 클리어)
     if(!e.shiftKey){ selected=null; selectedPort=null; selectedSet.clear(); showProps(null); }
+    cyclePos=null; cycleIdx=0;
+    document.getElementById('st-hint').textContent = hints['select'];
     boxSelect = {sx:getSVGPt(e).x, sy:getSVGPt(e).y, cx:getSVGPt(e).x, cy:getSVGPt(e).y};
     updateAlignUI(); renderAll();
     return;
@@ -580,7 +606,7 @@ function onMouseDown(e){
   }
 
   // Shape tools
-  if(tool==='line'||tool==='rect'||tool==='rrect'||tool==='circle'||tool==='ellipse'){
+  if(tool==='line'||tool==='rect'||tool==='rrect'||tool==='triangle'||tool==='circle'||tool==='ellipse'){
     isDrawing = true;
     drawStart = sp;
   } else if(tool==='polyline'||tool==='polygon'){
@@ -613,11 +639,12 @@ function onMouseUp(e){
       addElement({type:'line', x1:drawStart.x, y1:drawStart.y, x2:sp.x, y2:sp.y});
     }
     cancelDraw();
-  } else if((tool==='rect'||tool==='rrect')&&drawStart){
+  } else if((tool==='rect'||tool==='rrect'||tool==='triangle')&&drawStart){
     const x=Math.min(drawStart.x,sp.x), y=Math.min(drawStart.y,sp.y);
     const w=Math.abs(sp.x-drawStart.x), h=Math.abs(sp.y-drawStart.y);
     if(w>4&&h>4){
       if(tool==='rrect') addElement({type:'rrect', x, y, width:w, height:h, rx:defaultRx, ry:defaultRx});
+      else if(tool==='triangle') addElement({type:'triangle', x, y, width:w, height:h});
       else addElement({type:'rect', x, y, width:w, height:h});
     }
     cancelDraw();
@@ -661,7 +688,7 @@ function addElement(attrs){
 
 function getElementBBox(el){
   if(el.type==='line') return {cx:(el.x1+el.x2)/2, cy:(el.y1+el.y2)/2, x:Math.min(el.x1,el.x2), y:Math.min(el.y1,el.y2), w:Math.abs(el.x2-el.x1), h:Math.abs(el.y2-el.y1)};
-  if(el.type==='rect'||el.type==='rrect') return {cx:el.x+el.width/2, cy:el.y+el.height/2, x:el.x, y:el.y, w:el.width, h:el.height};
+  if(el.type==='rect'||el.type==='rrect'||el.type==='triangle') return {cx:el.x+el.width/2, cy:el.y+el.height/2, x:el.x, y:el.y, w:el.width, h:el.height};
   if(el.type==='circle') return {cx:el.cx, cy:el.cy, x:el.cx-el.r, y:el.cy-el.r, w:el.r*2, h:el.r*2};
   if(el.type==='ellipse') return {cx:el.cx, cy:el.cy, x:el.cx-el.rx, y:el.cy-el.ry, w:el.rx*2, h:el.ry*2};
   if(el.type==='text') return {cx:el.x, cy:el.y, x:el.x, y:el.y-14, w:el.text.length*8, h:16};
@@ -675,7 +702,7 @@ function getElementBBox(el){
 
 function getElementOrigin(el){
   if(el.type==='line') return {x:el.x1, y:el.y1};
-  if(el.type==='rect'||el.type==='rrect') return {x:el.x, y:el.y};
+  if(el.type==='rect'||el.type==='rrect'||el.type==='triangle') return {x:el.x, y:el.y};
   if(el.type==='circle'||el.type==='ellipse') return {x:el.cx, y:el.cy};
   if(el.type==='text') return {x:el.x, y:el.y};
   if(el.type==='polyline'||el.type==='polygon') return {x:el.points[0].x, y:el.points[0].y};
@@ -688,7 +715,7 @@ function moveElement(id, nx, ny){
   const orig = getElementOrigin(el);
   const dx=nx-orig.x, dy=ny-orig.y;
   if(el.type==='line'){ el.x1+=dx; el.y1+=dy; el.x2+=dx; el.y2+=dy; }
-  else if(el.type==='rect'||el.type==='rrect'){ el.x+=dx; el.y+=dy; }
+  else if(el.type==='rect'||el.type==='rrect'||el.type==='triangle'){ el.x+=dx; el.y+=dy; }
   else if(el.type==='circle'||el.type==='ellipse'){ el.cx+=dx; el.cy+=dy; }
   else if(el.type==='text'){ el.x+=dx; el.y+=dy; }
   else if(el.type==='polyline'||el.type==='polygon'){ el.points=el.points.map(p=>({x:p.x+dx,y:p.y+dy})); }
@@ -703,15 +730,22 @@ function getPortAt(pt){
   return null;
 }
 
-function getElementAt(pt){
-  // Reverse order (topmost first)
+function getElementsAt(pt){
+  // 위에서 아래 순으로 (가장 나중에 그린 것이 먼저)
+  const hits=[];
   for(let i=elements.length-1;i>=0;i--){
     const el=elements[i];
     const bb=getElementBBox(el);
-    if(pt.x>=bb.x-8&&pt.x<=bb.x+bb.w+8&&pt.y>=bb.y-8&&pt.y<=bb.y+bb.h+8) return el;
+    if(pt.x>=bb.x-8&&pt.x<=bb.x+bb.w+8&&pt.y>=bb.y-8&&pt.y<=bb.y+bb.h+8) hits.push(el);
   }
-  return null;
+  return hits;
 }
+
+function getElementAt(pt){ return getElementsAt(pt)[0]||null; }
+
+// 겹침 순환 선택 상태
+let cyclePos = null;   // {x,y} 마지막 클릭 위치
+let cycleIdx = 0;
 
 // ── Rendering ─────────────────────────────────────────────────────────────────
 
@@ -741,6 +775,11 @@ function elToSVG(el){
   }
   if(el.type==='polygon'){
     const pts=el.points.map(p=>p.x+','+p.y).join(' ');
+    return `<polygon points="${pts}" stroke="${stroke}" stroke-width="${sw}" fill="${fill}" stroke-linejoin="round"${rot}/>`;
+  }
+  if(el.type==='triangle'){
+    // 등변삼각형: 상단 중앙, 좌하단, 우하단
+    const pts=`${el.x+el.width/2},${el.y} ${el.x},${el.y+el.height} ${el.x+el.width},${el.y+el.height}`;
     return `<polygon points="${pts}" stroke="${stroke}" stroke-width="${sw}" fill="${fill}" stroke-linejoin="round"${rot}/>`;
   }
   return '';
@@ -855,7 +894,7 @@ function showProps(el){
     </div>`;
   }
 
-  if(el.type==='rect'||el.type==='rrect'){
+  if(el.type==='rect'||el.type==='rrect'||el.type==='triangle'){
     html += `<div class="prop-group">
       <div class="prop-row"><span class="prop-label">X</span><input class="prop-input" type="number" value="${el.x}" onchange="setProp('x',parseFloat(this.value))"/></div>
       <div class="prop-row"><span class="prop-label">Y</span><input class="prop-input" type="number" value="${el.y}" onchange="setProp('y',parseFloat(this.value))"/></div>
