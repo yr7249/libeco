@@ -187,6 +187,31 @@
   <div class="tb-sep"></div>
   <button class="tb-btn" onclick="deleteSelected()">선택 삭제</button>
   <button class="tb-btn danger" onclick="clearCanvas()">전체 지우기</button>
+  <div id="align-controls" style="display:none; align-items:center; gap:3px;">
+    <span class="tb-label" style="font-size:10px;color:#888;">정렬</span>
+    <button class="tb-btn" onclick="alignSelected('left')" title="왼쪽 맞춤">
+      <svg width="18" height="18" viewBox="0 0 18 18"><rect x="2" y="3" width="1" height="12" fill="#4f9cf9"/><rect x="4" y="4" width="6" height="3" rx="1" fill="currentColor"/><rect x="4" y="9" width="10" height="3" rx="1" fill="currentColor"/></svg>
+    </button>
+    <button class="tb-btn" onclick="alignSelected('centerX')" title="세로 중앙 맞춤">
+      <svg width="18" height="18" viewBox="0 0 18 18"><rect x="8.5" y="1" width="1" height="16" fill="#4f9cf9"/><rect x="4" y="4" width="10" height="3" rx="1" fill="currentColor"/><rect x="5" y="9" width="8" height="3" rx="1" fill="currentColor"/></svg>
+    </button>
+    <button class="tb-btn" onclick="alignSelected('right')" title="오른쪽 맞춤">
+      <svg width="18" height="18" viewBox="0 0 18 18"><rect x="15" y="3" width="1" height="12" fill="#4f9cf9"/><rect x="9" y="4" width="6" height="3" rx="1" fill="currentColor"/><rect x="3" y="9" width="12" height="3" rx="1" fill="currentColor"/></svg>
+    </button>
+    <div style="width:1px;height:16px;background:#3a3a3a;margin:0 3px;"></div>
+    <button class="tb-btn" onclick="alignSelected('top')" title="위쪽 맞춤">
+      <svg width="18" height="18" viewBox="0 0 18 18"><rect x="3" y="2" width="12" height="1" fill="#4f9cf9"/><rect x="4" y="4" width="3" height="6" rx="1" fill="currentColor"/><rect x="9" y="4" width="3" height="10" rx="1" fill="currentColor"/></svg>
+    </button>
+    <button class="tb-btn" onclick="alignSelected('centerY')" title="가로 중앙 맞춤">
+      <svg width="18" height="18" viewBox="0 0 18 18"><rect x="1" y="8.5" width="16" height="1" fill="#4f9cf9"/><rect x="4" y="4" width="3" height="10" rx="1" fill="currentColor"/><rect x="9" y="6" width="3" height="6" rx="1" fill="currentColor"/></svg>
+    </button>
+    <button class="tb-btn" onclick="alignSelected('bottom')" title="아래쪽 맞춤">
+      <svg width="18" height="18" viewBox="0 0 18 18"><rect x="3" y="15" width="12" height="1" fill="#4f9cf9"/><rect x="4" y="8" width="3" height="6" rx="1" fill="currentColor"/><rect x="9" y="4" width="3" height="10" rx="1" fill="currentColor"/></svg>
+    </button>
+    <div style="width:1px;height:16px;background:#3a3a3a;margin:0 3px;"></div>
+    <button class="tb-btn" onclick="distributeSelected('h')" title="가로 간격 균등" style="font-size:11px;">↔균</button>
+    <button class="tb-btn" onclick="distributeSelected('v')" title="세로 간격 균등" style="font-size:11px;">↕균</button>
+  </div>
   <div id="rrect-controls" style="display:none; align-items:center; gap:6px;">
     <span class="tb-label">모서리</span>
     <input id="rrect-rx" type="range" min="0" max="80" value="10" style="width:90px; accent-color:var(--accent);" oninput="onRxSlide(this.value)"/>
@@ -359,12 +384,17 @@ let dragOrigPos = null;
 // Port selection
 let selectedPort = null;
 
+// Multi-select
+let selectedSet = new Set();   // element ids
+let boxSelect = null;          // {sx,sy,cx,cy} rubber-band box
+let groupDragOrigs = {};       // {id: {x,y}} for group drag
+
 // Handle state
 let activeHandle = null;
 
 const toolNames = { select:'선택', line:'직선', polyline:'꺾인선', rect:'사각형', rrect:'둥근 사각형', circle:'원', ellipse:'타원', polygon:'다각형', text:'텍스트', port:'포트 지정' };
 const hints = {
-  select: '클릭해서 요소를 선택 / 드래그해서 이동',
+  select: '클릭: 선택 | Shift+클릭: 다중 선택 | 빈 곳 드래그: 범위 선택',
   line: '클릭해서 시작점 — 다시 클릭해서 끝점',
   polyline: '클릭해서 점 추가 — 더블클릭해서 완성',
   rect: '드래그해서 사각형 그리기',
@@ -405,6 +435,8 @@ function setTool(t){
   svg.style.cursor = t==='select' ? 'default' : 'crosshair';
   // 둥근 사각 컨트롤 표시/숨김
   document.getElementById('rrect-controls').style.display = t==='rrect' ? 'flex' : 'none';
+  // 도구 전환 시 다중 선택 초기화
+  if(t!=='select'){ selectedSet.clear(); selected=null; selectedPort=null; updateAlignUI(); }
   cancelDraw();
 }
 
@@ -425,12 +457,23 @@ function onMouseMove(e){
   const sp = {x:snap(p.x), y:snap(p.y)};
   document.getElementById('coord-display').textContent = `x: ${sp.x}  y: ${sp.y}`;
 
+  if(boxSelect){
+    boxSelect.cx = getSVGPt(e).x;
+    boxSelect.cy = getSVGPt(e).y;
+    renderAll();
+    return;
+  }
   if(isDragging && dragStart){
     const dx = sp.x - dragStart.x;
     const dy = sp.y - dragStart.y;
     if(selectedPort){
       const port = ports.find(p=>p.id===selectedPort);
       if(port){ port.x=dragOrigPos.x+dx; port.y=dragOrigPos.y+dy; }
+    } else if(Object.keys(groupDragOrigs).length>0){
+      // 그룹 드래그
+      for(const [id, orig] of Object.entries(groupDragOrigs)){
+        moveElement(parseInt(id), orig.x+dx, orig.y+dy);
+      }
     } else if(selected){
       moveElement(selected, dragOrigPos.x+dx, dragOrigPos.y+dy);
     }
@@ -472,30 +515,52 @@ function onMouseDown(e){
     const port = getPortAt(rawPt);
     if(port){
       selectedPort = port.id;
-      selected = null;
-      isDragging = true;
-      dragStart = sp;
+      selected = null; selectedSet.clear();
+      isDragging = true; dragStart = sp;
       dragOrigPos = {x:port.x, y:port.y};
-      showProps(null);
-      renderAll();
+      showProps(null); updateAlignUI(); renderAll();
       return;
     }
     // 요소 체크
     const el = getElementAt(rawPt);
     if(el){
-      selected = el.id;
       selectedPort = null;
-      isDragging = true;
-      dragStart = sp;
-      dragOrigPos = getElementOrigin(el);
-      showProps(el);
-    } else {
-      selected = null;
-      selectedPort = null;
-      isDragging = false;
-      showProps(null);
+      if(e.shiftKey){
+        // Shift: 다중 선택 토글
+        if(selectedSet.has(el.id)) selectedSet.delete(el.id);
+        else selectedSet.add(el.id);
+        selected = selectedSet.size===1 ? [...selectedSet][0] : null;
+        showProps(selectedSet.size===1 ? elements.find(x=>x.id===selected) : null);
+      } else {
+        // 이미 다중 선택 중에 선택된 것 클릭 → 그룹 드래그
+        if(selectedSet.size>1 && selectedSet.has(el.id)){
+          // 그룹 드래그 준비
+          groupDragOrigs = {};
+          selectedSet.forEach(id=>{
+            const x=elements.find(x=>x.id===id);
+            if(x) groupDragOrigs[id]=getElementOrigin(x);
+          });
+          isDragging=true; dragStart=sp;
+          updateAlignUI(); renderAll();
+          return;
+        }
+        selected = el.id;
+        selectedSet = new Set([el.id]);
+        isDragging = true; dragStart = sp;
+        dragOrigPos = getElementOrigin(el);
+        groupDragOrigs = {};
+        showProps(el);
+      }
+      isDragging = true; dragStart = sp;
+      if(selectedSet.size<=1){ dragOrigPos = getElementOrigin(el); groupDragOrigs={}; }
+      else { groupDragOrigs={}; selectedSet.forEach(id=>{ const x=elements.find(x=>x.id===id); if(x) groupDragOrigs[id]=getElementOrigin(x); }); }
+      updateAlignUI(); renderAll();
+      return;
     }
-    renderAll();
+    // 빈 공간 → 범위 선택 시작 (Shift 아닐 때 기존 선택 클리어)
+    if(!e.shiftKey){ selected=null; selectedPort=null; selectedSet.clear(); showProps(null); }
+    boxSelect = {sx:getSVGPt(e).x, sy:getSVGPt(e).y, cx:getSVGPt(e).x, cy:getSVGPt(e).y};
+    updateAlignUI(); renderAll();
     return;
   }
 
@@ -525,7 +590,21 @@ function onMouseDown(e){
 }
 
 function onMouseUp(e){
-  if(isDragging){ isDragging=false; dragStart=null; return; }
+  if(boxSelect){
+    const x1=Math.min(boxSelect.sx,boxSelect.cx), x2=Math.max(boxSelect.sx,boxSelect.cx);
+    const y1=Math.min(boxSelect.sy,boxSelect.cy), y2=Math.max(boxSelect.sy,boxSelect.cy);
+    if(x2-x1>4 || y2-y1>4){
+      elements.forEach(el=>{
+        const bb=getElementBBox(el);
+        if(bb.x>=x1&&bb.x+bb.w<=x2&&bb.y>=y1&&bb.y+bb.h<=y2) selectedSet.add(el.id);
+      });
+      selected = selectedSet.size===1 ? [...selectedSet][0] : null;
+      if(selectedSet.size===1) showProps(elements.find(el=>el.id===selected));
+    }
+    boxSelect=null; updateAlignUI(); renderAll();
+    return;
+  }
+  if(isDragging){ isDragging=false; dragStart=null; groupDragOrigs={}; return; }
   if(!isDrawing) return;
   const sp = snapPt(e);
 
@@ -685,13 +764,15 @@ function renderAll(){
   }).join('');
 
   // Selection overlay
-  if(selected){
+  let selHTML = '';
+  const pad=6;
+  // 단일 선택 핸들
+  if(selected && selectedSet.size<=1){
     const el = elements.find(e=>e.id===selected);
     if(el){
       const bb = getElementBBox(el);
-      const pad=6;
       const rot = el.rotation ? `transform="rotate(${el.rotation},${el.rotCx},${el.rotCy})"` : '';
-      selLayer.innerHTML = `
+      selHTML += `
         <rect x="${bb.x-pad}" y="${bb.y-pad}" width="${bb.w+pad*2}" height="${bb.h+pad*2}"
           stroke="#4f9cf9" stroke-width="1" fill="none" stroke-dasharray="4,3" rx="2" ${rot}/>
         <rect data-handle="tl" x="${bb.x-pad-4}" y="${bb.y-pad-4}" width="8" height="8" fill="#4f9cf9" rx="1" style="cursor:nwse-resize" ${rot}/>
@@ -700,9 +781,32 @@ function renderAll(){
         <rect data-handle="br" x="${bb.x+bb.w+pad-4}" y="${bb.y+bb.h+pad-4}" width="8" height="8" fill="#4f9cf9" rx="1" style="cursor:nwse-resize" ${rot}/>
       `;
     }
-  } else {
-    selLayer.innerHTML = '';
   }
+  // 다중 선택 하이라이트
+  if(selectedSet.size>1){
+    selectedSet.forEach(id=>{
+      const el=elements.find(e=>e.id===id); if(!el) return;
+      const bb=getElementBBox(el);
+      const rot=el.rotation?`transform="rotate(${el.rotation},${el.rotCx},${el.rotCy})"` : '';
+      selHTML += `<rect x="${bb.x-pad}" y="${bb.y-pad}" width="${bb.w+pad*2}" height="${bb.h+pad*2}"
+        stroke="#4f9cf9" stroke-width="1" fill="rgba(79,156,249,.06)" stroke-dasharray="3,2" rx="2" ${rot}/>`;
+    });
+    // 전체 묶음 박스
+    const bbs=[...selectedSet].map(id=>getElementBBox(elements.find(e=>e.id===id))).filter(Boolean);
+    const gx=Math.min(...bbs.map(b=>b.x)), gy=Math.min(...bbs.map(b=>b.y));
+    const gx2=Math.max(...bbs.map(b=>b.x+b.w)), gy2=Math.max(...bbs.map(b=>b.y+b.h));
+    selHTML += `<rect x="${gx-pad-2}" y="${gy-pad-2}" width="${gx2-gx+pad*2+4}" height="${gy2-gy+pad*2+4}"
+      stroke="#4f9cf9" stroke-width="1.5" fill="none" stroke-dasharray="6,3" rx="3"/>
+      <text x="${gx-pad}" y="${gy-pad-8}" font-size="10" fill="#4f9cf9" font-family="Courier New">${selectedSet.size}개 선택</text>`;
+  }
+  // 범위 선택 rubber band
+  if(boxSelect){
+    const bx=Math.min(boxSelect.sx,boxSelect.cx), by=Math.min(boxSelect.sy,boxSelect.cy);
+    const bw=Math.abs(boxSelect.cx-boxSelect.sx), bh=Math.abs(boxSelect.cy-boxSelect.sy);
+    selHTML += `<rect x="${bx}" y="${by}" width="${bw}" height="${bh}"
+      stroke="#4f9cf9" stroke-width="1" fill="rgba(79,156,249,.08)" stroke-dasharray="4,2"/>`;
+  }
+  selLayer.innerHTML = selHTML;
 
   document.getElementById('elem-count').textContent = `요소: ${elements.length}`;
 }
@@ -787,12 +891,67 @@ function rotateSelected(deg){
 
 // ── Delete ─────────────────────────────────────────────────────────────────────
 
+// ── 정렬 UI ───────────────────────────────────────────────────────────────────
+function updateAlignUI(){
+  document.getElementById('align-controls').style.display =
+    selectedSet.size>=2 ? 'flex' : 'none';
+}
+
+// ── 정렬 ──────────────────────────────────────────────────────────────────────
+function alignSelected(type){
+  if(selectedSet.size<2) return;
+  const els=[...selectedSet].map(id=>elements.find(e=>e.id===id)).filter(Boolean);
+  const bbs=els.map(el=>getElementBBox(el));
+  els.forEach((el,i)=>{
+    const orig=getElementOrigin(el);
+    const bb=bbs[i];
+    let nx=orig.x, ny=orig.y;
+    switch(type){
+      case 'left':    { const minX=Math.min(...bbs.map(b=>b.x));         nx=orig.x+(minX-bb.x); break; }
+      case 'right':   { const maxX=Math.max(...bbs.map(b=>b.x+b.w));    nx=orig.x+(maxX-bb.w-bb.x); break; }
+      case 'centerX': { const avgX=bbs.reduce((s,b)=>s+b.cx,0)/bbs.length; nx=orig.x+(avgX-bb.cx); break; }
+      case 'top':     { const minY=Math.min(...bbs.map(b=>b.y));         ny=orig.y+(minY-bb.y); break; }
+      case 'bottom':  { const maxY=Math.max(...bbs.map(b=>b.y+b.h));    ny=orig.y+(maxY-bb.h-bb.y); break; }
+      case 'centerY': { const avgY=bbs.reduce((s,b)=>s+b.cy,0)/bbs.length; ny=orig.y+(avgY-bb.cy); break; }
+    }
+    moveElement(el.id, nx, ny);
+  });
+  renderAll();
+}
+
+function distributeSelected(dir){
+  if(selectedSet.size<3) return;
+  const els=[...selectedSet].map(id=>elements.find(e=>e.id===id)).filter(Boolean);
+  const bbs=els.map(el=>getElementBBox(el));
+  if(dir==='h'){
+    const sorted=els.map((el,i)=>({el,bb:bbs[i]})).sort((a,b)=>a.bb.cx-b.bb.cx);
+    const totalW=sorted.reduce((s,x)=>s+x.bb.w,0);
+    const span=sorted[sorted.length-1].bb.cx-sorted[0].bb.cx;
+    const gap=(span-totalW)/Math.max(1,sorted.length-1);
+    let curX=sorted[0].bb.x;
+    sorted.forEach(({el,bb})=>{ const orig=getElementOrigin(el); moveElement(el.id,orig.x+(curX-bb.x),orig.y); curX+=bb.w+gap; });
+  } else {
+    const sorted=els.map((el,i)=>({el,bb:bbs[i]})).sort((a,b)=>a.bb.cy-b.bb.cy);
+    const totalH=sorted.reduce((s,x)=>s+x.bb.h,0);
+    const span=sorted[sorted.length-1].bb.cy-sorted[0].bb.cy;
+    const gap=(span-totalH)/Math.max(1,sorted.length-1);
+    let curY=sorted[0].bb.y;
+    sorted.forEach(({el,bb})=>{ const orig=getElementOrigin(el); moveElement(el.id,orig.x,orig.y+(curY-bb.y)); curY+=bb.h+gap; });
+  }
+  renderAll();
+}
+
 function deleteSelected(){
   if(selectedPort){
     ports = ports.filter(p=>p.id!==selectedPort);
     selectedPort=null; renderAll(); updateStatus(); return;
   }
-  if(selected){
+  if(selectedSet.size>1){
+    const ids=new Set(selectedSet);
+    elements=elements.filter(e=>!ids.has(e.id));
+    selectedSet.clear(); selected=null;
+    showProps(null); updateAlignUI(); renderAll(); updateStatus();
+  } else if(selected){
     elements = elements.filter(e=>e.id!==selected);
     selected=null; showProps(null); renderAll(); updateStatus();
   }
@@ -805,8 +964,8 @@ document.addEventListener('keydown', e=>{
   }
   if(e.key==='Escape'){
     cancelDraw();
-    selected=null; selectedPort=null;
-    showProps(null); renderAll();
+    selected=null; selectedPort=null; selectedSet.clear(); boxSelect=null;
+    showProps(null); updateAlignUI(); renderAll();
   }
 });
 
