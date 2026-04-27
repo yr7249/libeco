@@ -212,6 +212,30 @@
     <button class="tb-btn" onclick="distributeSelected('h')" title="가로 간격 균등" style="font-size:11px;">↔균</button>
     <button class="tb-btn" onclick="distributeSelected('v')" title="세로 간격 균등" style="font-size:11px;">↕균</button>
   </div>
+  <div id="bool-controls" style="display:none; align-items:center; gap:4px;">
+    <span class="tb-label" style="font-size:10px;color:#f59e0b;">부울</span>
+    <button class="tb-btn" onclick="boolSubtract()" title="A-B 빼기: 위 도형에서 아래 도형 영역 제거 (반달 등)" style="color:#f59e0b;">
+      <svg width="20" height="20" viewBox="0 0 20 20">
+        <circle cx="9" cy="10" r="6" fill="#333" stroke="#f59e0b" stroke-width="1.2"/>
+        <rect x="10" y="4" width="7" height="12" rx="1" fill="#1a1a1f" stroke="#f59e0b" stroke-width="1.2"/>
+        <text x="10" y="13" font-size="8" fill="#f59e0b" text-anchor="middle">A-B</text>
+      </svg>
+    </button>
+    <button class="tb-btn" onclick="boolIntersect()" title="A∩B 겹침만: 두 도형의 교집합 영역만 남기기" style="color:#3dd68c;">
+      <svg width="20" height="20" viewBox="0 0 20 20">
+        <circle cx="8" cy="10" r="5" fill="none" stroke="#555" stroke-width="1"/>
+        <rect x="9" y="5" width="8" height="10" rx="1" fill="none" stroke="#555" stroke-width="1"/>
+        <circle cx="8" cy="10" r="5" fill="none" stroke="none"/>
+        <text x="10" y="13" font-size="7" fill="#3dd68c" text-anchor="middle">A∩B</text>
+      </svg>
+    </button>
+    <button class="tb-btn" onclick="boolUnion()" title="A∪B 합치기: 두 도형을 하나의 path로 합침" style="color:#818cf8;">
+      <svg width="20" height="20" viewBox="0 0 20 20">
+        <text x="10" y="14" font-size="9" fill="#818cf8" text-anchor="middle">A∪B</text>
+      </svg>
+    </button>
+    <div style="width:1px;height:16px;background:#3a3a3a;margin:0 3px;"></div>
+  </div>
   <div id="rrect-controls" style="display:none; align-items:center; gap:6px;">
     <span class="tb-label">모서리</span>
     <input id="rrect-rx" type="range" min="0" max="80" value="10" style="width:90px; accent-color:var(--accent);" oninput="onRxSlide(this.value)"/>
@@ -697,6 +721,11 @@ function getElementBBox(el){
     const x=Math.min(...xs),y=Math.min(...ys),w=Math.max(...xs)-x,h=Math.max(...ys)-y;
     return {cx:x+w/2, cy:y+h/2, x, y, w, h};
   }
+  if(el.type==='path'){
+    const tx=el.tx||0, ty=el.ty||0;
+    const x=(el.bboxX||0)+tx, y=(el.bboxY||0)+ty, w=el.bboxW||100, h=el.bboxH||100;
+    return {cx:x+w/2, cy:y+h/2, x, y, w, h};
+  }
   return {cx:0,cy:0,x:0,y:0,w:0,h:0};
 }
 
@@ -706,6 +735,7 @@ function getElementOrigin(el){
   if(el.type==='circle'||el.type==='ellipse') return {x:el.cx, y:el.cy};
   if(el.type==='text') return {x:el.x, y:el.y};
   if(el.type==='polyline'||el.type==='polygon') return {x:el.points[0].x, y:el.points[0].y};
+  if(el.type==='path') return {x:el.tx||0, y:el.ty||0};
   return {x:0,y:0};
 }
 
@@ -719,6 +749,7 @@ function moveElement(id, nx, ny){
   else if(el.type==='circle'||el.type==='ellipse'){ el.cx+=dx; el.cy+=dy; }
   else if(el.type==='text'){ el.x+=dx; el.y+=dy; }
   else if(el.type==='polyline'||el.type==='polygon'){ el.points=el.points.map(p=>({x:p.x+dx,y:p.y+dy})); }
+  else if(el.type==='path'){ el.tx=(el.tx||0)+dx; el.ty=(el.ty||0)+dy; }
   const bb=getElementBBox(el); el.rotCx=bb.cx; el.rotCy=bb.cy;
 }
 
@@ -778,9 +809,15 @@ function elToSVG(el){
     return `<polygon points="${pts}" stroke="${stroke}" stroke-width="${sw}" fill="${fill}" stroke-linejoin="round"${rot}/>`;
   }
   if(el.type==='triangle'){
-    // 등변삼각형: 상단 중앙, 좌하단, 우하단
     const pts=`${el.x+el.width/2},${el.y} ${el.x},${el.y+el.height} ${el.x+el.width},${el.y+el.height}`;
     return `<polygon points="${pts}" stroke="${stroke}" stroke-width="${sw}" fill="${fill}" stroke-linejoin="round"${rot}/>`;
+  }
+  if(el.type==='path'){
+    // 부울 연산 결과 path (translate 오프셋 방식)
+    const tx=el.tx||0, ty=el.ty||0;
+    const tr = tx||ty ? ` transform="translate(${tx},${ty})"` : '';
+    const fr = el.fillRule||'evenodd';
+    return `<path d="${el.d}" fill-rule="${fr}" stroke="${stroke}" stroke-width="${sw}" fill="${fill}"${tr}/>`;
   }
   return '';
 }
@@ -906,6 +943,19 @@ function showProps(el){
     </div>`;
   }
 
+  if(el.type==='path'){
+    const fr=el.fillRule||'evenodd';
+    html += `<div class="prop-group">
+      <div class="prop-row"><span class="prop-label">채우기 규칙</span>
+        <select class="prop-input" onchange="setProp('fillRule',this.value)" style="font-size:11px">
+          <option value="evenodd" ${fr==='evenodd'?'selected':''}>evenodd (빼기)</option>
+          <option value="nonzero" ${fr==='nonzero'?'selected':''}>nonzero (합치기)</option>
+        </select>
+      </div>
+      <div class="prop-row"><span class="prop-label" style="color:#888;font-size:10px">부울 연산 결과 path</span></div>
+    </div>`;
+  }
+
   panel.innerHTML = html;
 }
 
@@ -930,10 +980,110 @@ function rotateSelected(deg){
 
 // ── Delete ─────────────────────────────────────────────────────────────────────
 
-// ── 정렬 UI ───────────────────────────────────────────────────────────────────
+// ── 도형 → SVG path 변환 ─────────────────────────────────────────────────────
+function shapeToPath(el){
+  if(el.type==='rect'||el.type==='rrect'){
+    if(el.type==='rrect'){
+      const rx=el.rx||10, ry=el.ry||10;
+      const {x,y,width:w,height:h}=el;
+      return `M${x+rx},${y} H${x+w-rx} A${rx},${ry} 0 0 1 ${x+w},${y+ry} V${y+h-ry} A${rx},${ry} 0 0 1 ${x+w-rx},${y+h} H${x+rx} A${rx},${ry} 0 0 1 ${x},${y+h-ry} V${y+ry} A${rx},${ry} 0 0 1 ${x+rx},${y} Z`;
+    }
+    return `M${el.x},${el.y} H${el.x+el.width} V${el.y+el.height} H${el.x} Z`;
+  }
+  if(el.type==='circle'){
+    const {cx,cy,r}=el;
+    // 두 반원 호로 표현 (단일 arc 명령으로는 완전원 불가)
+    return `M${cx},${cy-r} A${r},${r} 0 0 1 ${cx},${cy+r} A${r},${r} 0 0 1 ${cx},${cy-r} Z`;
+  }
+  if(el.type==='ellipse'){
+    const {cx,cy,rx,ry}=el;
+    return `M${cx},${cy-ry} A${rx},${ry} 0 0 1 ${cx},${cy+ry} A${rx},${ry} 0 0 1 ${cx},${cy-ry} Z`;
+  }
+  if(el.type==='triangle'){
+    return `M${el.x+el.width/2},${el.y} L${el.x},${el.y+el.height} L${el.x+el.width},${el.y+el.height} Z`;
+  }
+  if(el.type==='polygon'||el.type==='polyline'){
+    return el.points.map((p,i)=>(i===0?'M':'L')+p.x+','+p.y).join(' ')+' Z';
+  }
+  if(el.type==='path') return el.d; // 이미 path
+  return null;
+}
+
+function computePathBBox(els){
+  // 두 요소의 합산 bbox
+  const bbs=els.map(e=>getElementBBox(e));
+  const x=Math.min(...bbs.map(b=>b.x)), y=Math.min(...bbs.map(b=>b.y));
+  const x2=Math.max(...bbs.map(b=>b.x+b.w)), y2=Math.max(...bbs.map(b=>b.y+b.h));
+  return {x,y,w:x2-x,h:y2-y};
+}
+
+// ── 부울 연산 ─────────────────────────────────────────────────────────────────
+// 선택된 2개 중 첫번째가 A, 두번째가 B
+function getBooleanPair(){
+  if(selectedSet.size!==2) return null;
+  const [idA,idB]=[...selectedSet];
+  const a=elements.find(e=>e.id===idA), b=elements.find(e=>e.id===idB);
+  if(!a||!b) return null;
+  const pa=shapeToPath(a), pb=shapeToPath(b);
+  if(!pa||!pb){ alert('이 도형 유형은 부울 연산을 지원하지 않습니다.'); return null; }
+  return {a,b,pa,pb,idA,idB};
+}
+
+function boolSubtract(){
+  // A - B : A path + B path를 evenodd로 → 겹친 부분이 뚫림
+  const pair=getBooleanPair(); if(!pair) return;
+  const {a,b,pa,pb,idA,idB}=pair;
+  const bbox=computePathBBox([a,b]);
+  addElement({
+    type:'path', d:`${pa} ${pb}`, fillRule:'evenodd',
+    stroke:a.stroke, strokeWidth:a.strokeWidth, fill:a.fill||'#1a1a1f',
+    tx:0, ty:0, bboxX:bbox.x, bboxY:bbox.y, bboxW:bbox.w, bboxH:bbox.h,
+  });
+  elements=elements.filter(e=>e.id!==idA&&e.id!==idB);
+  selectedSet.clear(); selected=null;
+  showProps(null); updateBoolUI(); renderAll();
+}
+
+function boolIntersect(){
+  // A ∩ B : B path + A path를 evenodd → B에서 A 밖의 부분이 뚫림 (= 겹침만 남음)
+  const pair=getBooleanPair(); if(!pair) return;
+  const {a,b,pa,pb,idA,idB}=pair;
+  const bbox=computePathBBox([a,b]);
+  // intersect: B - (B-A) == B evenodd A (B경계 + A경계, 겹치지않는 B부분 뚫림 = 겹침만)
+  addElement({
+    type:'path', d:`${pb} ${pa}`, fillRule:'evenodd',
+    stroke:b.stroke, strokeWidth:b.strokeWidth, fill:b.fill||'#1a1a1f',
+    tx:0, ty:0, bboxX:bbox.x, bboxY:bbox.y, bboxW:bbox.w, bboxH:bbox.h,
+  });
+  elements=elements.filter(e=>e.id!==idA&&e.id!==idB);
+  selectedSet.clear(); selected=null;
+  showProps(null); updateBoolUI(); renderAll();
+}
+
+function boolUnion(){
+  // Union: 두 path를 nonzero로 합침 (겹친 부분도 채워짐)
+  const pair=getBooleanPair(); if(!pair) return;
+  const {a,b,pa,pb,idA,idB}=pair;
+  const bbox=computePathBBox([a,b]);
+  addElement({
+    type:'path', d:`${pa} ${pb}`, fillRule:'nonzero',
+    stroke:a.stroke, strokeWidth:a.strokeWidth, fill:a.fill||'#1a1a1f',
+    tx:0, ty:0, bboxX:bbox.x, bboxY:bbox.y, bboxW:bbox.w, bboxH:bbox.h,
+  });
+  elements=elements.filter(e=>e.id!==idA&&e.id!==idB);
+  selectedSet.clear(); selected=null;
+  showProps(null); updateBoolUI(); renderAll();
+}
+
+// ── 정렬 / 부울 UI ────────────────────────────────────────────────────────────
 function updateAlignUI(){
   document.getElementById('align-controls').style.display =
     selectedSet.size>=2 ? 'flex' : 'none';
+  updateBoolUI();
+}
+function updateBoolUI(){
+  document.getElementById('bool-controls').style.display =
+    selectedSet.size===2 ? 'flex' : 'none';
 }
 
 // ── 정렬 ──────────────────────────────────────────────────────────────────────
@@ -1003,7 +1153,7 @@ document.addEventListener('keydown', e=>{
   }
   if(e.key==='Escape'){
     cancelDraw();
-    selected=null; selectedPort=null; selectedSet.clear(); boxSelect=null;
+    selected=null; selectedPort=null; selectedSet.clear(); boxSelect=null; cyclePos=null; cycleIdx=0;
     showProps(null); updateAlignUI(); renderAll();
   }
 });
