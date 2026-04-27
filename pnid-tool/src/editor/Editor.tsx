@@ -13,6 +13,12 @@ import { hasSupabase } from '../lib/supabase';
 import { createDocument, updateDocument, DocRow } from '../lib/documents';
 import { exportPNG, exportSVG } from './export';
 import { loadCustomSymbols, saveCustomSymbols } from './customSymbols';
+import {
+  loadStoredDefs, saveStoredDefs,
+  initRegistry, addToRegistry, removeFromRegistry, getAllRegistryDefs,
+} from './customSymbolRegistry';
+import { SymbolCreatorDialog } from './SymbolCreatorDialog';
+import type { StoredCustomSymbolDef } from './types';
 
 const LS_KEY = 'pnid-tool:last';
 
@@ -38,6 +44,15 @@ export function Editor() {
   const [armed, setArmed] = useState<string | null>(null);
   const [armedCustom, setArmedCustom] = useState<CustomSymbolTemplate | null>(null);
   const [customSymbols, setCustomSymbols] = useState<CustomSymbolTemplate[]>(loadCustomSymbols);
+  // 심볼 에디터로 만든 정식 심볼
+  const [storedDefs, setStoredDefs] = useState<StoredCustomSymbolDef[]>(() => {
+    const defs = loadStoredDefs();
+    initRegistry(defs);
+    return defs;
+  });
+  const [registryDefs, setRegistryDefs] = useState(() => getAllRegistryDefs());
+  const [showSymbolCreator, setShowSymbolCreator] = useState(false);
+  const [editingSymbolDef, setEditingSymbolDef] = useState<StoredCustomSymbolDef | undefined>();
   const [lineKind, setLineKind] = useState<LineKind>('process');
   const [showAuth, setShowAuth] = useState(false);
   const [showOpen, setShowOpen] = useState(false);
@@ -140,6 +155,31 @@ export function Editor() {
     saveCustomSymbols(next);
   };
 
+  const doSaveRegistryDef = (def: StoredCustomSymbolDef) => {
+    addToRegistry(def);
+    const next = storedDefs.filter((d) => d.id !== def.id).concat(def);
+    setStoredDefs(next);
+    saveStoredDefs(next);
+    setRegistryDefs(getAllRegistryDefs());
+    setShowSymbolCreator(false);
+    setEditingSymbolDef(undefined);
+  };
+
+  const doDeleteRegistryDef = (id: string) => {
+    removeFromRegistry(id);
+    const next = storedDefs.filter((d) => d.id !== id);
+    setStoredDefs(next);
+    saveStoredDefs(next);
+    setRegistryDefs(getAllRegistryDefs());
+  };
+
+  const doEditRegistryDef = (id: string) => {
+    const def = storedDefs.find((d) => d.id === id);
+    if (!def) return;
+    setEditingSymbolDef(def);
+    setShowSymbolCreator(true);
+  };
+
   const doDeleteCustomSymbol = (id: string) => {
     const next = customSymbols.filter((c) => c.id !== id);
     setCustomSymbols(next);
@@ -201,6 +241,7 @@ export function Editor() {
         onDuplicate={doDuplicate}
         onSaveSymbol={doSaveSymbol}
         canSaveSymbol={selection.size > 0}
+        onCreateSymbol={() => { setEditingSymbolDef(undefined); setShowSymbolCreator(true); }}
         authLabel={session ? (session.user.email ?? '로그인됨') + ' • 로그아웃' : '로그인'}
         onAuthClick={() => session ? signOut() : setShowAuth(true)}
       />
@@ -213,6 +254,9 @@ export function Editor() {
           armedCustomId={armedCustom?.id ?? null}
           onArmCustom={(tpl) => { setArmedCustom(tpl); setArmed(null); }}
           onDeleteCustom={doDeleteCustomSymbol}
+          registryDefs={registryDefs}
+          onEditRegistryDef={doEditRegistryDef}
+          onDeleteRegistryDef={doDeleteRegistryDef}
         />
         <div className="pnid-canvas-wrap" ref={wrapRef}>
           <Canvas
@@ -241,6 +285,13 @@ export function Editor() {
 
       {showAuth && <AuthDialog onClose={() => setShowAuth(false)} />}
       {showOpen && <OpenDialog onClose={() => setShowOpen(false)} onPick={onOpenPick} />}
+      {showSymbolCreator && (
+        <SymbolCreatorDialog
+          initial={editingSymbolDef}
+          onSave={doSaveRegistryDef}
+          onClose={() => { setShowSymbolCreator(false); setEditingSymbolDef(undefined); }}
+        />
+      )}
     </div>
   );
 }

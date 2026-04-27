@@ -77,6 +77,7 @@ ALTER TABLE 테이블명 ADD COLUMN 컬럼명 타입 DEFAULT 기본값;
 ## 작업 히스토리 (최근순)
 | 날짜 | 파일 | 작업 내용 |
 |------|------|-----------|
+| 2026-04-27 | `pnid-tool/src/editor/*` | 전용 심볼 에디터(SymbolCreatorDialog) 구현 — 사각/원/선/텍스트 드래그 드로잉 + 앵커(연결점) 정의 + 저장 후 팔레트 "내 심볼" 섹션 등록, 편집/삭제 가능. customSymbolRegistry(런타임 SymbolDef 변환), geometry.ts 커스텀 앵커 지원. 신규: `SymbolCreatorDialog.tsx`, `customSymbolRegistry.ts` |
 | 2026-04-27 | `pnid-tool/src/editor/*` | 커스텀 심볼 저장/재사용 기능 추가 — 선택 항목을 "심볼저장" 버튼으로 저장, localStorage에 보관, Palette "사용자 심볼" 섹션에서 재배치 가능. 신규 파일: `customSymbols.ts`. 수정: `types.ts`(CustomSymbolTemplate), `Canvas.tsx`(armedCustom), `Palette.tsx`, `Toolbar.tsx`, `Editor.tsx`, `global.css` |
 | 2026-04-24 | `purchase.html` | Tab키로 단가→소계(자동계산) 건너뛰고 상태로 바로 이동하도록 수정 (`getNextCell`, `moveFocus`에 contentEditable 건너뛰기 로직 추가) |
 | 2026-04-24 | `diagram.html` | 클립보드 붙여넣기(Ctrl+V) 이미지 업로드 기능 추가 — Canvas API로 JPEG 변환 후 Supabase Storage 업로드, `uploadImageBlob()` 공통 함수 추출 |

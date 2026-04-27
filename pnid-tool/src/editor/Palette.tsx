@@ -10,6 +10,10 @@ interface Props {
   armedCustomId: string | null;
   onArmCustom: (tpl: CustomSymbolTemplate | null) => void;
   onDeleteCustom: (id: string) => void;
+  /** 심볼 에디터로 만든 정식 심볼 */
+  registryDefs: SymbolDef[];
+  onEditRegistryDef: (id: string) => void;
+  onDeleteRegistryDef: (id: string) => void;
 }
 
 function MiniIcon({ def }: { def: SymbolDef }) {
@@ -60,7 +64,7 @@ function CustomMiniIcon({ tpl }: { tpl: CustomSymbolTemplate }) {
   );
 }
 
-export function Palette({ armedSymbol, onArm, customSymbols, armedCustomId, onArmCustom, onDeleteCustom }: Props) {
+export function Palette({ armedSymbol, onArm, customSymbols, armedCustomId, onArmCustom, onDeleteCustom, registryDefs, onEditRegistryDef, onDeleteRegistryDef }: Props) {
   const [q, setQ] = useState('');
   const items = useMemo(() => {
     const ql = q.trim().toLowerCase();
@@ -84,7 +88,37 @@ export function Palette({ armedSymbol, onArm, customSymbols, armedCustomId, onAr
         />
       </div>
 
-      {/* 사용자 심볼 섹션 */}
+      {/* 심볼 에디터로 만든 정식 심볼 */}
+      {registryDefs.length > 0 && (
+        <section className="ph-section">
+          <h4>내 심볼</h4>
+          <div className="ph-grid">
+            {registryDefs
+              .filter((d) => {
+                const ql = q.trim().toLowerCase();
+                return !ql || d.label.toLowerCase().includes(ql) || d.tag.toLowerCase().includes(ql);
+              })
+              .map((def) => (
+                <div key={def.id} className="ph-item-custom-wrap">
+                  <button
+                    className={`ph-item ${armedSymbol === def.id ? 'armed' : ''}`}
+                    title={`${def.label}\n클릭 → 캔버스 클릭으로 배치`}
+                    onClick={() => onArm(armedSymbol === def.id ? null : def.id)}
+                  >
+                    <MiniIcon def={def} />
+                    <span>{def.label}</span>
+                  </button>
+                  <div className="sc-reg-actions">
+                    <button title="편집" onClick={() => onEditRegistryDef(def.id)}>✎</button>
+                    <button title="삭제" onClick={() => onDeleteRegistryDef(def.id)}>✕</button>
+                  </div>
+                </div>
+              ))}
+          </div>
+        </section>
+      )}
+
+      {/* 사용자 심볼 섹션 (그룹 저장) */}
       {filteredCustom.length > 0 && (
         <section className="ph-section">
           <h4>사용자 심볼</h4>

@@ -25,6 +25,7 @@ interface Props {
   onDuplicate: () => void;
   onSaveSymbol: () => void;
   canSaveSymbol: boolean;
+  onCreateSymbol: () => void;
   authLabel: string;
   onAuthClick: () => void;
 }
@@ -64,6 +65,14 @@ export function Toolbar(p: Props) {
           className="pill"
         >
           심볼저장
+        </button>
+        <button
+          onClick={p.onCreateSymbol}
+          title="심볼 에디터에서 직접 그리기"
+          className="pill"
+          style={{ background: '#0a66c2', color: '#fff', borderColor: '#0a66c2' }}
+        >
+          심볼 만들기
         </button>
       </div>
 

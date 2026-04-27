@@ -77,6 +77,42 @@ export const emptyDiagram = (): Diagram => ({
 export const uid = (): ID =>
   Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
 
+// ── 심볼 에디터에서 만드는 정식 심볼 정의 ──────────────────────
+export const SYM_EDITOR_W = 200; // 논리 좌표계 너비 (중심 0, 범위 ±100)
+export const SYM_EDITOR_H = 120; // 논리 좌표계 높이 (중심 0, 범위 ±60)
+
+/** 에디터에서 그린 도형 (논리 좌표) */
+export interface SymbolShape {
+  id: string;
+  type: 'rect' | 'ellipse' | 'line' | 'text';
+  // rect: top-left corner + size
+  x?: number; y?: number; w?: number; h?: number;
+  // ellipse: center + radii
+  cx?: number; cy?: number; rx?: number; ry?: number;
+  // line
+  x1?: number; y1?: number; x2?: number; y2?: number;
+  // text
+  content?: string; fontSize?: number;
+  // tx/ty shared with x/y for text position
+}
+
+/** 심볼의 커스텀 앵커 (파이프 연결점) */
+export interface SymbolAnchor {
+  id: string;
+  name: string;
+  x: number; // 논리 좌표
+  y: number;
+}
+
+/** localStorage에 저장되는 심볼 정의 */
+export interface StoredCustomSymbolDef {
+  id: string;
+  name: string;
+  tag: string;
+  shapes: SymbolShape[];
+  anchors: SymbolAnchor[];
+}
+
 // 커스텀 심볼 템플릿 (선택 → "심볼로 저장" 으로 생성)
 export interface CustomSymbolTemplate {
   id: string;

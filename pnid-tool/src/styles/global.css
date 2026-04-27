@@ -235,3 +235,175 @@ button { cursor: pointer; }
   color: #fff;
   border-color: var(--danger);
 }
+
+/* ───────── 심볼 에디터 다이얼로그 ───────── */
+.sc-dialog {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.22);
+  display: flex;
+  flex-direction: column;
+  width: 680px;
+  max-height: 90vh;
+  overflow: hidden;
+}
+.sc-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--chrome);
+  color: var(--chrome-fg);
+}
+.sc-header strong { font-size: 14px; }
+.sc-meta {
+  display: flex;
+  gap: 10px;
+  flex: 1;
+}
+.sc-meta label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #ccc;
+}
+.sc-meta input {
+  background: #2c2c2c;
+  border: 1px solid #3a3a3a;
+  color: #fff;
+  padding: 3px 7px;
+  border-radius: 3px;
+  width: 130px;
+  font-size: 12px;
+}
+.sc-close {
+  background: none;
+  border: none;
+  color: #ccc;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+.sc-close:hover { color: #fff; }
+.sc-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+  flex-wrap: wrap;
+}
+.sc-tool {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #fff;
+  font-size: 12px;
+  cursor: pointer;
+}
+.sc-tool:hover { border-color: var(--accent); }
+.sc-tool.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+.sc-tool.danger { color: var(--danger); border-color: var(--danger); }
+.sc-tool.danger:hover { background: var(--danger); color: #fff; }
+.sc-hint {
+  font-size: 11px;
+  color: var(--muted);
+  margin-left: 6px;
+}
+.sc-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+.sc-canvas {
+  flex-shrink: 0;
+  display: block;
+  border-right: 1px solid var(--border);
+}
+.sc-anchor-panel {
+  width: 180px;
+  padding: 10px;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+.sc-anchor-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .8px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.sc-anchor-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 10px;
+}
+.sc-anchor-list li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--border-2);
+  font-size: 12px;
+}
+.sc-anchor-list li.sel { background: #e8f0fe; border-radius: 3px; }
+.sc-anchor-name {
+  flex: 1;
+  text-align: left;
+  background: none;
+  border: none;
+  font-size: 12px;
+  color: var(--accent);
+  cursor: pointer;
+  padding: 0;
+}
+.sc-anchor-pos { font-size: 10px; color: var(--muted); }
+.sc-anchor-del {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 0 2px;
+}
+.sc-anchor-del:hover { color: var(--danger); }
+.sc-anchor-tip {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+.sc-footer {
+  padding: 10px 14px;
+  border-top: 1px solid var(--border);
+}
+
+/* 팔레트 내 레지스트리 심볼 편집/삭제 버튼 */
+.sc-reg-actions {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  display: none;
+  gap: 2px;
+}
+.ph-item-custom-wrap:hover .sc-reg-actions { display: flex; }
+.sc-reg-actions button {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  font-size: 9px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sc-reg-actions button:hover { background: var(--accent); color: #fff; border-color: var(--accent); }

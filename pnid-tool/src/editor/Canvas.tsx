@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { PointerEvent as RPE, WheelEvent as RWE } from 'react';
 import type { Diagram, ID, LineKind, NodeBase, AnchorName, Point, CustomSymbolTemplate } from './types';
 import { uid } from './types';
-import { snap as snapV, anchorLocal, localToWorld } from './geometry';
+import { snap as snapV, anchorLocal, localToWorld, getNodeAnchorNames } from './geometry';
 import { SYMBOL_MAP } from '../symbols';
 import { NodeView } from './render/Node';
 import { EdgeView } from './render/Edge';
@@ -247,12 +247,12 @@ export function Canvas({
     const w = clientToWorld(clientX, clientY);
     const RADIUS = 14 / vp.scale;
     let best: { nodeId: ID; anchor: AnchorName; d: number } | null = null;
-    const names: AnchorName[] = ['n','s','e','w','ne','nw','se','sw'];
     for (const n of Object.values(diagram.nodes)) {
+      const names = getNodeAnchorNames(n);
       for (const name of names) {
-        const ap = localToWorld(n, anchorLocal(n, name));
+        const ap = localToWorld(n, anchorLocal(n, name as AnchorName));
         const d = Math.hypot(ap.x - w.x, ap.y - w.y);
-        if (d <= RADIUS && (!best || d < best.d)) best = { nodeId: n.id, anchor: name, d };
+        if (d <= RADIUS && (!best || d < best.d)) best = { nodeId: n.id, anchor: name as AnchorName, d };
       }
     }
     return best ? { nodeId: best.nodeId, anchor: best.anchor } : null;
