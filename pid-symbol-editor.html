@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>P&ID Symbol Editor</title>
+<style>
+  :root {
+    --bg: #1a1a1f;
+    --bg2: #22222a;
+    --bg3: #2a2a35;
+    --bg4: #32323f;
+    --border: #3a3a4a;
+    --border2: #4a4a60;
+    --text: #e8e8f0;
+    --text2: #9898b0;
+    --text3: #5a5a72;
+    --accent: #4f9cf9;
+    --accent2: #2d7de0;
+    --green: #3dd68c;
+    --green2: #28a870;
+    --red: #f96060;
+    --amber: #f9b840;
+    --canvas-bg: #16161c;
+    --grid: #1e1e28;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Courier New', monospace; font-size: 13px; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* Top Bar */
+  #topbar {
+    height: 44px; background: var(--bg2); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px; padding: 0 12px; flex-shrink: 0;
+  }
+  #topbar .logo { font-size: 12px; font-weight: 700; color: var(--accent); letter-spacing: 2px; margin-right: 12px; }
+  .tb-sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
+  .tb-btn {
+    height: 28px; padding: 0 12px; border: 1px solid var(--border2); border-radius: 4px;
+    background: transparent; color: var(--text2); font-family: inherit; font-size: 12px;
+    cursor: pointer; transition: all .15s; white-space: nowrap;
+  }
+  .tb-btn:hover { background: var(--bg3); color: var(--text); border-color: var(--accent); }
+  .tb-btn.primary { background: var(--accent2); color: #fff; border-color: var(--accent); }
+  .tb-btn.primary:hover { background: var(--accent); }
+  .tb-btn.danger { border-color: var(--red); color: var(--red); }
+  .tb-btn.danger:hover { background: rgba(249,96,96,.1); }
+  #sym-name-input {
+    height: 28px; padding: 0 10px; background: var(--bg3); border: 1px solid var(--border2);
+    border-radius: 4px; color: var(--text); font-family: inherit; font-size: 12px; width: 160px;
+  }
+  #sym-name-input:focus { outline: none; border-color: var(--accent); }
+  #sym-cat-input {
+    height: 28px; padding: 0 10px; background: var(--bg3); border: 1px solid var(--border2);
+    border-radius: 4px; color: var(--text); font-family: inherit; font-size: 12px; width: 120px;
+  }
+  #sym-cat-input:focus { outline: none; border-color: var(--accent); }
+  .tb-label { color: var(--text3); font-size: 11px; }
+
+  /* Main layout */
+  #main { display: flex; flex: 1; overflow: hidden; }
+
+  /* Left panel */
+  #left-panel {
+    width: 200px; background: var(--bg2); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; flex-shrink: 0; overflow: hidden;
+  }
+  .panel-section { border-bottom: 1px solid var(--border); }
+  .panel-title {
+    padding: 8px 12px; font-size: 10px; font-weight: 700; color: var(--text3);
+    letter-spacing: 1.5px; text-transform: uppercase;
+  }
+
+  /* Tools */
+  #tools-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 8px;
+  }
+  .tool-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    padding: 8px 4px; border: 1px solid var(--border); border-radius: 4px;
+    background: var(--bg3); cursor: pointer; transition: all .15s; color: var(--text2);
+    font-size: 10px; letter-spacing: .5px;
+  }
+  .tool-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(79,156,249,.07); }
+  .tool-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(79,156,249,.15); }
+  .tool-btn svg { width: 20px; height: 20px; }
+
+  /* Symbol list */
+  #sym-list { flex: 1; overflow-y: auto; padding: 4px; }
+  #sym-list::-webkit-scrollbar { width: 4px; }
+  #sym-list::-webkit-scrollbar-track { background: transparent; }
+  #sym-list::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+  .sym-item {
+    display: flex; align-items: center; gap: 8px; padding: 7px 8px;
+    border-radius: 4px; cursor: pointer; transition: background .1s; border: 1px solid transparent;
+  }
+  .sym-item:hover { background: var(--bg3); }
+  .sym-item.active { background: rgba(79,156,249,.1); border-color: rgba(79,156,249,.3); }
+  .sym-preview { width: 36px; height: 28px; flex-shrink: 0; }
+  .sym-info { min-width: 0; }
+  .sym-name { font-size: 12px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sym-cat { font-size: 10px; color: var(--text3); }
+
+  /* Canvas area */
+  #canvas-wrap {
+    flex: 1; background: var(--canvas-bg); position: relative; overflow: hidden;
+  }
+  #canvas {
+    width: 100%; height: 100%; display: block;
+  }
+  #canvas-overlay {
+    position: absolute; top: 8px; right: 8px; display: flex; gap: 6px;
+  }
+  .overlay-info {
+    background: rgba(22,22,28,.8); border: 1px solid var(--border); border-radius: 4px;
+    padding: 4px 10px; font-size: 11px; color: var(--text3);
+  }
+
+  /* Right panel */
+  #right-panel {
+    width: 200px; background: var(--bg2); border-left: 1px solid var(--border);
+    display: flex; flex-direction: column; flex-shrink: 0; overflow-y: auto;
+  }
+  #right-panel::-webkit-scrollbar { width: 4px; }
+  #right-panel::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+  .prop-group { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+  .prop-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .prop-row:last-child { margin-bottom: 0; }
+  .prop-label { font-size: 11px; color: var(--text3); }
+  .prop-val { font-size: 12px; color: var(--text); }
+  .prop-input {
+    width: 80px; height: 24px; padding: 0 6px; background: var(--bg3); border: 1px solid var(--border2);
+    border-radius: 3px; color: var(--text); font-family: inherit; font-size: 12px; text-align: right;
+  }
+  .prop-input:focus { outline: none; border-color: var(--accent); }
+  .prop-color { width: 32px; height: 24px; border: 1px solid var(--border2); border-radius: 3px; cursor: pointer; padding: 2px; background: var(--bg3); }
+  .prop-select {
+    width: 80px; height: 24px; padding: 0 4px; background: var(--bg3); border: 1px solid var(--border2);
+    border-radius: 3px; color: var(--text); font-family: inherit; font-size: 11px;
+  }
+  .prop-select:focus { outline: none; border-color: var(--accent); }
+  .no-sel { padding: 16px 12px; font-size: 11px; color: var(--text3); line-height: 1.6; }
+
+  /* Port indicator */
+  .port-dot { cursor: crosshair; }
+
+  /* Status bar */
+  #statusbar {
+    height: 28px; background: var(--bg2); border-top: 1px solid var(--border);
+    display: flex; align-items: center; padding: 0 12px; gap: 16px; flex-shrink: 0;
+  }
+  .status-item { font-size: 11px; color: var(--text3); }
+  .status-item span { color: var(--text2); }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.6); display: flex;
+    align-items: center; justify-content: center; z-index: 100;
+  }
+  .modal {
+    background: var(--bg2); border: 1px solid var(--border2); border-radius: 8px;
+    padding: 20px; width: 320px;
+  }
+  .modal h3 { font-size: 14px; color: var(--text); margin-bottom: 14px; }
+  .modal-list { max-height: 300px; overflow-y: auto; }
+  .modal-sym-item {
+    display: flex; align-items: center; gap: 10px; padding: 8px;
+    border-radius: 4px; cursor: pointer; border: 1px solid transparent;
+  }
+  .modal-sym-item:hover { background: var(--bg3); border-color: var(--border); }
+  .modal-footer { display: flex; gap: 8px; margin-top: 14px; justify-content: flex-end; }
+</style>
+</head>
+<body>
+
+<!-- Top Bar -->
+<div id="topbar">
+  <span class="logo">P&ID SYM</span>
+  <div class="tb-sep"></div>
+  <span class="tb-label">심볼명</span>
+  <input id="sym-name-input" placeholder="예: Gate Valve" value="New Symbol"/>
+  <span class="tb-label">카테고리</span>
+  <input id="sym-cat-input" placeholder="예: Valve" value="Valve"/>
+  <div class="tb-sep"></div>
+  <button class="tb-btn" onclick="newSymbol()">+ 새 심볼</button>
+  <button class="tb-btn" onclick="openLoadModal()">불러오기</button>
+  <button class="tb-btn primary" onclick="saveSymbol()">저장</button>
+  <div class="tb-sep"></div>
+  <button class="tb-btn" onclick="deleteSelected()">선택 삭제</button>
+  <button class="tb-btn danger" onclick="clearCanvas()">전체 지우기</button>
+  <div style="margin-left:auto; display:flex; gap:8px; align-items:center">
+    <span class="tb-label">회전</span>
+    <button class="tb-btn" onclick="rotateSelected(-45)">-45°</button>
+    <button class="tb-btn" onclick="rotateSelected(-22.5)">-22.5°</button>
+    <button class="tb-btn" onclick="rotateSelected(22.5)">+22.5°</button>
+    <button class="tb-btn" onclick="rotateSelected(45)">+45°</button>
+  </div>
+</div>
+
+<div id="main">
+  <!-- Left Panel -->
+  <div id="left-panel">
+    <div class="panel-section">
+      <div class="panel-title">도구</div>
+      <div id="tools-grid">
+        <div class="tool-btn active" id="tool-select" onclick="setTool('select')">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M4 2l12 8-6 1-3 6z"/>
+          </svg>
+          선택
+        </div>
+        <div class="tool-btn" id="tool-line" onclick="setTool('line')">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+            <line x1="3" y1="17" x2="17" y2="3"/>
+          </svg>
+          직선
+        </div>
+        <div class="tool-btn" id="tool-polyline" onclick="setTool('polyline')">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+            <polyline points="3,17 8,8 14,12 17,3"/>
+          </svg>
+          꺾인선
+        </div>
+        <div class="tool-btn" id="tool-rect" onclick="setTool('rect')">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="3" y="5" width="14" height="10" rx="1"/>
+          </svg>
+          사각형
+        </div>
+        <div class="tool-btn" id="tool-rrect" onclick="setTool('rrect')">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="3" y="5" width="14" height="10" rx="4"/>
+          </svg>
+          둥근 사각
+        </div>
+        <div class="tool-btn" id="tool-circle" onclick="setTool('circle')">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="10" cy="10" r="7"/>
+          </svg>
+          원
+        </div>
+        <div class="tool-btn" id="tool-ellipse" onclick="setTool('ellipse')">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+            <ellipse cx="10" cy="10" rx="8" ry="5"/>
+          </svg>
+          타원
+        </div>
+        <div class="tool-btn" id="tool-polygon" onclick="setTool('polygon')">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+            <polygon points="10,2 18,8 15,18 5,18 2,8"/>
+          </svg>
+          다각형
+        </div>
+        <div class="tool-btn" id="tool-text" onclick="setTool('text')">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+            <line x1="3" y1="5" x2="17" y2="5"/><line x1="10" y1="5" x2="10" y2="17"/>
+          </svg>
+          텍스트
+        </div>
+        <div class="tool-btn" id="tool-port" onclick="setTool('port')" style="grid-column:span 2; flex-direction:row; gap:8px;">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" style="width:16px;height:16px">
+            <circle cx="10" cy="10" r="4" stroke="#3dd68c"/><circle cx="10" cy="10" r="1.5" fill="#3dd68c" stroke="none"/>
+          </svg>
+          포트 지정
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-section" style="flex:1; display:flex; flex-direction:column; overflow:hidden">
+      <div class="panel-title">저장된 심볼</div>
+      <div id="sym-list"></div>
+    </div>
+  </div>
+
+  <!-- Canvas -->
+  <div id="canvas-wrap">
+    <svg id="canvas" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+          <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1e1e28" stroke-width="1"/>
+        </pattern>
+        <pattern id="grid2" width="100" height="100" patternUnits="userSpaceOnUse">
+          <rect width="100" height="100" fill="url(#grid)"/>
+          <path d="M 100 0 L 0 0 0 100" fill="none" stroke="#252530" stroke-width="1"/>
+        </pattern>
+      </defs>
+      <rect id="canvas-bg" width="100%" height="100%" fill="url(#grid2)"/>
+      <!-- crosshair center -->
+      <line id="cx-h" x1="0" y1="0" x2="0" y2="0" stroke="#2a2a3a" stroke-width="1" stroke-dasharray="4,4"/>
+      <line id="cx-v" x1="0" y1="0" x2="0" y2="0" stroke="#2a2a3a" stroke-width="1" stroke-dasharray="4,4"/>
+      <g id="elements-layer"></g>
+      <g id="ports-layer"></g>
+      <g id="selection-layer"></g>
+      <g id="drawing-layer"></g>
+    </svg>
+    <div id="canvas-overlay">
+      <div class="overlay-info" id="coord-display">x: 0  y: 0</div>
+      <div class="overlay-info" id="elem-count">요소: 0</div>
+    </div>
+  </div>
+
+  <!-- Right Panel -->
+  <div id="right-panel">
+    <div class="panel-title" style="padding:10px 12px">속성</div>
+    <div id="props-content">
+      <div class="no-sel">요소를 선택하면<br>속성을 편집할 수 있어요</div>
+    </div>
+  </div>
+</div>
+
+<!-- Status Bar -->
+<div id="statusbar">
+  <div class="status-item">도구: <span id="st-tool">선택</span></div>
+  <div class="status-item">요소: <span id="st-count">0</span></div>
+  <div class="status-item">포트: <span id="st-ports">0</span></div>
+  <div class="status-item" id="st-hint">클릭해서 요소를 선택하세요</div>
+</div>
+
+<!-- Load Modal -->
+<div id="load-modal" class="modal-overlay" style="display:none">
+  <div class="modal">
+    <h3>심볼 불러오기</h3>
+    <div class="modal-list" id="modal-sym-list"></div>
+    <div class="modal-footer">
+      <button class="tb-btn" onclick="closeModal()">취소</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const GRID = 20;
+const svg = document.getElementById('canvas');
+const elemLayer = document.getElementById('elements-layer');
+const portsLayer = document.getElementById('ports-layer');
+const selLayer = document.getElementById('selection-layer');
+const drawLayer = document.getElementById('drawing-layer');
+
+let tool = 'select';
+let elements = [];   // {id, type, attrs, stroke, strokeWidth, fill, rotation, rotCx, rotCy}
+let ports = [];      // {id, x, y}
+let selected = null;
+let nextId = 1;
+
+// Drawing state
+let isDrawing = false;
+let drawStart = null;
+let polyPoints = [];
+let tempEl = null;
+
+// Drag state
+let isDragging = false;
+let dragStart = null;
+let dragOrigPos = null;
+
+// Handle state
+let activeHandle = null;
+
+const toolNames = { select:'선택', line:'직선', polyline:'꺾인선', rect:'사각형', rrect:'둥근 사각형', circle:'원', ellipse:'타원', polygon:'다각형', text:'텍스트', port:'포트 지정' };
+const hints = {
+  select: '클릭해서 요소를 선택 / 드래그해서 이동',
+  line: '클릭해서 시작점 — 다시 클릭해서 끝점',
+  polyline: '클릭해서 점 추가 — 더블클릭해서 완성',
+  rect: '드래그해서 사각형 그리기',
+  rrect: '드래그해서 둥근 모서리 사각형 그리기 (속성에서 반지름 조절)',
+  circle: '드래그해서 원 그리기',
+  ellipse: '드래그해서 타원 그리기',
+  polygon: '클릭해서 꼭짓점 추가 — 더블클릭해서 완성',
+  text: '클릭해서 텍스트 입력',
+  port: '클릭해서 포트(연결점) 지정',
+};
+
+function snap(v){ return Math.round(v/GRID)*GRID; }
+function getSVGPt(e){
+  const r = svg.getBoundingClientRect();
+  return { x: e.clientX - r.left, y: e.clientY - r.top };
+}
+function snapPt(e){ const p=getSVGPt(e); return {x:snap(p.x),y:snap(p.y)}; }
+
+function setTool(t){
+  tool = t;
+  document.querySelectorAll('.tool-btn').forEach(b=>b.classList.remove('active'));
+  const tb = document.getElementById('tool-'+t);
+  if(tb) tb.classList.add('active');
+  document.getElementById('st-tool').textContent = toolNames[t]||t;
+  document.getElementById('st-hint').textContent = hints[t]||'';
+  svg.style.cursor = t==='select' ? 'default' : 'crosshair';
+  // Cancel any in-progress drawing
+  cancelDraw();
+}
+
+function cancelDraw(){
+  isDrawing=false; drawStart=null; polyPoints=[]; drawLayer.innerHTML='';
+  if(tempEl){ tempEl=null; }
+}
+
+// ── SVG Events ────────────────────────────────────────────────────────────────
+
+svg.addEventListener('mousemove', onMouseMove);
+svg.addEventListener('mousedown', onMouseDown);
+svg.addEventListener('mouseup', onMouseUp);
+svg.addEventListener('dblclick', onDblClick);
+
+function onMouseMove(e){
+  const p = getSVGPt(e);
+  const sp = {x:snap(p.x), y:snap(p.y)};
+  document.getElementById('coord-display').textContent = `x: ${sp.x}  y: ${sp.y}`;
+
+  if(isDragging && selected && dragStart){
+    const dx = sp.x - dragStart.x;
+    const dy = sp.y - dragStart.y;
+    moveElement(selected, dragOrigPos.x+dx, dragOrigPos.y+dy);
+    renderAll();
+    return;
+  }
+
+  if(!isDrawing) return;
+
+  // Live preview
+  if(tool==='line'&&drawStart){
+    drawLayer.innerHTML = `<line x1="${drawStart.x}" y1="${drawStart.y}" x2="${sp.x}" y2="${sp.y}" stroke="#4f9cf9" stroke-width="1.5" stroke-dasharray="4,3" fill="none"/>`;
+  } else if((tool==='rect'||tool==='rrect')&&drawStart){
+    const x=Math.min(drawStart.x,sp.x), y=Math.min(drawStart.y,sp.y);
+    const w=Math.abs(sp.x-drawStart.x), h=Math.abs(sp.y-drawStart.y);
+    const rx = tool==='rrect' ? Math.min(10, w/4, h/4) : 0;
+    drawLayer.innerHTML = `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" ry="${rx}" stroke="#4f9cf9" stroke-width="1.5" stroke-dasharray="4,3" fill="rgba(79,156,249,.05)"/>`;
+  } else if(tool==='circle'&&drawStart){
+    const r=Math.hypot(sp.x-drawStart.x,sp.y-drawStart.y);
+    drawLayer.innerHTML = `<circle cx="${drawStart.x}" cy="${drawStart.y}" r="${r}" stroke="#4f9cf9" stroke-width="1.5" stroke-dasharray="4,3" fill="rgba(79,156,249,.05)"/>`;
+  } else if(tool==='ellipse'&&drawStart){
+    const cx=drawStart.x, cy=drawStart.y;
+    const rx=Math.abs(sp.x-cx), ry=Math.abs(sp.y-cy);
+    drawLayer.innerHTML = `<ellipse cx="${cx}" cy="${cy}" rx="${rx||1}" ry="${ry||1}" stroke="#4f9cf9" stroke-width="1.5" stroke-dasharray="4,3" fill="rgba(79,156,249,.05)"/>`;
+  } else if((tool==='polyline'||tool==='polygon')&&polyPoints.length>0){
+    const pts = [...polyPoints, sp].map(p=>p.x+','+p.y).join(' ');
+    const tag = tool==='polygon' ? 'polygon' : 'polyline';
+    drawLayer.innerHTML = `<${tag} points="${pts}" stroke="#4f9cf9" stroke-width="1.5" stroke-dasharray="4,3" fill="${tool==='polygon'?'rgba(79,156,249,.05)':'none'}"/>`;
+  }
+}
+
+function onMouseDown(e){
+  if(e.target.dataset.handle) return; // handles handled separately
+  const sp = snapPt(e);
+
+  if(tool==='select'){
+    // Check if clicked on element
+    const el = getElementAt(getSVGPt(e));
+    if(el){
+      selected = el.id;
+      isDragging = true;
+      dragStart = sp;
+      dragOrigPos = getElementOrigin(el);
+      showProps(el);
+    } else {
+      selected = null;
+      isDragging = false;
+      showProps(null);
+    }
+    renderAll();
+    return;
+  }
+
+  if(tool==='port'){
+    ports.push({id:'p'+nextId++, x:sp.x, y:sp.y});
+    renderAll();
+    updateStatus();
+    return;
+  }
+
+  if(tool==='text'){
+    const txt = prompt('텍스트 입력:', '');
+    if(txt){
+      addElement({type:'text', x:sp.x, y:sp.y, text:txt, stroke:'none', fill:'#e8e8f0', strokeWidth:0, fontSize:14});
+    }
+    return;
+  }
+
+  // Shape tools
+  if(tool==='line'||tool==='rect'||tool==='rrect'||tool==='circle'||tool==='ellipse'){
+    isDrawing = true;
+    drawStart = sp;
+  } else if(tool==='polyline'||tool==='polygon'){
+    if(!isDrawing){ isDrawing=true; }
+    polyPoints.push(sp);
+  }
+}
+
+function onMouseUp(e){
+  if(isDragging){ isDragging=false; dragStart=null; return; }
+  if(!isDrawing) return;
+  const sp = snapPt(e);
+
+  if(tool==='line'&&drawStart){
+    if(Math.hypot(sp.x-drawStart.x,sp.y-drawStart.y)>5){
+      addElement({type:'line', x1:drawStart.x, y1:drawStart.y, x2:sp.x, y2:sp.y});
+    }
+    cancelDraw();
+  } else if((tool==='rect'||tool==='rrect')&&drawStart){
+    const x=Math.min(drawStart.x,sp.x), y=Math.min(drawStart.y,sp.y);
+    const w=Math.abs(sp.x-drawStart.x), h=Math.abs(sp.y-drawStart.y);
+    if(w>4&&h>4){
+      if(tool==='rrect') addElement({type:'rrect', x, y, width:w, height:h, rx:10, ry:10});
+      else addElement({type:'rect', x, y, width:w, height:h});
+    }
+    cancelDraw();
+  } else if(tool==='circle'&&drawStart){
+    const r=Math.hypot(sp.x-drawStart.x,sp.y-drawStart.y);
+    if(r>4) addElement({type:'circle', cx:drawStart.x, cy:drawStart.y, r});
+    cancelDraw();
+  } else if(tool==='ellipse'&&drawStart){
+    const rx=Math.abs(sp.x-drawStart.x), ry=Math.abs(sp.y-drawStart.y);
+    if(rx>4&&ry>4) addElement({type:'ellipse', cx:drawStart.x, cy:drawStart.y, rx, ry});
+    cancelDraw();
+  }
+}
+
+function onDblClick(e){
+  const sp = snapPt(e);
+  if(tool==='polyline'&&polyPoints.length>1){
+    polyPoints.push(sp);
+    addElement({type:'polyline', points:[...polyPoints]});
+    cancelDraw();
+  } else if(tool==='polygon'&&polyPoints.length>2){
+    addElement({type:'polygon', points:[...polyPoints]});
+    cancelDraw();
+  }
+}
+
+// ── Element management ────────────────────────────────────────────────────────
+
+function addElement(attrs){
+  const def = { stroke:'#e8e8f0', strokeWidth:1.5, fill:'none', rotation:0, rotCx:0, rotCy:0 };
+  const el = { id: nextId++, ...def, ...attrs };
+  // Compute center for rotation
+  const bb = getElementBBox(el);
+  el.rotCx = bb.cx; el.rotCy = bb.cy;
+  elements.push(el);
+  selected = el.id;
+  showProps(el);
+  renderAll();
+  updateStatus();
+}
+
+function getElementBBox(el){
+  if(el.type==='line') return {cx:(el.x1+el.x2)/2, cy:(el.y1+el.y2)/2, x:Math.min(el.x1,el.x2), y:Math.min(el.y1,el.y2), w:Math.abs(el.x2-el.x1), h:Math.abs(el.y2-el.y1)};
+  if(el.type==='rect'||el.type==='rrect') return {cx:el.x+el.width/2, cy:el.y+el.height/2, x:el.x, y:el.y, w:el.width, h:el.height};
+  if(el.type==='circle') return {cx:el.cx, cy:el.cy, x:el.cx-el.r, y:el.cy-el.r, w:el.r*2, h:el.r*2};
+  if(el.type==='ellipse') return {cx:el.cx, cy:el.cy, x:el.cx-el.rx, y:el.cy-el.ry, w:el.rx*2, h:el.ry*2};
+  if(el.type==='text') return {cx:el.x, cy:el.y, x:el.x, y:el.y-14, w:el.text.length*8, h:16};
+  if(el.type==='polyline'||el.type==='polygon'){
+    const xs=el.points.map(p=>p.x), ys=el.points.map(p=>p.y);
+    const x=Math.min(...xs),y=Math.min(...ys),w=Math.max(...xs)-x,h=Math.max(...ys)-y;
+    return {cx:x+w/2, cy:y+h/2, x, y, w, h};
+  }
+  return {cx:0,cy:0,x:0,y:0,w:0,h:0};
+}
+
+function getElementOrigin(el){
+  if(el.type==='line') return {x:el.x1, y:el.y1};
+  if(el.type==='rect'||el.type==='rrect') return {x:el.x, y:el.y};
+  if(el.type==='circle'||el.type==='ellipse') return {x:el.cx, y:el.cy};
+  if(el.type==='text') return {x:el.x, y:el.y};
+  if(el.type==='polyline'||el.type==='polygon') return {x:el.points[0].x, y:el.points[0].y};
+  return {x:0,y:0};
+}
+
+function moveElement(id, nx, ny){
+  const el = elements.find(e=>e.id===id);
+  if(!el) return;
+  const orig = getElementOrigin(el);
+  const dx=nx-orig.x, dy=ny-orig.y;
+  if(el.type==='line'){ el.x1+=dx; el.y1+=dy; el.x2+=dx; el.y2+=dy; }
+  else if(el.type==='rect'||el.type==='rrect'){ el.x+=dx; el.y+=dy; }
+  else if(el.type==='circle'||el.type==='ellipse'){ el.cx+=dx; el.cy+=dy; }
+  else if(el.type==='text'){ el.x+=dx; el.y+=dy; }
+  else if(el.type==='polyline'||el.type==='polygon'){ el.points=el.points.map(p=>({x:p.x+dx,y:p.y+dy})); }
+  const bb=getElementBBox(el); el.rotCx=bb.cx; el.rotCy=bb.cy;
+}
+
+function getElementAt(pt){
+  // Reverse order (topmost first)
+  for(let i=elements.length-1;i>=0;i--){
+    const el=elements[i];
+    const bb=getElementBBox(el);
+    if(pt.x>=bb.x-8&&pt.x<=bb.x+bb.w+8&&pt.y>=bb.y-8&&pt.y<=bb.y+bb.h+8) return el;
+  }
+  return null;
+}
+
+// ── Rendering ─────────────────────────────────────────────────────────────────
+
+function elToSVG(el){
+  const rot = el.rotation ? ` transform="rotate(${el.rotation},${el.rotCx},${el.rotCy})"` : '';
+  const stroke = el.stroke||'#e8e8f0';
+  const sw = el.strokeWidth||1.5;
+  const fill = el.fill||'none';
+  const isSelected = el.id===selected;
+  const selStroke = isSelected ? ' filter="url(#sel-glow)"' : '';
+
+  if(el.type==='line')
+    return `<line x1="${el.x1}" y1="${el.y1}" x2="${el.x2}" y2="${el.y2}" stroke="${stroke}" stroke-width="${sw}" fill="none"${rot}/>`;
+  if(el.type==='rect')
+    return `<rect x="${el.x}" y="${el.y}" width="${el.width}" height="${el.height}" stroke="${stroke}" stroke-width="${sw}" fill="${fill}"${rot}/>`;
+  if(el.type==='rrect')
+    return `<rect x="${el.x}" y="${el.y}" width="${el.width}" height="${el.height}" rx="${el.rx||10}" ry="${el.ry||10}" stroke="${stroke}" stroke-width="${sw}" fill="${fill}"${rot}/>`;
+  if(el.type==='circle')
+    return `<circle cx="${el.cx}" cy="${el.cy}" r="${el.r}" stroke="${stroke}" stroke-width="${sw}" fill="${fill}"${rot}/>`;
+  if(el.type==='ellipse')
+    return `<ellipse cx="${el.cx}" cy="${el.cy}" rx="${el.rx}" ry="${el.ry}" stroke="${stroke}" stroke-width="${sw}" fill="${fill}"${rot}/>`;
+  if(el.type==='text')
+    return `<text x="${el.x}" y="${el.y}" fill="${el.fill||'#e8e8f0'}" font-size="${el.fontSize||14}" font-family="Courier New"${rot}>${el.text}</text>`;
+  if(el.type==='polyline'){
+    const pts=el.points.map(p=>p.x+','+p.y).join(' ');
+    return `<polyline points="${pts}" stroke="${stroke}" stroke-width="${sw}" fill="none" stroke-linejoin="round" stroke-linecap="round"${rot}/>`;
+  }
+  if(el.type==='polygon'){
+    const pts=el.points.map(p=>p.x+','+p.y).join(' ');
+    return `<polygon points="${pts}" stroke="${stroke}" stroke-width="${sw}" fill="${fill}" stroke-linejoin="round"${rot}/>`;
+  }
+  return '';
+}
+
+function renderAll(){
+  // Elements
+  elemLayer.innerHTML = elements.map(el=>elToSVG(el)).join('');
+
+  // Ports
+  portsLayer.innerHTML = ports.map(p=>`
+    <circle class="port-dot" cx="${p.x}" cy="${p.y}" r="5" fill="none" stroke="#3dd68c" stroke-width="1.5" data-pid="${p.id}"/>
+    <circle cx="${p.x}" cy="${p.y}" r="2" fill="#3dd68c"/>
+  `).join('');
+
+  // Selection overlay
+  if(selected){
+    const el = elements.find(e=>e.id===selected);
+    if(el){
+      const bb = getElementBBox(el);
+      const pad=6;
+      const rot = el.rotation ? `transform="rotate(${el.rotation},${el.rotCx},${el.rotCy})"` : '';
+      selLayer.innerHTML = `
+        <rect x="${bb.x-pad}" y="${bb.y-pad}" width="${bb.w+pad*2}" height="${bb.h+pad*2}"
+          stroke="#4f9cf9" stroke-width="1" fill="none" stroke-dasharray="4,3" rx="2" ${rot}/>
+        <rect data-handle="tl" x="${bb.x-pad-4}" y="${bb.y-pad-4}" width="8" height="8" fill="#4f9cf9" rx="1" style="cursor:nwse-resize" ${rot}/>
+        <rect data-handle="tr" x="${bb.x+bb.w+pad-4}" y="${bb.y-pad-4}" width="8" height="8" fill="#4f9cf9" rx="1" style="cursor:nesw-resize" ${rot}/>
+        <rect data-handle="bl" x="${bb.x-pad-4}" y="${bb.y+bb.h+pad-4}" width="8" height="8" fill="#4f9cf9" rx="1" style="cursor:nesw-resize" ${rot}/>
+        <rect data-handle="br" x="${bb.x+bb.w+pad-4}" y="${bb.y+bb.h+pad-4}" width="8" height="8" fill="#4f9cf9" rx="1" style="cursor:nwse-resize" ${rot}/>
+      `;
+    }
+  } else {
+    selLayer.innerHTML = '';
+  }
+
+  document.getElementById('elem-count').textContent = `요소: ${elements.length}`;
+}
+
+function updateStatus(){
+  document.getElementById('st-count').textContent = elements.length;
+  document.getElementById('st-ports').textContent = ports.length;
+}
+
+// ── Properties Panel ──────────────────────────────────────────────────────────
+
+function showProps(el){
+  const panel = document.getElementById('props-content');
+  if(!el){ panel.innerHTML='<div class="no-sel">요소를 선택하면<br>속성을 편집할 수 있어요</div>'; return; }
+
+  let html = `<div class="prop-group">
+    <div class="prop-row"><span class="prop-label">유형</span><span class="prop-val">${el.type}</span></div>
+    <div class="prop-row">
+      <span class="prop-label">선 색상</span>
+      <input type="color" class="prop-color" value="${el.stroke||'#e8e8f0'}" onchange="setProp('stroke',this.value)"/>
+    </div>
+    <div class="prop-row">
+      <span class="prop-label">채우기</span>
+      <input type="color" class="prop-color" value="${el.fill==='none'?'#1a1a1f':el.fill}" onchange="setProp('fill',this.value)"/>
+    </div>
+    <div class="prop-row">
+      <span class="prop-label">선 두께</span>
+      <input class="prop-input" type="number" min="0.5" max="10" step="0.5" value="${el.strokeWidth||1.5}" onchange="setProp('strokeWidth',parseFloat(this.value))"/>
+    </div>
+    <div class="prop-row">
+      <span class="prop-label">회전</span>
+      <input class="prop-input" type="number" step="22.5" value="${el.rotation||0}" onchange="setProp('rotation',parseFloat(this.value))"/>
+    </div>
+  </div>`;
+
+  if(el.type==='text'){
+    html += `<div class="prop-group">
+      <div class="prop-row">
+        <span class="prop-label">텍스트</span>
+        <input class="prop-input" style="width:100px" value="${el.text}" onchange="setProp('text',this.value)"/>
+      </div>
+      <div class="prop-row">
+        <span class="prop-label">크기</span>
+        <input class="prop-input" type="number" value="${el.fontSize||14}" onchange="setProp('fontSize',parseInt(this.value))"/>
+      </div>
+    </div>`;
+  }
+
+  if(el.type==='rect'||el.type==='rrect'){
+    html += `<div class="prop-group">
+      <div class="prop-row"><span class="prop-label">X</span><input class="prop-input" type="number" value="${el.x}" onchange="setProp('x',parseFloat(this.value))"/></div>
+      <div class="prop-row"><span class="prop-label">Y</span><input class="prop-input" type="number" value="${el.y}" onchange="setProp('y',parseFloat(this.value))"/></div>
+      <div class="prop-row"><span class="prop-label">너비</span><input class="prop-input" type="number" value="${el.width}" onchange="setProp('width',parseFloat(this.value))"/></div>
+      <div class="prop-row"><span class="prop-label">높이</span><input class="prop-input" type="number" value="${el.height}" onchange="setProp('height',parseFloat(this.value))"/></div>
+      ${el.type==='rrect' ? `
+      <div class="prop-row"><span class="prop-label">모서리 rx</span><input class="prop-input" type="number" min="0" max="100" value="${el.rx||10}" onchange="setProp('rx',parseFloat(this.value));setProp('ry',parseFloat(this.value))"/></div>
+      ` : ''}
+    </div>`;
+  }
+
+  panel.innerHTML = html;
+}
+
+function setProp(key, val){
+  const el = elements.find(e=>e.id===selected);
+  if(!el) return;
+  el[key] = val;
+  if(key==='rotation'){ const bb=getElementBBox(el); el.rotCx=bb.cx; el.rotCy=bb.cy; }
+  renderAll();
+}
+
+// ── Rotation ──────────────────────────────────────────────────────────────────
+
+function rotateSelected(deg){
+  const el = elements.find(e=>e.id===selected);
+  if(!el) return;
+  el.rotation = ((el.rotation||0) + deg + 360) % 360;
+  const bb=getElementBBox(el); el.rotCx=bb.cx; el.rotCy=bb.cy;
+  showProps(el);
+  renderAll();
+}
+
+// ── Delete ─────────────────────────────────────────────────────────────────────
+
+function deleteSelected(){
+  if(selected){
+    elements = elements.filter(e=>e.id!==selected);
+    selected=null; showProps(null); renderAll(); updateStatus();
+  }
+}
+
+document.addEventListener('keydown', e=>{
+  if(e.key==='Delete'||e.key==='Backspace'){
+    if(document.activeElement.tagName==='INPUT') return;
+    deleteSelected();
+  }
+  if(e.key==='Escape'){ cancelDraw(); selected=null; showProps(null); renderAll(); }
+});
+
+function clearCanvas(){
+  if(!confirm('캔버스를 전체 지울까요?')) return;
+  elements=[]; ports=[]; selected=null; showProps(null); renderAll(); updateStatus();
+}
+
+// ── Save / Load ───────────────────────────────────────────────────────────────
+
+function saveSymbol(){
+  const name = document.getElementById('sym-name-input').value.trim();
+  const cat  = document.getElementById('sym-cat-input').value.trim();
+  if(!name){ alert('심볼 이름을 입력해주세요'); return; }
+  if(elements.length===0){ alert('그려진 요소가 없어요'); return; }
+
+  const data = { name, category:cat||'기타', elements:[...elements], ports:[...ports], savedAt: Date.now() };
+  const key = 'pid_sym_'+name.replace(/\s+/g,'_');
+  localStorage.setItem(key, JSON.stringify(data));
+
+  refreshSymList();
+  alert(`"${name}" 저장 완료!`);
+}
+
+function newSymbol(){
+  if(elements.length>0 && !confirm('현재 작업을 지우고 새 심볼을 만들까요?')) return;
+  elements=[]; ports=[]; selected=null; nextId=1;
+  document.getElementById('sym-name-input').value='New Symbol';
+  document.getElementById('sym-cat-input').value='Valve';
+  showProps(null); renderAll(); updateStatus();
+}
+
+function openLoadModal(){
+  refreshModalList();
+  document.getElementById('load-modal').style.display='flex';
+}
+function closeModal(){
+  document.getElementById('load-modal').style.display='none';
+}
+
+function loadSymbol(key){
+  const raw = localStorage.getItem(key);
+  if(!raw) return;
+  const data = JSON.parse(raw);
+  if(elements.length>0 && !confirm('현재 작업을 지우고 불러올까요?')) return;
+  elements = data.elements||[];
+  ports = data.ports||[];
+  selected=null;
+  nextId = Math.max(...elements.map(e=>e.id||0), ...ports.map(p=>parseInt(p.id?.replace('p','')||0)), 0)+1;
+  document.getElementById('sym-name-input').value=data.name||'';
+  document.getElementById('sym-cat-input').value=data.category||'';
+  showProps(null); renderAll(); updateStatus();
+  closeModal();
+}
+
+function deleteSymbol(key){
+  if(!confirm('이 심볼을 삭제할까요?')) return;
+  localStorage.removeItem(key);
+  refreshModalList();
+  refreshSymList();
+}
+
+function getSymKeys(){
+  return Object.keys(localStorage).filter(k=>k.startsWith('pid_sym_'));
+}
+
+function renderSymPreview(data, svgEl){
+  if(!data.elements||data.elements.length===0) return;
+  // Find bounding box
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  for(const el of data.elements){
+    const bb=getElementBBox(el);
+    minX=Math.min(minX,bb.x); minY=Math.min(minY,bb.y);
+    maxX=Math.max(maxX,bb.x+bb.w); maxY=Math.max(maxY,bb.y+bb.h);
+  }
+  const W=maxX-minX||1, H=maxY-minY||1;
+  svgEl.setAttribute('viewBox',`${minX-4} ${minY-4} ${W+8} ${H+8}`);
+  svgEl.innerHTML = data.elements.map(el=>elToSVG(el)).join('');
+}
+
+function refreshSymList(){
+  const keys = getSymKeys();
+  const list = document.getElementById('sym-list');
+  if(keys.length===0){ list.innerHTML='<div style="padding:12px;font-size:11px;color:var(--text3)">저장된 심볼 없음</div>'; return; }
+  list.innerHTML = keys.map(k=>{
+    const d=JSON.parse(localStorage.getItem(k));
+    return `<div class="sym-item" onclick="loadSymFromList('${k}')">
+      <svg class="sym-preview" viewBox="0 0 40 30"></svg>
+      <div class="sym-info">
+        <div class="sym-name">${d.name}</div>
+        <div class="sym-cat">${d.category}</div>
+      </div>
+    </div>`;
+  }).join('');
+  // Render previews
+  keys.forEach((k,i)=>{
+    const d=JSON.parse(localStorage.getItem(k));
+    const svgEl=list.querySelectorAll('.sym-preview')[i];
+    renderSymPreview(d,svgEl);
+  });
+}
+
+function loadSymFromList(key){ loadSymbol(key); }
+
+function refreshModalList(){
+  const keys = getSymKeys();
+  const list = document.getElementById('modal-sym-list');
+  if(keys.length===0){ list.innerHTML='<div style="padding:12px;font-size:11px;color:var(--text3)">저장된 심볼 없음</div>'; return; }
+  list.innerHTML = keys.map(k=>{
+    const d=JSON.parse(localStorage.getItem(k));
+    return `<div class="modal-sym-item">
+      <svg style="width:48px;height:36px;flex-shrink:0" viewBox="0 0 40 30"></svg>
+      <div style="flex:1">
+        <div style="font-size:13px;color:var(--text)">${d.name}</div>
+        <div style="font-size:11px;color:var(--text3)">${d.category}</div>
+      </div>
+      <button class="tb-btn" onclick="loadSymbol('${k}');closeModal()">불러오기</button>
+      <button class="tb-btn danger" onclick="deleteSymbol('${k}')">삭제</button>
+    </div>`;
+  }).join('');
+  keys.forEach((k,i)=>{
+    const d=JSON.parse(localStorage.getItem(k));
+    const svgEl=list.querySelectorAll('svg')[i];
+    renderSymPreview(d,svgEl);
+  });
+}
+
+// Initial
+refreshSymList();
+updateStatus();
+</script>
+</body>
+</html>
