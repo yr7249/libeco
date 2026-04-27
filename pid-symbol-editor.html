@@ -187,6 +187,11 @@
   <div class="tb-sep"></div>
   <button class="tb-btn" onclick="deleteSelected()">선택 삭제</button>
   <button class="tb-btn danger" onclick="clearCanvas()">전체 지우기</button>
+  <div id="rrect-controls" style="display:none; align-items:center; gap:6px;">
+    <span class="tb-label">모서리</span>
+    <input id="rrect-rx" type="range" min="0" max="80" value="10" style="width:90px; accent-color:var(--accent);" oninput="onRxSlide(this.value)"/>
+    <span id="rrect-rx-val" style="font-size:12px; color:var(--text2); min-width:26px;">10px</span>
+  </div>
   <div style="margin-left:auto; display:flex; gap:8px; align-items:center">
     <span class="tb-label">회전</span>
     <button class="tb-btn" onclick="rotateSelected(-45)">-45°</button>
@@ -375,6 +380,18 @@ function getSVGPt(e){
 }
 function snapPt(e){ const p=getSVGPt(e); return {x:snap(p.x),y:snap(p.y)}; }
 
+let defaultRx = 10;
+
+function onRxSlide(val){
+  defaultRx = parseInt(val);
+  document.getElementById('rrect-rx-val').textContent = val + 'px';
+  // 선택된 rrect가 있으면 실시간 반영
+  if(selected){
+    const el = elements.find(e=>e.id===selected);
+    if(el && el.type==='rrect'){ el.rx=defaultRx; el.ry=defaultRx; renderAll(); showProps(el); }
+  }
+}
+
 function setTool(t){
   tool = t;
   document.querySelectorAll('.tool-btn').forEach(b=>b.classList.remove('active'));
@@ -383,7 +400,8 @@ function setTool(t){
   document.getElementById('st-tool').textContent = toolNames[t]||t;
   document.getElementById('st-hint').textContent = hints[t]||'';
   svg.style.cursor = t==='select' ? 'default' : 'crosshair';
-  // Cancel any in-progress drawing
+  // 둥근 사각 컨트롤 표시/숨김
+  document.getElementById('rrect-controls').style.display = t==='rrect' ? 'flex' : 'none';
   cancelDraw();
 }
 
@@ -420,7 +438,7 @@ function onMouseMove(e){
   } else if((tool==='rect'||tool==='rrect')&&drawStart){
     const x=Math.min(drawStart.x,sp.x), y=Math.min(drawStart.y,sp.y);
     const w=Math.abs(sp.x-drawStart.x), h=Math.abs(sp.y-drawStart.y);
-    const rx = tool==='rrect' ? Math.min(10, w/4, h/4) : 0;
+    const rx = tool==='rrect' ? Math.min(defaultRx, w/2, h/2) : 0;
     drawLayer.innerHTML = `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" ry="${rx}" stroke="#4f9cf9" stroke-width="1.5" stroke-dasharray="4,3" fill="rgba(79,156,249,.05)"/>`;
   } else if(tool==='circle'&&drawStart){
     const r=Math.hypot(sp.x-drawStart.x,sp.y-drawStart.y);
@@ -497,7 +515,7 @@ function onMouseUp(e){
     const x=Math.min(drawStart.x,sp.x), y=Math.min(drawStart.y,sp.y);
     const w=Math.abs(sp.x-drawStart.x), h=Math.abs(sp.y-drawStart.y);
     if(w>4&&h>4){
-      if(tool==='rrect') addElement({type:'rrect', x, y, width:w, height:h, rx:10, ry:10});
+      if(tool==='rrect') addElement({type:'rrect', x, y, width:w, height:h, rx:defaultRx, ry:defaultRx});
       else addElement({type:'rect', x, y, width:w, height:h});
     }
     cancelDraw();
@@ -702,7 +720,7 @@ function showProps(el){
       <div class="prop-row"><span class="prop-label">너비</span><input class="prop-input" type="number" value="${el.width}" onchange="setProp('width',parseFloat(this.value))"/></div>
       <div class="prop-row"><span class="prop-label">높이</span><input class="prop-input" type="number" value="${el.height}" onchange="setProp('height',parseFloat(this.value))"/></div>
       ${el.type==='rrect' ? `
-      <div class="prop-row"><span class="prop-label">모서리 rx</span><input class="prop-input" type="number" min="0" max="100" value="${el.rx||10}" onchange="setProp('rx',parseFloat(this.value));setProp('ry',parseFloat(this.value))"/></div>
+      <div class="prop-row"><span class="prop-label">모서리 rx</span><input class="prop-input" type="number" min="0" max="200" value="${el.rx||10}" onchange="const v=parseFloat(this.value);setProp('rx',v);setProp('ry',v);defaultRx=v;document.getElementById('rrect-rx').value=v;document.getElementById('rrect-rx-val').textContent=v+'px';"/></div>
       ` : ''}
     </div>`;
   }
