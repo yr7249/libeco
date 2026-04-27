@@ -615,7 +615,7 @@ function onMouseDown(e){
   }
 
   if(tool==='port'){
-    ports.push({id:'p'+nextId++, x:sp.x, y:sp.y});
+    saveHistory(); ports.push({id:'p'+nextId++, x:sp.x, y:sp.y});
     renderAll();
     updateStatus();
     return;
@@ -654,7 +654,7 @@ function onMouseUp(e){
     boxSelect=null; updateAlignUI(); renderAll();
     return;
   }
-  if(isDragging){ isDragging=false; dragStart=null; groupDragOrigs={}; return; }
+  if(isDragging){ saveHistory(); isDragging=false; dragStart=null; groupDragOrigs={}; return; }
   if(!isDrawing) return;
   const sp = snapPt(e);
 
@@ -692,20 +692,32 @@ function onDblClick(e){
   } else if(tool==='polygon'&&polyPoints.length>2){
     addElement({type:'polygon', points:[...polyPoints]});
     cancelDraw();
+  } else if(tool==='text'){
+    // 텍스트는 기존 로직에서 처리됨
   }
 }
 
 // ── Element management ────────────────────────────────────────────────────────
 
-function addElement(attrs){
+function addElement(attrs, autoSelect=true){
+  saveHistory();
   const def = { stroke:'#e8e8f0', strokeWidth:1.5, fill:'none', rotation:0, rotCx:0, rotCy:0 };
   const el = { id: nextId++, ...def, ...attrs };
-  // Compute center for rotation
   const bb = getElementBBox(el);
   el.rotCx = bb.cx; el.rotCy = bb.cy;
   elements.push(el);
-  selected = el.id;
-  showProps(el);
+  if(autoSelect){
+    // 도형 완성 후 선택 도구로 자동 전환
+    tool = 'select';
+    document.querySelectorAll('.tool-btn').forEach(b=>b.classList.remove('active'));
+    const tb=document.getElementById('tool-select'); if(tb) tb.classList.add('active');
+    document.getElementById('st-tool').textContent = toolNames['select'];
+    document.getElementById('st-hint').textContent = hints['select'];
+    svg.style.cursor = 'default';
+    document.getElementById('rrect-controls').style.display='none';
+    selected = el.id; selectedSet = new Set([el.id]); selectedPort=null;
+    showProps(el);
+  }
   renderAll();
   updateStatus();
 }
@@ -775,8 +787,38 @@ function getElementsAt(pt){
 function getElementAt(pt){ return getElementsAt(pt)[0]||null; }
 
 // 겹침 순환 선택 상태
-let cyclePos = null;   // {x,y} 마지막 클릭 위치
+let cyclePos = null;
 let cycleIdx = 0;
+
+// ── Undo / Redo ───────────────────────────────────────────────────────────────
+let undoStack = [];
+let redoStack = [];
+
+function saveHistory(){
+  undoStack.push({ elements: JSON.parse(JSON.stringify(elements)), ports: JSON.parse(JSON.stringify(ports)) });
+  if(undoStack.length>80) undoStack.shift();
+  redoStack = [];
+}
+
+function undo(){
+  if(undoStack.length===0) return;
+  redoStack.push({ elements: JSON.parse(JSON.stringify(elements)), ports: JSON.parse(JSON.stringify(ports)) });
+  const state = undoStack.pop();
+  elements = state.elements; ports = state.ports;
+  nextId = Math.max(0, ...elements.map(e=>e.id), ...ports.map(p=>parseInt(p.id)||0)) + 1;
+  selected=null; selectedSet.clear(); selectedPort=null;
+  showProps(null); updateAlignUI(); renderAll(); updateStatus();
+}
+
+function redo(){
+  if(redoStack.length===0) return;
+  undoStack.push({ elements: JSON.parse(JSON.stringify(elements)), ports: JSON.parse(JSON.stringify(ports)) });
+  const state = redoStack.pop();
+  elements = state.elements; ports = state.ports;
+  nextId = Math.max(0, ...elements.map(e=>e.id), ...ports.map(p=>parseInt(p.id)||0)) + 1;
+  selected=null; selectedSet.clear(); selectedPort=null;
+  showProps(null); updateAlignUI(); renderAll(); updateStatus();
+}
 
 // ── Rendering ─────────────────────────────────────────────────────────────────
 
@@ -1029,50 +1071,31 @@ function getBooleanPair(){
   return {a,b,pa,pb,idA,idB};
 }
 
-function boolSubtract(){
-  // A - B : A path + B path를 evenodd로 → 겹친 부분이 뚫림
-  const pair=getBooleanPair(); if(!pair) return;
-  const {a,b,pa,pb,idA,idB}=pair;
-  const bbox=computePathBBox([a,b]);
-  addElement({
-    type:'path', d:`${pa} ${pb}`, fillRule:'evenodd',
-    stroke:a.stroke, strokeWidth:a.strokeWidth, fill:a.fill||'#1a1a1f',
-    tx:0, ty:0, bboxX:bbox.x, bboxY:bbox.y, bboxW:bbox.w, bboxH:bbox.h,
-  });
+function _boolOp(pair, d, fr, srcEl){
+  const {idA,idB}=pair;
+  const bbox=computePathBBox([pair.a,pair.b]);
+  // addElement이 이미 saveHistory 호출 → 원본 2개 제거 전 히스토리 저장됨
+  addElement({ type:'path', d, fillRule:fr,
+    stroke:srcEl.stroke, strokeWidth:srcEl.strokeWidth, fill:srcEl.fill||'#1a1a1f',
+    tx:0, ty:0, bboxX:bbox.x, bboxY:bbox.y, bboxW:bbox.w, bboxH:bbox.h });
   elements=elements.filter(e=>e.id!==idA&&e.id!==idB);
   selectedSet.clear(); selected=null;
   showProps(null); updateBoolUI(); renderAll();
+}
+
+function boolSubtract(){
+  const pair=getBooleanPair(); if(!pair) return;
+  _boolOp(pair, `${pair.pa} ${pair.pb}`, 'evenodd', pair.a);
 }
 
 function boolIntersect(){
-  // A ∩ B : B path + A path를 evenodd → B에서 A 밖의 부분이 뚫림 (= 겹침만 남음)
   const pair=getBooleanPair(); if(!pair) return;
-  const {a,b,pa,pb,idA,idB}=pair;
-  const bbox=computePathBBox([a,b]);
-  // intersect: B - (B-A) == B evenodd A (B경계 + A경계, 겹치지않는 B부분 뚫림 = 겹침만)
-  addElement({
-    type:'path', d:`${pb} ${pa}`, fillRule:'evenodd',
-    stroke:b.stroke, strokeWidth:b.strokeWidth, fill:b.fill||'#1a1a1f',
-    tx:0, ty:0, bboxX:bbox.x, bboxY:bbox.y, bboxW:bbox.w, bboxH:bbox.h,
-  });
-  elements=elements.filter(e=>e.id!==idA&&e.id!==idB);
-  selectedSet.clear(); selected=null;
-  showProps(null); updateBoolUI(); renderAll();
+  _boolOp(pair, `${pair.pb} ${pair.pa}`, 'evenodd', pair.b);
 }
 
 function boolUnion(){
-  // Union: 두 path를 nonzero로 합침 (겹친 부분도 채워짐)
   const pair=getBooleanPair(); if(!pair) return;
-  const {a,b,pa,pb,idA,idB}=pair;
-  const bbox=computePathBBox([a,b]);
-  addElement({
-    type:'path', d:`${pa} ${pb}`, fillRule:'nonzero',
-    stroke:a.stroke, strokeWidth:a.strokeWidth, fill:a.fill||'#1a1a1f',
-    tx:0, ty:0, bboxX:bbox.x, bboxY:bbox.y, bboxW:bbox.w, bboxH:bbox.h,
-  });
-  elements=elements.filter(e=>e.id!==idA&&e.id!==idB);
-  selectedSet.clear(); selected=null;
-  showProps(null); updateBoolUI(); renderAll();
+  _boolOp(pair, `${pair.pa} ${pair.pb}`, 'nonzero', pair.a);
 }
 
 // ── 정렬 / 부울 UI ────────────────────────────────────────────────────────────
@@ -1131,6 +1154,7 @@ function distributeSelected(dir){
 }
 
 function deleteSelected(){
+  saveHistory();
   if(selectedPort){
     ports = ports.filter(p=>p.id!==selectedPort);
     selectedPort=null; renderAll(); updateStatus(); return;
@@ -1147,21 +1171,147 @@ function deleteSelected(){
 }
 
 document.addEventListener('keydown', e=>{
-  if(e.key==='Delete'||e.key==='Backspace'){
-    if(document.activeElement.tagName==='INPUT') return;
-    deleteSelected();
-  }
+  const inInput = document.activeElement.tagName==='INPUT' || document.activeElement.tagName==='SELECT';
+  if((e.key==='Delete'||e.key==='Backspace') && !inInput){ deleteSelected(); }
   if(e.key==='Escape'){
     cancelDraw();
     selected=null; selectedPort=null; selectedSet.clear(); boxSelect=null; cyclePos=null; cycleIdx=0;
     showProps(null); updateAlignUI(); renderAll();
+    hideContextMenu();
+  }
+  // Undo / Redo
+  if(e.ctrlKey && !inInput){
+    if(e.key==='z'||e.key==='Z'){ e.preventDefault(); if(e.shiftKey) redo(); else undo(); }
+    if(e.key==='y'||e.key==='Y'){ e.preventDefault(); redo(); }
+    if(e.key==='a'||e.key==='A'){ e.preventDefault(); selectAll(); }
+    if(e.key==='d'||e.key==='D'){ e.preventDefault(); duplicateSelected(); }
   }
 });
 
 function clearCanvas(){
   if(!confirm('캔버스를 전체 지울까요?')) return;
-  elements=[]; ports=[]; selected=null; showProps(null); renderAll(); updateStatus();
+  saveHistory();
+  elements=[]; ports=[]; selected=null; selectedSet.clear(); showProps(null); renderAll(); updateStatus();
 }
+
+// ── 유틸리티 명령 ─────────────────────────────────────────────────────────────
+function selectAll(){
+  selectedSet = new Set(elements.map(e=>e.id));
+  selected = null; selectedPort = null;
+  showProps(null); updateAlignUI(); renderAll();
+}
+
+function duplicateSelected(){
+  const ids = selectedSet.size>0 ? [...selectedSet] : (selected ? [selected] : []);
+  if(ids.length===0) return;
+  saveHistory();
+  const newIds = new Set();
+  ids.forEach(id=>{
+    const el=elements.find(e=>e.id===id); if(!el) return;
+    const copy=JSON.parse(JSON.stringify(el));
+    copy.id=nextId++;
+    // 20px 오프셋
+    if(copy.type==='line'){ copy.x1+=20;copy.y1+=20;copy.x2+=20;copy.y2+=20; }
+    else if(copy.type==='rect'||copy.type==='rrect'||copy.type==='triangle'){ copy.x+=20;copy.y+=20; }
+    else if(copy.type==='circle'||copy.type==='ellipse'){ copy.cx+=20;copy.cy+=20; }
+    else if(copy.type==='text'){ copy.x+=20;copy.y+=20; }
+    else if(copy.type==='polyline'||copy.type==='polygon'){ copy.points=copy.points.map(p=>({x:p.x+20,y:p.y+20})); }
+    else if(copy.type==='path'){ copy.tx=(copy.tx||0)+20; copy.ty=(copy.ty||0)+20; }
+    elements.push(copy); newIds.add(copy.id);
+  });
+  selectedSet=newIds; selected=null; showProps(null); updateAlignUI(); renderAll(); updateStatus();
+}
+
+function bringToFront(){
+  const id=selected||[...selectedSet][0]; if(!id) return;
+  saveHistory();
+  const idx=elements.findIndex(e=>e.id===id); if(idx<0) return;
+  elements.push(elements.splice(idx,1)[0]); renderAll();
+}
+
+function sendToBack(){
+  const id=selected||[...selectedSet][0]; if(!id) return;
+  saveHistory();
+  const idx=elements.findIndex(e=>e.id===id); if(idx<0) return;
+  elements.unshift(elements.splice(idx,1)[0]); renderAll();
+}
+
+function selectById(id){
+  selected=id; selectedSet=new Set([id]); selectedPort=null;
+  showProps(elements.find(e=>e.id===id)); updateAlignUI(); renderAll();
+}
+
+// ── 우클릭 컨텍스트 메뉴 ──────────────────────────────────────────────────────
+function hideContextMenu(){
+  const m=document.getElementById('ctx-menu'); if(m) m.remove();
+}
+
+function showContextMenu(cx, cy, svgPt){
+  hideContextMenu();
+  const allAt = getElementsAt(svgPt);
+  const topEl = allAt[0]||null;
+  // 클릭한 요소가 현재 선택에 없으면 선택
+  if(topEl && !selectedSet.has(topEl.id) && selectedSet.size<=1){
+    selected=topEl.id; selectedSet=new Set([topEl.id]);
+    showProps(topEl); updateAlignUI(); renderAll();
+  }
+
+  const items=[];
+  if(topEl||selectedSet.size>0){
+    items.push({icon:'🗑', label:'삭제', cmd:'deleteSelected()'});
+    items.push({icon:'⧉', label:'복제  Ctrl+D', cmd:'duplicateSelected()'});
+    items.push({icon:'↑', label:'맨 앞으로', cmd:'bringToFront()'});
+    items.push({icon:'↓', label:'맨 뒤로', cmd:'sendToBack()'});
+  }
+  if(selectedSet.size===2){
+    items.push('sep');
+    items.push({icon:'⊖', label:'A-B 빼기', cmd:'boolSubtract()'});
+    items.push({icon:'⊙', label:'A∩B 겹침만', cmd:'boolIntersect()'});
+    items.push({icon:'⊕', label:'A∪B 합치기', cmd:'boolUnion()'});
+  }
+  if(allAt.length>1){
+    items.push('sep');
+    allAt.forEach((el,i)=>{
+      items.push({icon:'◈', label:`[${i+1}] ${el.type} #${el.id}`, cmd:`selectById(${el.id})`});
+    });
+  }
+  items.push('sep');
+  items.push({icon:'⬚', label:'전체 선택  Ctrl+A', cmd:'selectAll()'});
+  items.push({icon:'↩', label:'실행 취소  Ctrl+Z', cmd:'undo()'});
+  items.push({icon:'↪', label:'다시 실행  Ctrl+Y', cmd:'redo()'});
+
+  const menu=document.createElement('div');
+  menu.id='ctx-menu';
+  menu.style.cssText=`position:fixed;left:${cx}px;top:${cy}px;
+    background:#252530;border:1px solid #3a3a4a;border-radius:6px;
+    padding:4px 0;z-index:9999;min-width:180px;box-shadow:0 8px 24px rgba(0,0,0,.5);
+    font-size:13px;font-family:'Segoe UI',sans-serif;`;
+  items.forEach(item=>{
+    if(item==='sep'){
+      const s=document.createElement('div');
+      s.style.cssText='height:1px;background:#3a3a4a;margin:3px 0;';
+      menu.appendChild(s); return;
+    }
+    const btn=document.createElement('div');
+    btn.style.cssText='padding:6px 14px;cursor:pointer;display:flex;align-items:center;gap:8px;color:#d0d0e0;';
+    btn.innerHTML=`<span style="width:16px;text-align:center;opacity:.7">${item.icon}</span><span>${item.label}</span>`;
+    btn.onmouseenter=()=>btn.style.background='#35354a';
+    btn.onmouseleave=()=>btn.style.background='';
+    btn.onclick=()=>{ hideContextMenu(); eval(item.cmd); };
+    menu.appendChild(btn);
+  });
+
+  document.body.appendChild(menu);
+  // 화면 경계 보정
+  requestAnimationFrame(()=>{
+    const r=menu.getBoundingClientRect();
+    if(r.right>window.innerWidth) menu.style.left=(cx-r.width)+'px';
+    if(r.bottom>window.innerHeight) menu.style.top=(cy-r.height)+'px';
+  });
+}
+
+svg.addEventListener('contextmenu', e=>{ e.preventDefault(); showContextMenu(e.clientX, e.clientY, getSVGPt(e)); });
+document.addEventListener('click', e=>{ if(!e.target.closest('#ctx-menu')) hideContextMenu(); });
 
 // ── Save / Load ───────────────────────────────────────────────────────────────
 
