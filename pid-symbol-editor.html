@@ -356,6 +356,9 @@ let isDragging = false;
 let dragStart = null;
 let dragOrigPos = null;
 
+// Port selection
+let selectedPort = null;
+
 // Handle state
 let activeHandle = null;
 
@@ -422,10 +425,15 @@ function onMouseMove(e){
   const sp = {x:snap(p.x), y:snap(p.y)};
   document.getElementById('coord-display').textContent = `x: ${sp.x}  y: ${sp.y}`;
 
-  if(isDragging && selected && dragStart){
+  if(isDragging && dragStart){
     const dx = sp.x - dragStart.x;
     const dy = sp.y - dragStart.y;
-    moveElement(selected, dragOrigPos.x+dx, dragOrigPos.y+dy);
+    if(selectedPort){
+      const port = ports.find(p=>p.id===selectedPort);
+      if(port){ port.x=dragOrigPos.x+dx; port.y=dragOrigPos.y+dy; }
+    } else if(selected){
+      moveElement(selected, dragOrigPos.x+dx, dragOrigPos.y+dy);
+    }
     renderAll();
     return;
   }
@@ -459,16 +467,31 @@ function onMouseDown(e){
   const sp = snapPt(e);
 
   if(tool==='select'){
-    // Check if clicked on element
-    const el = getElementAt(getSVGPt(e));
+    const rawPt = getSVGPt(e);
+    // 포트 먼저 체크
+    const port = getPortAt(rawPt);
+    if(port){
+      selectedPort = port.id;
+      selected = null;
+      isDragging = true;
+      dragStart = sp;
+      dragOrigPos = {x:port.x, y:port.y};
+      showProps(null);
+      renderAll();
+      return;
+    }
+    // 요소 체크
+    const el = getElementAt(rawPt);
     if(el){
       selected = el.id;
+      selectedPort = null;
       isDragging = true;
       dragStart = sp;
       dragOrigPos = getElementOrigin(el);
       showProps(el);
     } else {
       selected = null;
+      selectedPort = null;
       isDragging = false;
       showProps(null);
     }
@@ -593,6 +616,14 @@ function moveElement(id, nx, ny){
   const bb=getElementBBox(el); el.rotCx=bb.cx; el.rotCy=bb.cy;
 }
 
+function getPortAt(pt){
+  for(let i=ports.length-1;i>=0;i--){
+    const p=ports[i];
+    if(Math.hypot(pt.x-p.x, pt.y-p.y)<=10) return p;
+  }
+  return null;
+}
+
 function getElementAt(pt){
   // Reverse order (topmost first)
   for(let i=elements.length-1;i>=0;i--){
@@ -641,10 +672,17 @@ function renderAll(){
   elemLayer.innerHTML = elements.map(el=>elToSVG(el)).join('');
 
   // Ports
-  portsLayer.innerHTML = ports.map(p=>`
-    <circle class="port-dot" cx="${p.x}" cy="${p.y}" r="5" fill="none" stroke="#3dd68c" stroke-width="1.5" data-pid="${p.id}"/>
-    <circle cx="${p.x}" cy="${p.y}" r="2" fill="#3dd68c"/>
-  `).join('');
+  portsLayer.innerHTML = ports.map(p=>{
+    const isSel = p.id===selectedPort;
+    return `
+      <circle class="port-dot" cx="${p.x}" cy="${p.y}" r="${isSel?9:6}"
+        fill="${isSel?'rgba(61,214,140,.15)':'none'}"
+        stroke="#3dd68c" stroke-width="${isSel?2:1.5}"
+        ${isSel?'stroke-dasharray="4,2"':''} data-pid="${p.id}" style="cursor:move"/>
+      <circle cx="${p.x}" cy="${p.y}" r="2.5" fill="#3dd68c" style="pointer-events:none"/>
+      ${isSel?`<text x="${p.x}" y="${p.y-13}" text-anchor="middle" font-size="10" fill="#3dd68c" font-family="Courier New">포트</text>`:''}
+    `;
+  }).join('');
 
   // Selection overlay
   if(selected){
@@ -750,6 +788,10 @@ function rotateSelected(deg){
 // ── Delete ─────────────────────────────────────────────────────────────────────
 
 function deleteSelected(){
+  if(selectedPort){
+    ports = ports.filter(p=>p.id!==selectedPort);
+    selectedPort=null; renderAll(); updateStatus(); return;
+  }
   if(selected){
     elements = elements.filter(e=>e.id!==selected);
     selected=null; showProps(null); renderAll(); updateStatus();
@@ -761,7 +803,11 @@ document.addEventListener('keydown', e=>{
     if(document.activeElement.tagName==='INPUT') return;
     deleteSelected();
   }
-  if(e.key==='Escape'){ cancelDraw(); selected=null; showProps(null); renderAll(); }
+  if(e.key==='Escape'){
+    cancelDraw();
+    selected=null; selectedPort=null;
+    showProps(null); renderAll();
+  }
 });
 
 function clearCanvas(){
