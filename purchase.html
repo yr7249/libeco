@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LLNL POC — 구매리스트</title>
+  <title>USA POC — 구매리스트</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -831,7 +831,7 @@
         <div class="pg-vdiv"></div>
         <button class="pg-btn pg-btn-nav" id="equip-nav-btn">이동 ▾</button>
         <div class="pg-vdiv no-mobile"></div>
-        <span class="pg-title no-mobile">LLNL POC <span>구매리스트</span></span>
+        <span class="pg-title no-mobile">USA POC <span>구매리스트</span></span>
         <span class="pg-badge no-mobile">EQUIP LIST</span>
       </div>
       <div class="pg-topbar-r">
@@ -855,7 +855,7 @@
       <div class="header-inner">
         <div class="header-left">
           <div>
-            <h1>LLNL POC <span>구매리스트</span></h1>
+            <h1>USA POC <span>구매리스트</span></h1>
             <p class="header-sub"><span id="genTime">2026/04/14 17:03</span> update</p>
           </div>
         </div>
@@ -2370,7 +2370,6 @@
       if (!res.ok){
         const body = await res.text();
         console.error("[purchase] DELETE 실패 — status:", res.status, "body:", body);
-        alert("⚠️ DELETE 실패 (status " + res.status + ")\n\n" + body + "\n\nSupabase RLS 정책에서 purchase 테이블의 DELETE 권한을 확인하세요.");
       } else {
         console.log("[purchase] DELETE 성공 id=" + item._supa_id);
       }
@@ -2631,7 +2630,7 @@
       /<script type="application\/json" id="seed-data"[^>]*>[\s\S]*?<\/script>/,
       `<script type="application/json" id="seed-data" data-fid="${newFid}">${json}<\/script>`
     );
-    saveToFile(html, `LLNL POC_${ds}.html`);
+    saveToFile(html, `USA POC_${ds}.html`);
   }
 
   function buildReadonlyTableHtml(){
@@ -2684,7 +2683,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LLNL 시험장비 구매 계획 – 보고 (${date})</title>
+  <title>USA 시험장비 구매 계획 – 보고 (${date})</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -2698,7 +2697,7 @@
       <div class="header-inner">
         <div class="header-left">
           <div>
-            <h1>LLNL 시험장비 <span>구매 계획</span></h1>
+            <h1>USA 시험장비 <span>구매 계획</span></h1>
             <p class="header-sub">보고용(읽기 전용) · ${escapeHtml(stamp)}</p>
           </div>
         </div>
@@ -2719,7 +2718,7 @@
   </div>
 </body>
 </html>`;
-    saveToFile(html, `LLNL POC_구매리스트_${ds}.html`);
+    saveToFile(html, `USA POC_구매리스트_${ds}.html`);
   }
 
   function exportReportPdf(){

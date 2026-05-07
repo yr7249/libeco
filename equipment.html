@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LLNL POC — 시험장비 목록</title>
+  <title>USA POC — 시험장비 목록</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -301,7 +301,7 @@
     <div class="pg-vdiv"></div>
     <button class="pg-btn" id="eq-nav-btn">이동 ▾</button>
     <div class="pg-vdiv no-mobile"></div>
-    <span class="pg-title no-mobile">LLNL POC <span>시험장비</span></span>
+    <span class="pg-title no-mobile">USA POC <span>시험장비</span></span>
     <span class="pg-badge no-mobile">EQUIPMENT</span>
   </div>
   <div class="pg-topbar-r">
@@ -333,7 +333,7 @@
           <path d="M12 16c0-5 4-8 9-8s9 3 9 8" stroke="#166534" stroke-width="1.5" stroke-linecap="round" fill="none"/>
         </svg>
         <div>
-          <h1>LLNL POC <span>시험장비 목록</span></h1>
+          <h1>USA POC <span>시험장비 목록</span></h1>
           <p class="header-sub"><span id="eq-gen-time">--</span> update</p>
         </div>
       </div>
@@ -507,7 +507,6 @@
       if(!res.ok){
         const body = await res.text();
         console.error("[equipment] DELETE 실패 — status:", res.status, "body:", body);
-        alert("⚠️ DELETE 실패 (status " + res.status + ")\n\n" + body + "\n\nSupabase RLS 정책에서 equipment 테이블의 DELETE 권한을 확인하세요.");
       } else {
         console.log("[equipment] DELETE 성공 id=" + id);
       }
