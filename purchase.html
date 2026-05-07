@@ -2340,27 +2340,72 @@
   /* ── 실시간 동기화 (Supabase Realtime) ── */
   function startPurchaseRealtime(){
     const wsUrl = SUPA_URL.replace("https://", "wss://") + "/realtime/v1/websocket?apikey=" + SUPA_KEY + "&vsn=1.0.0";
-    let ws;
+    let ws, heartbeatTimer, refCount = 1;
+
+    function sendJson(obj){ if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj)); }
+
+    function startHeartbeat(){
+      clearInterval(heartbeatTimer);
+      heartbeatTimer = setInterval(() => {
+        sendJson({ topic: "phoenix", event: "heartbeat", payload: {}, ref: String(refCount++) });
+      }, 20000);
+    }
+
     function connect(){
       ws = new WebSocket(wsUrl);
+
       ws.onopen = () => {
-        ws.send(JSON.stringify({ topic: "realtime:public:" + SUPA_TABLE, event: "phx_join", payload: {}, ref: "1" }));
+        // postgres_changes 필터를 포함한 올바른 구독 페이로드
+        sendJson({
+          topic: "realtime:public:" + SUPA_TABLE,
+          event: "phx_join",
+          payload: {
+            config: {
+              broadcast: { self: false },
+              presence: { key: "" },
+              postgres_changes: [{ event: "*", schema: "public", table: SUPA_TABLE }]
+            }
+          },
+          ref: String(refCount++)
+        });
+        startHeartbeat();
       };
+
       ws.onmessage = async (e) => {
-        const msg = JSON.parse(e.data);
-        if (msg.event === "postgres_changes" || msg.payload?.data?.type){
-          const ok = await supaLoad();
-          if (ok){
-            items.forEach(function(item){
-              item.subtotal = (Number(item.unit_price) || 0) * (Number(item.purchase_qty) || 0);
-            });
-            buildTable();
-            updateKpis();
-          }
+        let msg;
+        try { msg = JSON.parse(e.data); } catch { return; }
+
+        // postgres_changes 이벤트: INSERT/UPDATE/DELETE 모두 처리
+        const isDbChange =
+          msg.event === "postgres_changes" ||
+          (msg.event === "INSERT" || msg.event === "UPDATE" || msg.event === "DELETE") ||
+          msg.payload?.data?.type === "INSERT" ||
+          msg.payload?.data?.type === "UPDATE" ||
+          msg.payload?.data?.type === "DELETE";
+
+        if (!isDbChange) return;
+
+        // 내가 방금 저장 중이면 충돌 방지를 위해 살짝 대기
+        if (window._purchaseSaveTimer) return;
+
+        const ok = await supaLoad();
+        if (ok){
+          items.forEach(function(item){
+            item.subtotal = (Number(item.unit_price) || 0) * (Number(item.purchase_qty) || 0);
+          });
+          buildTable();
+          updateKpis();
         }
       };
-      ws.onclose = () => setTimeout(connect, 3000);
+
+      ws.onerror = (err) => console.warn("[Realtime] WebSocket 오류:", err);
+
+      ws.onclose = () => {
+        clearInterval(heartbeatTimer);
+        setTimeout(connect, 3000);
+      };
     }
+
     connect();
   }
   // commitField 후 자동저장 훅
