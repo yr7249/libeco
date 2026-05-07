@@ -840,6 +840,7 @@
         <div class="pg-vdiv"></div>
         <button class="pg-btn" id="undoBtn" title="Ctrl+Z">↩ 취소</button>
         <button class="pg-btn" id="redoBtn" title="Ctrl+Y" disabled="">↪ 다시</button>
+        <span id="save-status-indicator" style="font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:#22c55e;padding:0 4px;transition:opacity .3s"></span>
         <div class="pg-vdiv no-mobile"></div>
         <button class="pg-btn pg-btn-export no-mobile" id="exportReportBtn">📄 PDF저장</button>
         <button class="pg-btn no-mobile" onclick="window.print()">🖨 인쇄</button>
@@ -2718,7 +2719,18 @@
   document.addEventListener("keydown", e => {
     const mod = e.ctrlKey || e.metaKey;
     if (!mod) return;
-    if (e.key === "z" && !e.shiftKey){
+    if (e.key === "s"){
+      e.preventDefault();
+      // 편집 중인 셀이 있으면 먼저 커밋
+      const editing = document.querySelector(".cell-edit[contenteditable='true']");
+      if (editing) editing.blur();
+      clearTimeout(window._purchaseSaveTimer);
+      window._purchaseSaveTimer = null;
+      supaUpsertAll().then(() => {
+        const btn = document.getElementById("save-status-indicator");
+        if (btn){ btn.textContent = "저장됨 ✓"; setTimeout(() => { btn.textContent = ""; }, 1500); }
+      });
+    } else if (e.key === "z" && !e.shiftKey){
       e.preventDefault();
       undo();
     } else if (e.key === "y" || (e.key === "z" && e.shiftKey)){
