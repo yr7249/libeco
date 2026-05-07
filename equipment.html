@@ -517,7 +517,7 @@
         let msg; try{ msg=JSON.parse(e.data); }catch{ return; }
         const isDbChange = msg.event==="postgres_changes"||msg.event==="INSERT"||msg.event==="UPDATE"||msg.event==="DELETE"||msg.payload?.data?.type==="INSERT"||msg.payload?.data?.type==="UPDATE"||msg.payload?.data?.type==="DELETE";
         if(!isDbChange) return;
-        if(_saveTimer) return;
+        if(_eqSaving) return;
         const ok = await supaLoad();
         if(ok) build();
       };
@@ -527,25 +527,34 @@
     connect();
   }
 
-  function triggerEqSaveNow(){
+  async function triggerEqSaveNow(){
     const ind = document.getElementById("eq-save-status");
     if(ind) ind.textContent = "저장 중…";
     clearTimeout(_saveTimer);
     _saveTimer = null;
-    supaUpsertAll().then(()=>{ if(ind){ ind.textContent="저장됨 ✓"; setTimeout(()=>{ ind.textContent=""; },1500); } });
+    _eqSaving = true;
+    await supaUpsertAll();
+    _eqSaving = false;
+    if(ind){ ind.textContent="저장됨 ✓"; setTimeout(()=>{ ind.textContent=""; },1500); }
   }
   document.getElementById("eq-saveNowBtn")?.addEventListener("click", triggerEqSaveNow);
 
   /* ── 상태 ── */
   let eqItems = [];
   let _saveTimer = null;
+  let _eqSaving = false;
   let activeCat = "ALL";
   let eqUndoStack = [], eqRedoStack = [];
 
   function save(){
     try{ localStorage.setItem(EQ_LS, JSON.stringify(eqItems)); }catch(e){}
     clearTimeout(_saveTimer);
-    _saveTimer = setTimeout(()=> supaUpsertAll(), 500);
+    _eqSaving = true;
+    _saveTimer = setTimeout(async () => {
+      await supaUpsertAll();
+      _saveTimer = null;
+      _eqSaving = false;
+    }, 500);
   }
 
   function loadLocal(){
@@ -948,15 +957,12 @@
     const item=eqItems[idx];
     eqItems.splice(idx,1);
     build(); updateUndoBtns();
-    // Supabase에서 먼저 삭제 확인 후 나머지 upsert
-    if(item._supa_id){
-      await supaDeleteRow(item._supa_id);
-      clearTimeout(_saveTimer);
-      _saveTimer = null;
-      await supaUpsertAll();
-    } else {
-      save();
-    }
+    clearTimeout(_saveTimer);
+    _saveTimer = null;
+    _eqSaving = true;
+    if(item._supa_id) await supaDeleteRow(item._supa_id);
+    await supaUpsertAll();
+    _eqSaving = false;
   }
 
   /* ── 플로팅 핸들 ── */

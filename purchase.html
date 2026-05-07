@@ -2068,16 +2068,14 @@
     const deletedItem = items[ctxTargetIdx];
     items.splice(ctxTargetIdx, 1);
     buildTable(); updateKpis();
-    // Supabase에서 즉시 삭제 후 나머지 upsert
-    if(deletedItem?._supa_id){
-      supaDeleteRow(deletedItem).then(() => {
-        clearTimeout(window._purchaseSaveTimer);
-        window._purchaseSaveTimer = null;
-        supaUpsertAll();
-      });
-    } else {
-      saveLocal();
-    }
+    clearTimeout(window._purchaseSaveTimer);
+    window._purchaseSaveTimer = null;
+    _purSaving = true;
+    (async () => {
+      if (deletedItem?._supa_id) await supaDeleteRow(deletedItem);
+      await supaUpsertAll();
+      _purSaving = false;
+    })();
     hideCtxMenu();
   });
 
@@ -2219,14 +2217,19 @@
   const LS_KEY = "equip_autosave_v1";
   const LS_FID_KEY = "equip_fid_v1";
   const FILE_FID = "";
+  let _purSaving = false;
   function saveLocal(){
     try {
       localStorage.setItem(LS_KEY, JSON.stringify(items));
       if (FILE_FID) localStorage.setItem(LS_FID_KEY, FILE_FID);
     } catch(e){}
-    // Supabase 저장 (디바운스 600ms)
     clearTimeout(window._purchaseSaveTimer);
-    window._purchaseSaveTimer = setTimeout(() => supaUpsertAll(), 600);
+    _purSaving = true;
+    window._purchaseSaveTimer = setTimeout(async () => {
+      await supaUpsertAll();
+      window._purchaseSaveTimer = null;
+      _purSaving = false;
+    }, 600);
   }
   function loadLocal(){
     try {
@@ -2389,8 +2392,8 @@
 
         if (!isDbChange) return;
 
-        // 내가 방금 저장 중이면 충돌 방지를 위해 살짝 대기
-        if (window._purchaseSaveTimer) return;
+        // 내가 저장 중이면 Realtime 리로드 차단
+        if (_purSaving) return;
 
         const ok = await supaLoad();
         if (ok){
@@ -2743,16 +2746,17 @@
   }, true);
 
   // 저장 버튼
-  function triggerSaveNow(){
+  async function triggerSaveNow(){
     const editing = document.querySelector(".cell-edit[contenteditable='true']");
     if (editing) editing.blur();
     clearTimeout(window._purchaseSaveTimer);
     window._purchaseSaveTimer = null;
+    _purSaving = true;
     const ind = document.getElementById("save-status-indicator");
     if (ind) ind.textContent = "저장 중…";
-    supaUpsertAll().then(() => {
-      if (ind){ ind.textContent = "저장됨 ✓"; setTimeout(() => { ind.textContent = ""; }, 1500); }
-    });
+    await supaUpsertAll();
+    _purSaving = false;
+    if (ind){ ind.textContent = "저장됨 ✓"; setTimeout(() => { ind.textContent = ""; }, 1500); }
   }
   document.getElementById("saveNowBtn")?.addEventListener("click", triggerSaveNow);
 
