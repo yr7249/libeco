@@ -489,10 +489,17 @@
   async function supaDeleteRow(id){
     try{
       const token = localStorage.getItem("supa_token") || SUPA_KEY;
-      await fetch(SUPA_URL+"/rest/v1/"+SUPA_TABLE+"?id=eq."+id, {
+      const res = await fetch(SUPA_URL+"/rest/v1/"+SUPA_TABLE+"?id=eq."+id, {
         method:"DELETE",
         headers:{"apikey":SUPA_KEY,"Authorization":"Bearer "+token}
       });
+      if(!res.ok){
+        const body = await res.text();
+        console.error("[equipment] DELETE 실패 — status:", res.status, "body:", body);
+        alert("⚠️ DELETE 실패 (status " + res.status + ")\n\n" + body + "\n\nSupabase RLS 정책에서 equipment 테이블의 DELETE 권한을 확인하세요.");
+      } else {
+        console.log("[equipment] DELETE 성공 id=" + id);
+      }
     }catch(e){ console.warn("Supabase delete failed:", e); }
   }
 

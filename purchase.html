@@ -2337,10 +2337,17 @@
   async function supaDeleteRow(item){
     if (!item._supa_id) return;
     try {
-      await fetch(SUPA_URL + "/rest/v1/" + SUPA_TABLE + "?id=eq." + item._supa_id, {
+      const res = await fetch(SUPA_URL + "/rest/v1/" + SUPA_TABLE + "?id=eq." + item._supa_id, {
         method: "DELETE",
         headers: { "apikey": SUPA_KEY, "Authorization": "Bearer " + (localStorage.getItem("supa_token") || SUPA_KEY) }
       });
+      if (!res.ok){
+        const body = await res.text();
+        console.error("[purchase] DELETE 실패 — status:", res.status, "body:", body);
+        alert("⚠️ DELETE 실패 (status " + res.status + ")\n\n" + body + "\n\nSupabase RLS 정책에서 purchase 테이블의 DELETE 권한을 확인하세요.");
+      } else {
+        console.log("[purchase] DELETE 성공 id=" + item._supa_id);
+      }
     } catch(e){ console.warn("Supabase delete failed:", e); }
   }
 
