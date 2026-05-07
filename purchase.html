@@ -2065,8 +2065,19 @@
     if(ctxTargetIdx === null) return;
     if(!confirm("이 행을 삭제하시겠습니까?")) return;
     pushUndo();
+    const deletedItem = items[ctxTargetIdx];
     items.splice(ctxTargetIdx, 1);
-    buildTable(); updateKpis(); saveLocal();
+    buildTable(); updateKpis();
+    // Supabase에서 즉시 삭제 후 나머지 upsert
+    if(deletedItem?._supa_id){
+      supaDeleteRow(deletedItem).then(() => {
+        clearTimeout(window._purchaseSaveTimer);
+        window._purchaseSaveTimer = null;
+        supaUpsertAll();
+      });
+    } else {
+      saveLocal();
+    }
     hideCtxMenu();
   });
 
@@ -2329,15 +2340,6 @@
       });
     } catch(e){ console.warn("Supabase delete failed:", e); }
   }
-  // 행 삭제 시 Supabase에서도 삭제 — ctx-delete 버튼 패치
-  (function(){
-    const orig = document.getElementById("ctx-delete");
-    if (!orig) return;
-    orig.addEventListener("click", function(){
-      // ctxTargetIdx는 이미 처리됐으므로 마지막으로 삭제된 item을 추적
-      // saveLocal()이 이미 호출되기 때문에 supaUpsertAll()로 전체 재동기화
-    }, true);
-  })();
 
   /* ── 실시간 동기화 (Supabase Realtime) ── */
   function startPurchaseRealtime(){

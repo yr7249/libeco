@@ -947,8 +947,16 @@
     saveUndo();
     const item=eqItems[idx];
     eqItems.splice(idx,1);
-    save(); build(); updateUndoBtns();
-    if(item._supa_id) await supaDeleteRow(item._supa_id);
+    build(); updateUndoBtns();
+    // Supabase에서 먼저 삭제 확인 후 나머지 upsert
+    if(item._supa_id){
+      await supaDeleteRow(item._supa_id);
+      clearTimeout(_saveTimer);
+      _saveTimer = null;
+      await supaUpsertAll();
+    } else {
+      save();
+    }
   }
 
   /* ── 플로팅 핸들 ── */
