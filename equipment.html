@@ -445,11 +445,15 @@
     return false;
   }
 
+  let _upsertLock = false;
   async function supaUpsertAll(){
+    if(_upsertLock) return;
+    _upsertLock = true;
     try{
       const token = localStorage.getItem("supa_token") || SUPA_KEY;
       const headers = { "apikey":SUPA_KEY, "Authorization":"Bearer "+token, "Content-Type":"application/json" };
       const existing = [], newRows = [];
+      const seenIds = new Set();
       eqItems.forEach((r,i)=>{
         const obj = {
           part_no: r.part_no||"", qty: r.qty||"", name: r.name||"",
@@ -461,15 +465,19 @@
           sort_order: i,
           _cat: r._cat||"", _group: r._group||false, _label: r._label||"", _color: r._color||"", _bg: r._bg||""
         };
-        if(r._supa_id){ obj.id = r._supa_id; existing.push(obj); }
-        else newRows.push(obj);
+        if(r._supa_id && !seenIds.has(r._supa_id)){
+          obj.id = r._supa_id; seenIds.add(r._supa_id); existing.push(obj);
+        } else if(!r._supa_id){
+          newRows.push(obj);
+        }
       });
       if(existing.length > 0){
-        await fetch(SUPA_URL+"/rest/v1/"+SUPA_TABLE, {
+        const res = await fetch(SUPA_URL+"/rest/v1/"+SUPA_TABLE, {
           method:"POST",
           headers:{...headers, "Prefer":"resolution=merge-duplicates,return=representation"},
           body:JSON.stringify(existing)
         });
+        if(!res.ok) console.error("[equipment] upsert 실패:", res.status, await res.text());
       }
       if(newRows.length > 0){
         const res = await fetch(SUPA_URL+"/rest/v1/"+SUPA_TABLE, {
@@ -481,9 +489,12 @@
           const inserted = await res.json();
           let ni = 0;
           eqItems.forEach(r=>{ if(!r._supa_id && inserted[ni]){ r._supa_id=inserted[ni].id; ni++; } });
+        } else {
+          console.error("[equipment] insert 실패:", res.status, await res.text());
         }
       }
     }catch(e){ console.warn("Supabase save failed:", e); }
+    finally{ _upsertLock = false; }
   }
 
   async function supaDeleteRow(id){
@@ -824,11 +835,12 @@
   /* ── KPI ── */
   function updateKpi(){
     const items = eqItems.filter(r=>!r._group);
-    document.getElementById("kpi-total").textContent = items.length;
-    document.getElementById("kpi-measure").textContent = items.filter(r=>r.usage==="계측").length;
-    document.getElementById("kpi-exproof").textContent = items.filter(r=>r.usage==="방폭").length;
-    document.getElementById("kpi-control").textContent = items.filter(r=>r.usage==="제어").length;
-    document.getElementById("kpi-daq").textContent = items.filter(r=>r.usage==="데이터수집").length;
+    const set = (id, v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
+    set("kpi-total",   items.length);
+    set("kpi-measure", items.filter(r=>r.usage==="계측").length);
+    set("kpi-exproof", items.filter(r=>r.usage==="방폭").length);
+    set("kpi-control", items.filter(r=>r.usage==="제어").length);
+    set("kpi-daq",     items.filter(r=>r.usage==="데이터수집").length);
   }
 
   /* ── Usage dropdown ── */

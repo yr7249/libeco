@@ -2288,8 +2288,12 @@
     return false;
   }
 
+  let _purUpsertLock = false;
   async function supaUpsertAll(){
+    if(_purUpsertLock) return;
+    _purUpsertLock = true;
     try {
+      const seenIds = new Set();
       const payload = items.map((r, i) => {
         const obj = {
           no:           String(r.no           ?? ""),
@@ -2309,7 +2313,10 @@
           done:         !!r.done,
           sort_order:   i
         };
-        if (r._supa_id) obj.id = r._supa_id;
+        if (r._supa_id && !seenIds.has(r._supa_id)){
+          obj.id = r._supa_id;
+          seenIds.add(r._supa_id);
+        }
         return obj;
       });
       const res = await supaFetch("POST", "", payload);
@@ -2332,6 +2339,7 @@
         }
       } catch(e){}
     } catch(e){ console.warn("Supabase save failed:", e); }
+    finally{ _purUpsertLock = false; }
   }
 
   async function supaDeleteRow(item){
