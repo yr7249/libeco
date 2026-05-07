@@ -840,6 +840,7 @@
         <div class="pg-vdiv"></div>
         <button class="pg-btn" id="undoBtn" title="Ctrl+Z">↩ 취소</button>
         <button class="pg-btn" id="redoBtn" title="Ctrl+Y" disabled="">↪ 다시</button>
+        <button class="pg-btn" id="saveNowBtn" title="즉시 저장" style="font-weight:700;color:#22c55e;border-color:rgba(34,197,94,.4)">💾 저장</button>
         <span id="save-status-indicator" style="font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:#22c55e;padding:0 4px;transition:opacity .3s"></span>
         <div class="pg-vdiv no-mobile"></div>
         <button class="pg-btn pg-btn-export no-mobile" id="exportReportBtn">📄 PDF저장</button>
@@ -2349,7 +2350,7 @@
       clearInterval(heartbeatTimer);
       heartbeatTimer = setInterval(() => {
         sendJson({ topic: "phoenix", event: "heartbeat", payload: {}, ref: String(refCount++) });
-      }, 20000);
+      }, 5000);
     }
 
     function connect(){
@@ -2738,6 +2739,20 @@
       redo();
     }
   }, true);
+
+  // 저장 버튼
+  function triggerSaveNow(){
+    const editing = document.querySelector(".cell-edit[contenteditable='true']");
+    if (editing) editing.blur();
+    clearTimeout(window._purchaseSaveTimer);
+    window._purchaseSaveTimer = null;
+    const ind = document.getElementById("save-status-indicator");
+    if (ind) ind.textContent = "저장 중…";
+    supaUpsertAll().then(() => {
+      if (ind){ ind.textContent = "저장됨 ✓"; setTimeout(() => { ind.textContent = ""; }, 1500); }
+    });
+  }
+  document.getElementById("saveNowBtn")?.addEventListener("click", triggerSaveNow);
 
   function goHome(){ window.location.href = 'index.html'; }
   function goEquip(){ /* 현재 페이지 */ }
