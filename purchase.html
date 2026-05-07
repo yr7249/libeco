@@ -2293,9 +2293,14 @@
     if(_purUpsertLock) return;
     _purUpsertLock = true;
     try {
+      const userToken = localStorage.getItem("supa_token") || SUPA_KEY;
+      const baseHeaders = { "apikey": SUPA_KEY, "Authorization": "Bearer " + userToken, "Content-Type": "application/json" };
+      const url = SUPA_URL + "/rest/v1/" + SUPA_TABLE;
+
+      const existing = [], newRows = [], newRowIdx = [];
       const seenIds = new Set();
-      const payload = items.map((r, i) => {
-        const obj = {
+      items.forEach((r, i) => {
+        const base = {
           no:           String(r.no           ?? ""),
           category:     String(r.category     ?? ""),
           code:         String(r.code         ?? ""),
@@ -2314,30 +2319,43 @@
           sort_order:   i
         };
         if (r._supa_id && !seenIds.has(r._supa_id)){
-          obj.id = r._supa_id;
           seenIds.add(r._supa_id);
+          existing.push({ id: r._supa_id, ...base });
+        } else if (!r._supa_id){
+          newRows.push(base);
+          newRowIdx.push(i);
         }
-        return obj;
       });
-      const res = await supaFetch("POST", "", payload);
-      // 신규 삽입된 행의 id를 items에 반영
-      try {
-        const returned = await res.json();
-        if (Array.isArray(returned)){
-          returned.forEach(r => {
-            if (!r.id) return;
-            // 기존 행: _supa_id로 매칭
-            if (items.find(it => it._supa_id === r.id)) return;
-            // 신규 행: sort_order(= 배열 인덱스)로 매칭
-            const idx = typeof r.sort_order === 'number' ? r.sort_order : -1;
-            if (idx >= 0 && idx < items.length && !items[idx]._supa_id) {
+
+      // 기존 행 upsert
+      if (existing.length > 0){
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { ...baseHeaders, "Prefer": "resolution=merge-duplicates,return=representation" },
+          body: JSON.stringify(existing)
+        });
+        if (!res.ok) console.error("[purchase] upsert 실패:", res.status, await res.text());
+      }
+      // 신규 행 insert (id 컬럼 없음)
+      if (newRows.length > 0){
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { ...baseHeaders, "Prefer": "return=representation" },
+          body: JSON.stringify(newRows)
+        });
+        if (res.ok){
+          const inserted = await res.json();
+          inserted.forEach((r, n) => {
+            const idx = newRowIdx[n];
+            if (idx !== undefined && items[idx] && !items[idx]._supa_id){
               items[idx]._supa_id = r.id;
             }
           });
-          // _supa_id를 localStorage에 저장해 다음 저장 시 중복 삽입 방지
           try { localStorage.setItem(LS_KEY, JSON.stringify(items)); } catch(e){}
+        } else {
+          console.error("[purchase] insert 실패:", res.status, await res.text());
         }
-      } catch(e){}
+      }
     } catch(e){ console.warn("Supabase save failed:", e); }
     finally{ _purUpsertLock = false; }
   }
