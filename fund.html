@@ -31,18 +31,6 @@
     .total-label{font-size:.72rem;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
     .total-amount{font-family:var(--font-mono);font-size:1.5rem;font-weight:700;color:var(--accent)}
 
-    /* ── KPI ── */
-    .kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:18px;padding:24px 0 18px}
-    .kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 20px;position:relative;overflow:hidden}
-    .kpi-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:14px 0 0 14px}
-    .kpi-card:nth-child(1)::before{background:var(--accent)}
-    .kpi-card:nth-child(2)::before{background:#0ea5e9}
-    .kpi-card:nth-child(3)::before{background:#8b5cf6}
-    .kpi-card:nth-child(4)::before{background:#ef4444}
-    .kpi-label{font-size:.78rem;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
-    .kpi-value{font-family:var(--font-mono);font-size:1.5rem;font-weight:700;color:var(--text)}
-    .kpi-sub{font-size:.75rem;color:var(--text2);margin-top:6px;font-family:var(--font-mono)}
-
     /* ── Section ── */
     .section-title{font-size:1.05rem;font-weight:800;color:var(--text);margin:16px 0 10px;display:flex;align-items:center;gap:10px}
     .section-title::before{content:'';width:3px;height:20px;background:var(--accent);border-radius:2px}
@@ -79,7 +67,6 @@
     td.align-right .cell-inner{text-align:right}
     td.amount .cell-inner{font-family:var(--font-mono);color:var(--accent);text-align:right}
     td.time-cell .cell-inner{text-align:center;font-family:var(--font-mono);font-size:.78rem}
-    .time-hint{font-size:.62rem;color:rgba(29,78,216,.5);display:block;line-height:1;margin-top:1px;text-align:center;pointer-events:none}
 
     /* row drag */
     tbody tr.row-dragging{opacity:.4;background:rgba(29,78,216,.06)!important}
@@ -249,30 +236,6 @@
         </div>
       </div>
     </header>
-
-    <!-- KPI -->
-    <div class="kpi-row">
-      <div class="kpi-card">
-        <div class="kpi-label">총 발주건수</div>
-        <div class="kpi-value" id="kpi-count">0</div>
-        <div class="kpi-sub">건</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">총 발주금액</div>
-        <div class="kpi-value" id="kpi-total">₩0</div>
-        <div class="kpi-sub">부가세 별도</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">선금 집행예정</div>
-        <div class="kpi-value" id="kpi-advance">0</div>
-        <div class="kpi-sub">건 일정 등록됨</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">잔금 집행예정</div>
-        <div class="kpi-value" id="kpi-balance">0</div>
-        <div class="kpi-sub">건 일정 등록됨</div>
-      </div>
-    </div>
 
     <div class="section-title">자금집행 현황</div>
 
@@ -605,18 +568,13 @@
   }
   function esc(v){ return String(v||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 
-  /* ── KPI ── */
+  /* ── 헤더 총액 업데이트 ── */
   function updateKpi(){
-    const total     = items.reduce((s, r) => s + parseMoney(r.total_amount), 0);
-    const advCount  = items.filter(r => String(r.advance_time||"").trim()).length;
-    const balCount  = items.filter(r => String(r.balance_time||"").trim()).length;
-    const set = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = v; };
-    set("kpi-count",   items.length);
-    set("kpi-total",   "₩" + total.toLocaleString("ko-KR"));
-    set("kpi-advance", advCount);
-    set("kpi-balance", balCount);
-    set("header-total-amount", "₩" + total.toLocaleString("ko-KR"));
-    document.getElementById("updateTime").textContent = new Date().toLocaleString("ko-KR") + " update";
+    const total = items.reduce((s, r) => s + parseMoney(r.total_amount), 0);
+    const el = document.getElementById("header-total-amount");
+    if(el) el.textContent = "₩" + total.toLocaleString("ko-KR");
+    const ut = document.getElementById("updateTime");
+    if(ut) ut.textContent = new Date().toLocaleString("ko-KR") + " update";
   }
 
   /* ── Undo/Redo ── */
@@ -672,8 +630,8 @@
         <td><div class="cell-inner" contenteditable="true" data-idx="${ri}" data-field="order_item" style="min-width:140px">${esc(r.order_item)}</div></td>
         <td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="${ri}" data-field="order_date">${esc(r.order_date)}</div></td>
         <td class="amount"><div class="cell-inner" contenteditable="true" data-idx="${ri}" data-field="total_amount">${fmtMoney(r.total_amount)}</div></td>
-        <td class="time-cell"><div class="cell-inner" contenteditable="true" data-idx="${ri}" data-field="advance_time">${esc(r.advance_time)}</div><span class="time-hint">예: 5월 초</span></td>
-        <td class="time-cell"><div class="cell-inner" contenteditable="true" data-idx="${ri}" data-field="balance_time">${esc(r.balance_time)}</div><span class="time-hint">예: 6월 말</span></td>
+        <td class="time-cell"><div class="cell-inner" contenteditable="true" data-idx="${ri}" data-field="advance_time">${esc(r.advance_time)}</div></td>
+        <td class="time-cell"><div class="cell-inner" contenteditable="true" data-idx="${ri}" data-field="balance_time">${esc(r.balance_time)}</div></td>
         <td><div class="cell-inner" contenteditable="true" data-idx="${ri}" data-field="fund_source">${esc(r.fund_source)}</div></td>
         <td><div class="cell-inner" contenteditable="true" data-idx="${ri}" data-field="budget_item">${esc(r.budget_item)}</div></td>
         <td><div class="cell-inner" contenteditable="true" data-idx="${ri}" data-field="remark">${esc(r.remark)}</div></td>
