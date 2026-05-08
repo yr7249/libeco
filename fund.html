@@ -242,11 +242,6 @@
     </header>
 
     <div class="section-title">자금계획</div>
-    <p style="font-size:.78rem;color:var(--text2);margin:-4px 0 10px;font-weight:500;line-height:1.5">
-      발주건별 <b>총 발주금액</b>·<b>집행 시점(선금/잔금)</b>을 정리하고, <b>재원</b>(국책과제·내부자금·투자금 등)과
-      <b>비목</b>(재료비·인건비·용역비 등)으로 자금 출처를 분류합니다.
-      셀을 한 번 클릭하면 선택, <b>더블클릭(또는 Enter/F2)</b> 하면 편집입니다.
-    </p>
 
     <datalist id="fund-source-list">
       <option value="국책과제">
@@ -272,20 +267,18 @@
       <div class="table-scroll">
         <table id="fundTable">
           <colgroup>
-            <col style="width:4%">
-            <col style="width:9%">
-            <col style="width:18%">
-            <col style="width:8%">
             <col style="width:11%">
+            <col style="width:22%">
             <col style="width:9%">
-            <col style="width:9%">
-            <col style="width:11%">
-            <col style="width:11%">
+            <col style="width:12%">
             <col style="width:10%">
+            <col style="width:10%">
+            <col style="width:12%">
+            <col style="width:12%">
+            <col style="width:12%">
           </colgroup>
           <thead>
             <tr>
-              <th rowspan="2">No.</th>
               <th rowspan="2">분류번호</th>
               <th rowspan="2" style="text-align:left;padding-left:12px">발주건</th>
               <th rowspan="2">발주일</th>
@@ -302,7 +295,7 @@
             </tr>
           </thead>
           <tbody id="tableBody">
-            <tr><td colspan="10" style="text-align:center;padding:48px;color:#94a3b8;font-size:.9rem">⏳ 데이터 불러오는 중...</td></tr>
+            <tr><td colspan="9" style="text-align:center;padding:48px;color:#94a3b8;font-size:.9rem">⏳ 데이터 불러오는 중...</td></tr>
           </tbody>
         </table>
       </div>
@@ -412,7 +405,6 @@
       const rows = await res.json();
       if(rows.length > 0){
         items = rows.map(r => ({
-          no:           r.no           ?? "",
           code:         r.code         ?? "",
           order_item:   r.order_item   ?? "",
           order_date:   r.order_date   ?? "",
@@ -441,7 +433,6 @@
       if(rows.length === 0) return;
 
       const seedRows = rows.map((r, i) => ({
-        no:           String(i + 1),
         code:         r.code        ?? "",
         order_item:   r.equipment   ?? "",
         order_date:   "",
@@ -462,7 +453,6 @@
       if(insRes.ok){
         const inserted = await insRes.json();
         items = inserted.map(r => ({
-          no:           r.no           ?? "",
           code:         r.code         ?? "",
           order_item:   r.order_item   ?? "",
           order_date:   r.order_date   ?? "",
@@ -495,7 +485,6 @@
       const seenIds = new Set();
       items.forEach((r, i) => {
         const base = {
-          no:           String(r.no           ?? ""),
           code:         String(r.code         ?? ""),
           order_item:   String(r.order_item   ?? ""),
           order_date:   String(r.order_date   ?? ""),
@@ -624,7 +613,7 @@
   });
 
   /* ── 필드 목록 (Tab 이동 순서) ── */
-  const FIELDS = ["no","code","order_item","order_date","total_amount","advance_time","balance_time","fund_source","budget_item","remark"];
+  const FIELDS = ["code","order_item","order_date","total_amount","advance_time","balance_time","fund_source","budget_item","remark"];
 
   /* ── 렌더링 ── */
   let searchQuery = "";
@@ -644,7 +633,7 @@
     }
 
     if(visible.length === 0){
-      tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:40px;color:#94a3b8;font-size:.9rem">${searchQuery ? "검색 결과 없음" : "데이터 없음. 행 추가 버튼으로 시작하세요."}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:40px;color:#94a3b8;font-size:.9rem">${searchQuery ? "검색 결과 없음" : "우클릭으로 행을 추가하세요."}</td></tr>`;
       updateKpi();
       return;
     }
@@ -652,7 +641,6 @@
     tbody.innerHTML = visible.map(r => {
       const ri = items.indexOf(r);
       return `<tr data-idx="${ri}" draggable="true">
-        <td class="mono align-center"><div class="cell-inner" tabindex="0" data-idx="${ri}" data-field="no">${esc(r.no)}</div></td>
         <td class="mono"><div class="cell-inner" tabindex="0" data-idx="${ri}" data-field="code">${esc(r.code)}</div></td>
         <td><div class="cell-inner" tabindex="0" data-idx="${ri}" data-field="order_item" style="min-width:140px">${esc(r.order_item)}</div></td>
         <td class="mono align-center"><div class="cell-inner" tabindex="0" data-idx="${ri}" data-field="order_date">${esc(r.order_date)}</div></td>
@@ -829,7 +817,7 @@
   /* ── 행 추가 ── */
   function addRow(afterIdx){
     snapshot();
-    const newRow = {no: String(items.length+1), code:"", order_item:"", order_date:"", total_amount:0, advance_time:"", balance_time:"", fund_source:"", budget_item:"", remark:""};
+    const newRow = newEmptyRow();
     if(afterIdx !== undefined && afterIdx >= 0 && afterIdx < items.length){
       items.splice(afterIdx+1, 0, newRow);
     } else {
@@ -854,7 +842,7 @@
   document.addEventListener("click", () => { ctxMenu.style.display = "none"; });
 
   function newEmptyRow(){
-    return {no:"", code:"", order_item:"", order_date:"", total_amount:0, advance_time:"", balance_time:"", fund_source:"", budget_item:"", remark:""};
+    return {code:"", order_item:"", order_date:"", total_amount:0, advance_time:"", balance_time:"", fund_source:"", budget_item:"", remark:""};
   }
 
   document.getElementById("ctx-add-above").addEventListener("click", () => {
@@ -900,30 +888,61 @@
   });
 
   /* ── 행 드래그 정렬 ── */
-  const floatDrag = document.getElementById("fund-float-drag");
-  let dragSrcIdx  = null;
-  let hoverTr     = null;
+  const floatDrag   = document.getElementById("fund-float-drag");
+  const tableWrap   = document.querySelector(".table-wrap");
+  let floatTargetTr = null;
+  let floatDragSrcIdx = null;
+  let dragSrcIdx    = null;
+  let hideTimer     = null;
 
-  function bindRowHover(){
-    document.querySelectorAll("#tableBody tr[data-idx]").forEach(tr => {
-      tr.addEventListener("mousemove", e => {
-        hoverTr = tr;
-        const rect = tr.getBoundingClientRect();
-        floatDrag.style.display = "flex";
-        floatDrag.style.top  = (rect.top + rect.height/2) + "px";
-        floatDrag.style.left = (rect.left + 4) + "px";
-      });
-    });
-    document.getElementById("tableBody").addEventListener("mouseleave", () => {
-      if(dragSrcIdx === null) floatDrag.style.display = "none";
-    });
+  function positionFloatDrag(tr){
+    const rect = tr.getBoundingClientRect();
+    const wrapRect = tableWrap.getBoundingClientRect();
+    floatDrag.style.top  = (rect.top + rect.height / 2) + "px";
+    floatDrag.style.left = Math.max(2, wrapRect.left - 28) + "px";
+    floatDrag.style.display = "flex";
   }
+  function hideFloatDrag(){
+    floatDrag.style.display = "none";
+    floatTargetTr = null;
+  }
+  function scheduleHide(){
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(hideFloatDrag, 400);
+  }
+
+  document.getElementById("tableBody").addEventListener("mouseover", e => {
+    clearTimeout(hideTimer);
+    const tr = e.target.closest("tr[data-idx]");
+    if(!tr) return;
+    floatTargetTr = tr;
+    positionFloatDrag(tr);
+  });
+  document.getElementById("tableBody").addEventListener("mouseleave", scheduleHide);
+  floatDrag.addEventListener("mouseenter", () => clearTimeout(hideTimer));
+  floatDrag.addEventListener("mouseleave", scheduleHide);
+  window.addEventListener("scroll", () => { if(floatTargetTr) positionFloatDrag(floatTargetTr); }, true);
+
+  floatDrag.draggable = true;
+  floatDrag.addEventListener("dragstart", e => {
+    if(!floatTargetTr){ e.preventDefault(); return; }
+    floatDragSrcIdx = parseInt(floatTargetTr.dataset.idx);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", String(floatDragSrcIdx));
+    floatTargetTr.classList.add("row-dragging");
+    requestAnimationFrame(() => { floatDrag.style.display = "none"; });
+  });
+  floatDrag.addEventListener("dragend", () => {
+    floatDragSrcIdx = null;
+    document.querySelectorAll("tr.row-dragging").forEach(r => r.classList.remove("row-dragging"));
+    document.querySelectorAll(".drag-over-top,.drag-over-bot").forEach(r => r.classList.remove("drag-over-top","drag-over-bot"));
+  });
 
   function bindRowDrag(){
     document.querySelectorAll("#tableBody tr[data-idx]").forEach(tr => {
       tr.addEventListener("dragstart", e => {
         dragSrcIdx = parseInt(tr.dataset.idx);
-        e.dataTransfer.setData("text/plain", String(dragSrcIdx));
+        e.dataTransfer.effectAllowed = "move";
         tr.classList.add("row-dragging");
         requestAnimationFrame(() => { floatDrag.style.display = "none"; });
       });
@@ -935,33 +954,29 @@
       });
       tr.addEventListener("dragover", e => {
         e.preventDefault();
-        const rect = tr.getBoundingClientRect();
-        const mid  = rect.top + rect.height/2;
         document.querySelectorAll(".drag-over-top,.drag-over-bot").forEach(el => el.classList.remove("drag-over-top","drag-over-bot"));
-        tr.classList.add(e.clientY < mid ? "drag-over-top" : "drag-over-bot");
+        const rect = tr.getBoundingClientRect();
+        tr.classList.add(e.clientY < rect.top + rect.height/2 ? "drag-over-top" : "drag-over-bot");
       });
       tr.addEventListener("drop", e => {
         e.preventDefault();
-        if(dragSrcIdx === null) return;
+        const src = dragSrcIdx !== null ? dragSrcIdx : floatDragSrcIdx;
+        if(src === null) return;
         const targetIdx = parseInt(tr.dataset.idx);
-        if(dragSrcIdx === targetIdx) return;
-        const rect  = tr.getBoundingClientRect();
-        const after = e.clientY >= rect.top + rect.height/2;
+        if(src === targetIdx) return;
+        const after = e.clientY >= tr.getBoundingClientRect().top + tr.getBoundingClientRect().height/2;
         snapshot();
-        const [moved] = items.splice(dragSrcIdx, 1);
-        let insertAt  = items.indexOf(items.find((_, i) => {
-          const el = document.querySelector(`#tableBody tr[data-idx="${targetIdx}"]`);
-          return el;
-        }));
-        // recalc after splice
-        insertAt = targetIdx > dragSrcIdx ? (after ? targetIdx : targetIdx-1) : (after ? targetIdx+1 : targetIdx);
-        insertAt = Math.max(0, Math.min(insertAt, items.length));
-        items.splice(insertAt, 0, moved);
+        const [moved] = items.splice(src, 1);
+        const newTarget = targetIdx > src ? targetIdx - 1 : targetIdx;
+        items.splice(after ? newTarget + 1 : newTarget, 0, moved);
+        floatDragSrcIdx = null;
         renderTable();
         saveDebounce();
       });
     });
   }
+
+  function bindRowHover(){} // 빈 함수 — 마우스오버는 tableBody 레벨에서 처리
 
   /* ── Realtime ── */
   function startRealtime(){
