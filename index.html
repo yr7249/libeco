@@ -86,12 +86,13 @@
     .svc-section-label{font-family:var(--font-mono);font-size:.7rem;font-weight:800;color:var(--text2);letter-spacing:.1em;text-transform:uppercase;white-space:nowrap}
     .svc-section-line{flex:1;height:1px;background:var(--border)}
 
-    /* ── Service grid: 3 columns ── */
+    /* ── Service grid: 4 columns ── */
     .svc-grid{
       display:grid;
-      grid-template-columns:repeat(3,1fr);
+      grid-template-columns:repeat(4,1fr);
       gap:14px;
     }
+    @media(max-width:1100px){.svc-grid{grid-template-columns:repeat(3,1fr)}}
     @media(max-width:768px){.svc-grid{grid-template-columns:repeat(2,1fr)}}
     @media(max-width:480px){.svc-grid{grid-template-columns:1fr}}
 
@@ -408,6 +409,18 @@
             <span class="svc-arr">→</span>
           </a>
 
+          <!-- 1행-4: 자금집행 (LIVE) -->
+          <a id="card-fund" class="svc-card live" href="fund.html" aria-label="자금집행 열기">
+            <div class="svc-card-head">
+              <div class="svc-icon" style="background:rgba(29,78,216,.1)">💰</div>
+              <span class="svc-status status-live">LIVE</span>
+            </div>
+            <div class="svc-title">자금집행</div>
+            <div class="svc-desc">발주 · 선금 · 잔금 집행</div>
+            <div class="svc-foot"><span>Updated 2026.05.07</span><span style="color:#1d4ed8;font-weight:700">FUND</span></div>
+            <span class="svc-arr">→</span>
+          </a>
+
           <!-- 2행-1: 입고관리 (LIVE) -->
           <a class="svc-card live" href="incoming.html" aria-label="입고관리 열기">
             <div class="svc-card-head">
@@ -440,18 +453,6 @@
             <div class="svc-title">기타 공유사항</div>
             <div class="svc-desc">팀 공지 및 공유 자료</div>
             <div class="svc-foot"><span>Updated 2026.04.20</span><span style="color:var(--accent);font-weight:700">SHARED</span></div>
-            <span class="svc-arr">→</span>
-          </a>
-
-          <!-- 3행-1: 자금집행 (LIVE, admin only) -->
-          <a id="card-fund" class="svc-card live" href="fund.html" aria-label="자금집행 열기">
-            <div class="svc-card-head">
-              <div class="svc-icon" style="background:rgba(29,78,216,.1)">💰</div>
-              <span class="svc-status status-live">LIVE</span>
-            </div>
-            <div class="svc-title">자금집행</div>
-            <div class="svc-desc">발주 · 선금 · 잔금 집행</div>
-            <div class="svc-foot"><span>Updated 2026.05.07</span><span style="color:#1d4ed8;font-weight:700">FUND</span></div>
             <span class="svc-arr">→</span>
           </a>
 

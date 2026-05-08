@@ -179,9 +179,9 @@
     <a class="nav-item" href="diagram.html"><span class="nav-icon">📐</span><div><div class="nav-label">구성도</div><div class="nav-sub">P&amp;ID Schematic</div></div></a>
     <a class="nav-item" href="equipment.html"><span class="nav-icon">🔬</span><div><div class="nav-label">시험장비</div><div class="nav-sub">계측/제어 장비 목록</div></div></a>
     <a class="nav-item" href="purchase.html"><span class="nav-icon">📋</span><div><div class="nav-label">구매리스트</div><div class="nav-sub">구매 필요내역</div></div></a>
+    <div class="nav-item active"><span class="nav-icon">💰</span><div><div class="nav-label">자금집행</div><div class="nav-sub">발주 · 집행 현황</div></div></div>
     <div class="nav-sep"></div>
     <a class="nav-item" href="incoming.html"><span class="nav-icon">📦</span><div><div class="nav-label">입고관리</div><div class="nav-sub">장비 일정관리</div></div></a>
-    <div class="nav-item active"><span class="nav-icon">💰</span><div><div class="nav-label">자금집행</div><div class="nav-sub">발주 · 집행 현황</div></div></div>
     <div class="nav-item disabled"><span class="nav-icon">📖</span><div><div class="nav-label">시험절차서</div><div class="nav-sub">준비중</div></div><span class="nav-soon-tag">SOON</span></div>
     <a class="nav-item" href="share.html"><span class="nav-icon">💬</span><div><div class="nav-label">기타 공유사항</div><div class="nav-sub">팀 공지 · 공유 자료</div></div></a>
   </div>
@@ -253,18 +253,20 @@
         <table id="fundTable">
           <colgroup>
             <col style="width:4%">
-            <col style="width:22%">
+            <col style="width:9%">
+            <col style="width:18%">
+            <col style="width:8%">
+            <col style="width:11%">
+            <col style="width:9%">
             <col style="width:9%">
             <col style="width:11%">
+            <col style="width:11%">
             <col style="width:10%">
-            <col style="width:10%">
-            <col style="width:13%">
-            <col style="width:13%">
-            <col style="width:8%">
           </colgroup>
           <thead>
             <tr>
               <th rowspan="2">No.</th>
+              <th rowspan="2">분류번호</th>
               <th rowspan="2" style="text-align:left;padding-left:12px">발주건</th>
               <th rowspan="2">발주일</th>
               <th rowspan="2">총 발주금액</th>
@@ -280,7 +282,7 @@
             </tr>
           </thead>
           <tbody id="tableBody">
-            <tr><td colspan="9" style="text-align:center;padding:48px;color:#94a3b8;font-size:.9rem">⏳ 데이터 불러오는 중...</td></tr>
+            <tr><td colspan="10" style="text-align:center;padding:48px;color:#94a3b8;font-size:.9rem">⏳ 데이터 불러오는 중...</td></tr>
           </tbody>
         </table>
       </div>
@@ -391,6 +393,7 @@
       if(rows.length > 0){
         items = rows.map(r => ({
           no:           r.no           ?? "",
+          code:         r.code         ?? "",
           order_item:   r.order_item   ?? "",
           order_date:   r.order_date   ?? "",
           total_amount: r.total_amount ?? 0,
@@ -419,6 +422,7 @@
 
       const seedRows = rows.map((r, i) => ({
         no:           String(i + 1),
+        code:         r.code        ?? "",
         order_item:   r.equipment   ?? "",
         order_date:   "",
         total_amount: r.subtotal    ?? 0,
@@ -439,6 +443,7 @@
         const inserted = await insRes.json();
         items = inserted.map(r => ({
           no:           r.no           ?? "",
+          code:         r.code         ?? "",
           order_item:   r.order_item   ?? "",
           order_date:   r.order_date   ?? "",
           total_amount: r.total_amount ?? 0,
@@ -471,6 +476,7 @@
       items.forEach((r, i) => {
         const base = {
           no:           String(r.no           ?? ""),
+          code:         String(r.code         ?? ""),
           order_item:   String(r.order_item   ?? ""),
           order_date:   String(r.order_date   ?? ""),
           total_amount: parseMoney(r.total_amount) || 0,
@@ -598,7 +604,7 @@
   });
 
   /* ── 필드 목록 (Tab 이동 순서) ── */
-  const FIELDS = ["no","order_item","order_date","total_amount","advance_time","balance_time","fund_source","budget_item","remark"];
+  const FIELDS = ["no","code","order_item","order_date","total_amount","advance_time","balance_time","fund_source","budget_item","remark"];
 
   /* ── 렌더링 ── */
   let searchQuery = "";
@@ -618,7 +624,7 @@
     }
 
     if(visible.length === 0){
-      tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:40px;color:#94a3b8;font-size:.9rem">${searchQuery ? "검색 결과 없음" : "데이터 없음. 행 추가 버튼으로 시작하세요."}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:40px;color:#94a3b8;font-size:.9rem">${searchQuery ? "검색 결과 없음" : "데이터 없음. 행 추가 버튼으로 시작하세요."}</td></tr>`;
       updateKpi();
       return;
     }
@@ -627,6 +633,7 @@
       const ri = items.indexOf(r);
       return `<tr data-idx="${ri}" draggable="true">
         <td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="${ri}" data-field="no">${esc(r.no)}</div></td>
+        <td class="mono"><div class="cell-inner" contenteditable="true" data-idx="${ri}" data-field="code">${esc(r.code)}</div></td>
         <td><div class="cell-inner" contenteditable="true" data-idx="${ri}" data-field="order_item" style="min-width:140px">${esc(r.order_item)}</div></td>
         <td class="mono align-center"><div class="cell-inner" contenteditable="true" data-idx="${ri}" data-field="order_date">${esc(r.order_date)}</div></td>
         <td class="amount"><div class="cell-inner" contenteditable="true" data-idx="${ri}" data-field="total_amount">${fmtMoney(r.total_amount)}</div></td>
@@ -726,7 +733,7 @@
   /* ── 행 추가 ── */
   function addRow(afterIdx){
     snapshot();
-    const newRow = {no: String(items.length+1), order_item:"", order_date:"", total_amount:0, advance_time:"", balance_time:"", fund_source:"", budget_item:"", remark:""};
+    const newRow = {no: String(items.length+1), code:"", order_item:"", order_date:"", total_amount:0, advance_time:"", balance_time:"", fund_source:"", budget_item:"", remark:""};
     if(afterIdx !== undefined && afterIdx >= 0 && afterIdx < items.length){
       items.splice(afterIdx+1, 0, newRow);
     } else {
@@ -755,7 +762,7 @@
   document.getElementById("ctx-add-above").addEventListener("click", () => {
     if(ctxIdx < 0) return;
     snapshot();
-    const newRow = {no: String(items.length+1), order_item:"", order_date:"", total_amount:0, advance_time:"", balance_time:"", fund_source:"", budget_item:"", remark:""};
+    const newRow = {no: String(items.length+1), code:"", order_item:"", order_date:"", total_amount:0, advance_time:"", balance_time:"", fund_source:"", budget_item:"", remark:""};
     items.splice(ctxIdx, 0, newRow);
     renderTable();
     saveDebounce();
