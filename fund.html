@@ -48,7 +48,7 @@
     /* ── Table ── */
     .table-wrap{background:var(--surface);border:1px solid var(--border)}
     .table-scroll{overflow-x:auto}
-    table{width:100%;border-collapse:collapse;min-width:960px}
+    table{width:100%;border-collapse:collapse;min-width:1100px}
     thead{position:sticky;top:0;z-index:2}
     thead tr:first-child th{background:#166534}
     thead tr:last-child th{background:#14532d}
@@ -267,15 +267,17 @@
       <div class="table-scroll">
         <table id="fundTable">
           <colgroup>
-            <col style="width:11%">
-            <col style="width:22%">
-            <col style="width:9%">
-            <col style="width:12%">
+            <col style="width:8%">
+            <col style="width:18%">
+            <col style="width:7%">
             <col style="width:10%">
+            <col style="width:8%">
+            <col style="width:8%">
+            <col style="width:8%">
+            <col style="width:8%">
+            <col style="width:8%">
+            <col style="width:7%">
             <col style="width:10%">
-            <col style="width:12%">
-            <col style="width:12%">
-            <col style="width:12%">
           </colgroup>
           <thead>
             <tr>
@@ -283,19 +285,21 @@
               <th rowspan="2" style="text-align:left;padding-left:12px">발주건</th>
               <th rowspan="2">발주일</th>
               <th rowspan="2">총 발주금액</th>
-              <th colspan="2" class="group-head">집행예정</th>
+              <th colspan="4" class="group-head">집행예정</th>
               <th colspan="2" class="group-head">자금출처</th>
               <th rowspan="2">비고</th>
             </tr>
             <tr>
-              <th>선금</th>
-              <th>잔금</th>
+              <th>선금날짜</th>
+              <th>선금금액</th>
+              <th>잔금날짜</th>
+              <th>잔금금액</th>
               <th>재원</th>
               <th>비목</th>
             </tr>
           </thead>
           <tbody id="tableBody">
-            <tr><td colspan="9" style="text-align:center;padding:48px;color:#94a3b8;font-size:.9rem">⏳ 데이터 불러오는 중...</td></tr>
+            <tr><td colspan="11" style="text-align:center;padding:48px;color:#94a3b8;font-size:.9rem">⏳ 데이터 불러오는 중...</td></tr>
           </tbody>
         </table>
       </div>
@@ -405,17 +409,19 @@
       const rows = await res.json();
       if(rows.length > 0){
         items = rows.map(r => ({
-          code:         r.code         ?? "",
-          order_item:   r.order_item   ?? "",
-          order_date:   r.order_date   ?? "",
-          total_amount: r.total_amount ?? 0,
-          advance_time: r.advance_time ?? "",
-          balance_time: r.balance_time ?? "",
-          fund_source:  r.fund_source  ?? "",
-          budget_item:  r.budget_item  ?? "",
-          remark:       r.remark       ?? "",
-          _supa_id:     r.id,
-          _sort:        r.sort_order
+          code:            r.code            ?? "",
+          order_item:      r.order_item      ?? "",
+          order_date:      r.order_date      ?? "",
+          total_amount:    r.total_amount    ?? 0,
+          advance_time:    r.advance_time    ?? "",
+          advance_amount:  r.advance_amount  ?? 0,
+          balance_time:    r.balance_time    ?? "",
+          balance_amount:  r.balance_amount  ?? 0,
+          fund_source:     r.fund_source     ?? "",
+          budget_item:     r.budget_item     ?? "",
+          remark:          r.remark          ?? "",
+          _supa_id:        r.id,
+          _sort:           r.sort_order
         }));
         return true;
       }
@@ -433,16 +439,18 @@
       if(rows.length === 0) return;
 
       const seedRows = rows.map((r, i) => ({
-        code:         r.code        ?? "",
-        order_item:   r.equipment   ?? "",
-        order_date:   "",
-        total_amount: r.subtotal    ?? 0,
-        advance_time: "",
-        balance_time: "",
-        fund_source:  "",
-        budget_item:  "",
-        remark:       r.remark      ?? "",
-        sort_order:   i
+        code:           r.code     ?? "",
+        order_item:     r.equipment ?? "",
+        order_date:     "",
+        total_amount:   r.subtotal ?? 0,
+        advance_time:   "",
+        advance_amount: 0,
+        balance_time:   "",
+        balance_amount: 0,
+        fund_source:    "",
+        budget_item:    "",
+        remark:         r.remark   ?? "",
+        sort_order:     i
       }));
 
       const insRes = await fetch(SU+"/rest/v1/"+TABLE, {
@@ -453,17 +461,19 @@
       if(insRes.ok){
         const inserted = await insRes.json();
         items = inserted.map(r => ({
-          code:         r.code         ?? "",
-          order_item:   r.order_item   ?? "",
-          order_date:   r.order_date   ?? "",
-          total_amount: r.total_amount ?? 0,
-          advance_time: r.advance_time ?? "",
-          balance_time: r.balance_time ?? "",
-          fund_source:  r.fund_source  ?? "",
-          budget_item:  r.budget_item  ?? "",
-          remark:       r.remark       ?? "",
-          _supa_id:     r.id,
-          _sort:        r.sort_order
+          code:            r.code            ?? "",
+          order_item:      r.order_item      ?? "",
+          order_date:      r.order_date      ?? "",
+          total_amount:    r.total_amount    ?? 0,
+          advance_time:    r.advance_time    ?? "",
+          advance_amount:  r.advance_amount  ?? 0,
+          balance_time:    r.balance_time    ?? "",
+          balance_amount:  r.balance_amount  ?? 0,
+          fund_source:     r.fund_source     ?? "",
+          budget_item:     r.budget_item     ?? "",
+          remark:          r.remark          ?? "",
+          _supa_id:        r.id,
+          _sort:           r.sort_order
         }));
         console.log("[fund] seeded from purchase:", items.length, "rows");
       }
@@ -485,16 +495,18 @@
       const seenIds = new Set();
       items.forEach((r, i) => {
         const base = {
-          code:         String(r.code         ?? ""),
-          order_item:   String(r.order_item   ?? ""),
-          order_date:   String(r.order_date   ?? ""),
-          total_amount: parseMoney(r.total_amount) || 0,
-          advance_time: String(r.advance_time ?? ""),
-          balance_time: String(r.balance_time ?? ""),
-          fund_source:  String(r.fund_source  ?? ""),
-          budget_item:  String(r.budget_item  ?? ""),
-          remark:       String(r.remark       ?? ""),
-          sort_order:   i
+          code:            String(r.code           ?? ""),
+          order_item:      String(r.order_item     ?? ""),
+          order_date:      String(r.order_date     ?? ""),
+          total_amount:    parseMoney(r.total_amount) || 0,
+          advance_time:    String(r.advance_time   ?? ""),
+          advance_amount:  parseMoney(r.advance_amount) || 0,
+          balance_time:    String(r.balance_time   ?? ""),
+          balance_amount:  parseMoney(r.balance_amount) || 0,
+          fund_source:     String(r.fund_source    ?? ""),
+          budget_item:     String(r.budget_item    ?? ""),
+          remark:          String(r.remark         ?? ""),
+          sort_order:      i
         };
         if(r._supa_id && !seenIds.has(r._supa_id)){
           seenIds.add(r._supa_id);
@@ -613,7 +625,7 @@
   });
 
   /* ── 필드 목록 (Tab 이동 순서) ── */
-  const FIELDS = ["code","order_item","order_date","total_amount","advance_time","balance_time","fund_source","budget_item","remark"];
+  const FIELDS = ["code","order_item","order_date","total_amount","advance_time","advance_amount","balance_time","balance_amount","fund_source","budget_item","remark"];
 
   /* ── 렌더링 ── */
   let searchQuery = "";
@@ -633,7 +645,7 @@
     }
 
     if(visible.length === 0){
-      tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:40px;color:#94a3b8;font-size:.9rem">${searchQuery ? "검색 결과 없음" : "우클릭으로 행을 추가하세요."}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;padding:40px;color:#94a3b8;font-size:.9rem">${searchQuery ? "검색 결과 없음" : "우클릭으로 행을 추가하세요."}</td></tr>`;
       updateKpi();
       return;
     }
@@ -642,11 +654,13 @@
       const ri = items.indexOf(r);
       return `<tr data-idx="${ri}" draggable="true">
         <td class="mono"><div class="cell-inner" tabindex="0" data-idx="${ri}" data-field="code">${esc(r.code)}</div></td>
-        <td><div class="cell-inner" tabindex="0" data-idx="${ri}" data-field="order_item" style="min-width:140px">${esc(r.order_item)}</div></td>
+        <td><div class="cell-inner" tabindex="0" data-idx="${ri}" data-field="order_item" style="min-width:120px">${esc(r.order_item)}</div></td>
         <td class="mono align-center"><div class="cell-inner" tabindex="0" data-idx="${ri}" data-field="order_date">${esc(r.order_date)}</div></td>
         <td class="amount"><div class="cell-inner" tabindex="0" data-idx="${ri}" data-field="total_amount">${fmtMoney(r.total_amount)}</div></td>
         <td class="time-cell"><div class="cell-inner" tabindex="0" data-idx="${ri}" data-field="advance_time">${esc(r.advance_time)}</div></td>
+        <td class="amount"><div class="cell-inner" tabindex="0" data-idx="${ri}" data-field="advance_amount">${fmtMoney(r.advance_amount)}</div></td>
         <td class="time-cell"><div class="cell-inner" tabindex="0" data-idx="${ri}" data-field="balance_time">${esc(r.balance_time)}</div></td>
+        <td class="amount"><div class="cell-inner" tabindex="0" data-idx="${ri}" data-field="balance_amount">${fmtMoney(r.balance_amount)}</div></td>
         <td><div class="cell-inner" tabindex="0" data-idx="${ri}" data-field="fund_source">${esc(r.fund_source)}</div></td>
         <td><div class="cell-inner" tabindex="0" data-idx="${ri}" data-field="budget_item">${esc(r.budget_item)}</div></td>
         <td><div class="cell-inner" tabindex="0" data-idx="${ri}" data-field="remark">${esc(r.remark).replaceAll("\n","<br>")}</div></td>
@@ -686,7 +700,7 @@
     el.contentEditable = "true";
     el.classList.remove("cell-sel");
     el.classList.add("cell-edit");
-    if(el.dataset.field === "total_amount"){
+    if(["total_amount","advance_amount","balance_amount"].includes(el.dataset.field)){
       const v = parseMoney(el.textContent);
       el.textContent = v > 0 ? String(v) : "";
     }
@@ -717,10 +731,11 @@
     const resolved = evalFormula(raw);
     if(resolved !== raw) el.textContent = resolved;
     let val = String(resolved || "").trim();
-    const old = field === "total_amount"
+    const isMoneyField = field === "total_amount" || field === "advance_amount" || field === "balance_amount";
+    const old = isMoneyField
       ? String(parseMoney(items[idx][field]))
       : String(items[idx][field] ?? "");
-    if(field === "total_amount"){
+    if(isMoneyField){
       const newVal = parseMoney(val);
       if(newVal === parseMoney(old)){ el.textContent = fmtMoney(newVal); return; }
       snapshot();
@@ -840,7 +855,7 @@
   document.addEventListener("click", () => { ctxMenu.style.display = "none"; });
 
   function newEmptyRow(){
-    return {code:"", order_item:"", order_date:"", total_amount:0, advance_time:"", balance_time:"", fund_source:"", budget_item:"", remark:""};
+    return {code:"", order_item:"", order_date:"", total_amount:0, advance_time:"", advance_amount:0, balance_time:"", balance_amount:0, fund_source:"", budget_item:"", remark:""};
   }
 
   document.getElementById("ctx-add-above").addEventListener("click", () => {
