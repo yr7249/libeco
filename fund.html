@@ -132,14 +132,7 @@
 </head>
 <body>
 
-  <!-- 접근권한 오버레이 -->
-  <div id="fund-access-overlay" style="display:none;position:fixed;inset:0;background:rgba(255,255,255,.97);z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:14px">
-    <div style="font-size:2.8rem">🔒</div>
-    <div style="font-size:1.25rem;font-weight:800;color:#0f172a">접근 불가합니다.</div>
-    <a href="index.html" style="margin-top:6px;padding:9px 22px;background:#166534;color:#fff;border-radius:8px;text-decoration:none;font-size:.85rem;font-weight:700">홈으로 돌아가기</a>
-  </div>
-
-  <script>(async function(){
+<script>(async function(){
     const SU="https://ikfjpzdzrgsmhaobqnai.supabase.co",SK="sb_publishable_fbbdwjCZCL9AFD-eUIs0bg_XwdlhxFN";
     const token=localStorage.getItem("supa_token")||"";
     if(!token){location.href="login.html";return;}
@@ -157,10 +150,8 @@
       }
     }catch(e){}
     window._isAdmin=isAdmin;
-    if(!isAdmin){
-      const ov=document.getElementById("fund-access-overlay");if(ov)ov.style.display="flex";
-    }
-  })();</script>
+    if(!isAdmin){ location.href="index.html"; return; }
+  })();<\/script>
 
   <!-- User panel -->
   <div class="user-panel" id="fundUserPanel">
@@ -673,7 +664,7 @@
     bindRowHover();
   }
 
-  /* ── 셀 이벤트 (구매리스트와 동일한 2-state 모델: 클릭=선택, 더블클릭=편집) ── */
+  /* ── 셀 이벤트 ── */
   function bindCellEvents(){
     document.querySelectorAll("#tableBody .cell-inner[data-idx]").forEach(el => {
       el.addEventListener("focus", () => {
@@ -841,6 +832,7 @@
     const newIdx = afterIdx !== undefined ? afterIdx+1 : items.length-1;
     setTimeout(() => focusCell(newIdx, "order_item"), 50);
   }
+
   /* ── 컨텍스트 메뉴 ── */
   let ctxIdx = -1;
   const ctxMenu = document.getElementById("fund-ctx-menu");
@@ -1039,6 +1031,6 @@
     renderTable();
     startRealtime();
   })();
-  </script>
+  <\/script>
 </body>
 </html>
