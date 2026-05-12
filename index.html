@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LLNL POC PROJECT</title>
+  <title>USA POC PROJECT</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -86,12 +86,13 @@
     .svc-section-label{font-family:var(--font-mono);font-size:.7rem;font-weight:800;color:var(--text2);letter-spacing:.1em;text-transform:uppercase;white-space:nowrap}
     .svc-section-line{flex:1;height:1px;background:var(--border)}
 
-    /* ── Service grid: 3 columns ── */
+    /* ── Service grid: 4 columns ── */
     .svc-grid{
       display:grid;
-      grid-template-columns:repeat(3,1fr);
+      grid-template-columns:repeat(4,1fr);
       gap:14px;
     }
+    @media(max-width:1100px){.svc-grid{grid-template-columns:repeat(3,1fr)}}
     @media(max-width:768px){.svc-grid{grid-template-columns:repeat(2,1fr)}}
     @media(max-width:480px){.svc-grid{grid-template-columns:1fr}}
 
@@ -344,7 +345,7 @@
         <span style="color:#16a34a;font-weight:800;font-size:.95rem;letter-spacing:-.02em;font-family:inherit">LIBECO E&amp;C</span>
       </div>
       <div class="site-topbar-right">
-        <span class="topbar-badge">LLNL POC</span>
+        <span class="topbar-badge">USA POC</span>
         <span class="user-info" id="user-name-display"></span>
         <button class="btn-logout" id="home-user-btn" title="계정 정보" style="padding:5px 10px">👤</button>
         <span id="home-session-display" style="font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:var(--text2);padding:0 4px">⏱ --</span>
@@ -356,7 +357,7 @@
     <div class="home-hero">
       <div class="hero-inner">
         <div class="hero-eyebrow">LIVE PROJECT</div>
-        <div class="hero-title">LLNL POC Project</div>
+        <div class="hero-title">USA POC Project</div>
         <div class="hero-desc">과냉각 액체수소 연료시스템 검증</div>
       </div>
     </div>
@@ -405,6 +406,18 @@
             <div class="svc-title">구매리스트</div>
             <div class="svc-desc">구매 필요내역</div>
             <div class="svc-foot"><span>Updated 2026.04.08</span><span style="color:var(--accent);font-weight:700">PURCHASE</span></div>
+            <span class="svc-arr">→</span>
+          </a>
+
+          <!-- 1행-4: 자금계획 (LIVE) -->
+          <a id="card-fund" class="svc-card live" href="fund.html" aria-label="자금계획 열기">
+            <div class="svc-card-head">
+              <div class="svc-icon" style="background:rgba(29,78,216,.1)">💰</div>
+              <span class="svc-status status-live">LIVE</span>
+            </div>
+            <div class="svc-title">자금계획</div>
+            <div class="svc-desc">발주 · 선금 · 잔금 집행</div>
+            <div class="svc-foot"><span>Updated 2026.05.07</span><span style="color:#1d4ed8;font-weight:700">FUND</span></div>
             <span class="svc-arr">→</span>
           </a>
 

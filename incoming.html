@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LLNL POC — 입고관리</title>
+  <title>USA POC — 입고관리</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -797,6 +797,7 @@
       <span class="nav-icon">📋</span>
       <div><div class="nav-label">구매리스트</div><div class="nav-sub">구매 필요내역</div></div>
     </a>
+    <a class="nav-item" href="fund.html"><span class="nav-icon">💰</span><div><div class="nav-label">자금계획</div><div class="nav-sub">발주 · 자금 계획</div></div></a>
     <div class="nav-sep"></div>
     <div class="nav-item active"><span class="nav-icon">📦</span><div><div class="nav-label">입고관리</div><div class="nav-sub">장비 일정관리</div></div></div>
     <div class="nav-item disabled"><span class="nav-icon">📖</span><div><div class="nav-label">시험절차서</div><div class="nav-sub">준비중</div></div><span class="nav-soon-tag">SOON</span></div>
@@ -817,7 +818,7 @@
         <div class="pg-vdiv"></div>
         <button class="pg-btn pg-btn-nav" id="inc-nav-btn">이동 ▾</button>
         <div class="pg-vdiv no-mobile"></div>
-        <span class="pg-title no-mobile">LLNL POC <span>입고관리</span></span>
+        <span class="pg-title no-mobile">USA POC <span>입고관리</span></span>
         <span class="pg-badge no-mobile">INCOMING</span>
       </div>
       <div class="pg-topbar-r">
@@ -826,6 +827,8 @@
         <div class="pg-vdiv"></div>
         <button class="pg-btn" id="inc-undoBtn" title="Ctrl+Z" disabled="">↩ 취소</button>
         <button class="pg-btn" id="inc-redoBtn" title="Ctrl+Y" disabled="">↪ 다시</button>
+        <button class="pg-btn" id="inc-saveNowBtn" title="즉시 저장" style="font-weight:700;color:#22c55e;border-color:rgba(34,197,94,.4)">💾 저장</button>
+        <span id="inc-save-status" style="font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:#22c55e;padding:0 4px"></span>
         <div class="pg-vdiv no-mobile"></div>
         <button class="pg-btn pg-btn-export no-mobile" id="inc-export-report">📄 PDF저장</button>
         <button class="pg-btn no-mobile" onclick="window.print()">🖨 인쇄</button>
@@ -846,7 +849,7 @@
               <path d="M30 28l1.5 1.5L34 26" stroke="#a855f7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
             </svg>
             <div>
-              <h1>LLNL POC <span>입고관리</span></h1>
+              <h1>USA POC <span>입고관리</span></h1>
               <p class="header-sub"><span id="inc-gen-time">2026/04/14 17:03</span> update</p>
             </div>
           </div>
@@ -997,23 +1000,42 @@
   /* ── 실시간 동기화 (Supabase Realtime) ── */
   function startRealtime(){
     const wsUrl = SUPA_URL.replace("https://","wss://") + "/realtime/v1/websocket?apikey="+SUPA_KEY+"&vsn=1.0.0";
-    let ws;
+    let ws, heartbeatTimer, refCount = 1;
+    function sendJson(obj){ if(ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj)); }
+    function startHeartbeat(){
+      clearInterval(heartbeatTimer);
+      heartbeatTimer = setInterval(() => {
+        sendJson({topic:"phoenix",event:"heartbeat",payload:{},ref:String(refCount++)});
+      }, 5000);
+    }
     function connect(){
       ws = new WebSocket(wsUrl);
       ws.onopen = () => {
-        ws.send(JSON.stringify({topic:"realtime:public:"+SUPA_TABLE,event:"phx_join",payload:{},ref:"1"}));
+        sendJson({topic:"realtime:public:"+SUPA_TABLE,event:"phx_join",payload:{config:{broadcast:{self:false},presence:{key:""},postgres_changes:[{event:"*",schema:"public",table:SUPA_TABLE}]}},ref:String(refCount++)});
+        startHeartbeat();
       };
       ws.onmessage = async (e) => {
-        const msg = JSON.parse(e.data);
-        if(msg.event==="postgres_changes"||msg.payload?.data?.type){
-          const ok = await supaLoad();
-          if(ok) build();
-        }
+        let msg; try{ msg=JSON.parse(e.data); }catch{ return; }
+        const isDbChange = msg.event==="postgres_changes"||msg.event==="INSERT"||msg.event==="UPDATE"||msg.event==="DELETE"||msg.payload?.data?.type==="INSERT"||msg.payload?.data?.type==="UPDATE"||msg.payload?.data?.type==="DELETE";
+        if(!isDbChange) return;
+        if(_saveTimer) return;
+        const ok = await supaLoad();
+        if(ok) build();
       };
-      ws.onclose = () => setTimeout(connect, 3000);
+      ws.onerror = (err) => console.warn("[Realtime] 오류:", err);
+      ws.onclose = () => { clearInterval(heartbeatTimer); setTimeout(connect, 3000); };
     }
     connect();
   }
+
+  function triggerIncSaveNow(){
+    const ind = document.getElementById("inc-save-status");
+    if(ind) ind.textContent = "저장 중…";
+    clearTimeout(_saveTimer);
+    _saveTimer = null;
+    supaUpsertAll().then(()=>{ if(ind){ ind.textContent="저장됨 ✓"; setTimeout(()=>{ ind.textContent=""; },1500); } });
+  }
+  document.getElementById("inc-saveNowBtn")?.addEventListener("click", triggerIncSaveNow);
   const STATUS_CLS = {
     "\uac80\ud1a0\uc911":"inc-s-review",
     "\ubc1c\uc8fc\uc608\uc815":"inc-s-planned",

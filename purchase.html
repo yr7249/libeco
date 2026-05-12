@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LLNL POC — 구매리스트</title>
+  <title>USA POC — 구매리스트</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -799,6 +799,7 @@
       <span class="nav-icon">📋</span>
       <div><div class="nav-label">구매리스트</div><div class="nav-sub">구매 필요내역</div></div>
     </div>
+    <a class="nav-item" href="fund.html"><span class="nav-icon">💰</span><div><div class="nav-label">자금계획</div><div class="nav-sub">발주 · 자금 계획</div></div></a>
     <div class="nav-sep"></div>
     <a class="nav-item" href="incoming.html">
       <span class="nav-icon">📦</span><div><div class="nav-label">입고관리</div><div class="nav-sub">장비 일정관리</div></div>
@@ -831,7 +832,7 @@
         <div class="pg-vdiv"></div>
         <button class="pg-btn pg-btn-nav" id="equip-nav-btn">이동 ▾</button>
         <div class="pg-vdiv no-mobile"></div>
-        <span class="pg-title no-mobile">LLNL POC <span>구매리스트</span></span>
+        <span class="pg-title no-mobile">USA POC <span>구매리스트</span></span>
         <span class="pg-badge no-mobile">EQUIP LIST</span>
       </div>
       <div class="pg-topbar-r">
@@ -840,6 +841,8 @@
         <div class="pg-vdiv"></div>
         <button class="pg-btn" id="undoBtn" title="Ctrl+Z">↩ 취소</button>
         <button class="pg-btn" id="redoBtn" title="Ctrl+Y" disabled="">↪ 다시</button>
+        <button class="pg-btn" id="saveNowBtn" title="즉시 저장" style="font-weight:700;color:#22c55e;border-color:rgba(34,197,94,.4)">💾 저장</button>
+        <span id="save-status-indicator" style="font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:#22c55e;padding:0 4px;transition:opacity .3s"></span>
         <div class="pg-vdiv no-mobile"></div>
         <button class="pg-btn pg-btn-export no-mobile" id="exportReportBtn">📄 PDF저장</button>
         <button class="pg-btn no-mobile" onclick="window.print()">🖨 인쇄</button>
@@ -853,7 +856,7 @@
       <div class="header-inner">
         <div class="header-left">
           <div>
-            <h1>LLNL POC <span>구매리스트</span></h1>
+            <h1>USA POC <span>구매리스트</span></h1>
             <p class="header-sub"><span id="genTime">2026/04/14 17:03</span> update</p>
           </div>
         </div>
@@ -2063,8 +2066,17 @@
     if(ctxTargetIdx === null) return;
     if(!confirm("이 행을 삭제하시겠습니까?")) return;
     pushUndo();
+    const deletedItem = items[ctxTargetIdx];
     items.splice(ctxTargetIdx, 1);
-    buildTable(); updateKpis(); saveLocal();
+    buildTable(); updateKpis();
+    clearTimeout(window._purchaseSaveTimer);
+    window._purchaseSaveTimer = null;
+    _purSaving = true;
+    (async () => {
+      if (deletedItem?._supa_id) await supaDeleteRow(deletedItem);
+      await supaUpsertAll();
+      _purSaving = false;
+    })();
     hideCtxMenu();
   });
 
@@ -2206,14 +2218,19 @@
   const LS_KEY = "equip_autosave_v1";
   const LS_FID_KEY = "equip_fid_v1";
   const FILE_FID = "";
+  let _purSaving = false;
   function saveLocal(){
     try {
       localStorage.setItem(LS_KEY, JSON.stringify(items));
       if (FILE_FID) localStorage.setItem(LS_FID_KEY, FILE_FID);
     } catch(e){}
-    // Supabase 저장 (디바운스 600ms)
     clearTimeout(window._purchaseSaveTimer);
-    window._purchaseSaveTimer = setTimeout(() => supaUpsertAll(), 600);
+    _purSaving = true;
+    window._purchaseSaveTimer = setTimeout(async () => {
+      await supaUpsertAll();
+      window._purchaseSaveTimer = null;
+      _purSaving = false;
+    }, 600);
   }
   function loadLocal(){
     try {
@@ -2272,10 +2289,19 @@
     return false;
   }
 
+  let _purUpsertLock = false;
   async function supaUpsertAll(){
+    if(_purUpsertLock) return;
+    _purUpsertLock = true;
     try {
-      const payload = items.map((r, i) => {
-        const obj = {
+      const userToken = localStorage.getItem("supa_token") || SUPA_KEY;
+      const baseHeaders = { "apikey": SUPA_KEY, "Authorization": "Bearer " + userToken, "Content-Type": "application/json" };
+      const url = SUPA_URL + "/rest/v1/" + SUPA_TABLE;
+
+      const existing = [], newRows = [], newRowIdx = [];
+      const seenIds = new Set();
+      items.forEach((r, i) => {
+        const base = {
           no:           String(r.no           ?? ""),
           category:     String(r.category     ?? ""),
           code:         String(r.code         ?? ""),
@@ -2293,74 +2319,133 @@
           done:         !!r.done,
           sort_order:   i
         };
-        if (r._supa_id) obj.id = r._supa_id;
-        return obj;
+        if (r._supa_id && !seenIds.has(r._supa_id)){
+          seenIds.add(r._supa_id);
+          existing.push({ id: r._supa_id, ...base });
+        } else if (!r._supa_id){
+          newRows.push(base);
+          newRowIdx.push(i);
+        }
       });
-      const res = await supaFetch("POST", "", payload);
-      // 신규 삽입된 행의 id를 items에 반영
-      try {
-        const returned = await res.json();
-        if (Array.isArray(returned)){
-          returned.forEach(r => {
-            if (!r.id) return;
-            // 기존 행: _supa_id로 매칭
-            if (items.find(it => it._supa_id === r.id)) return;
-            // 신규 행: sort_order(= 배열 인덱스)로 매칭
-            const idx = typeof r.sort_order === 'number' ? r.sort_order : -1;
-            if (idx >= 0 && idx < items.length && !items[idx]._supa_id) {
+
+      // 기존 행 upsert
+      if (existing.length > 0){
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { ...baseHeaders, "Prefer": "resolution=merge-duplicates,return=representation" },
+          body: JSON.stringify(existing)
+        });
+        if (!res.ok) console.error("[purchase] upsert 실패:", res.status, await res.text());
+      }
+      // 신규 행 insert (id 컬럼 없음)
+      if (newRows.length > 0){
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { ...baseHeaders, "Prefer": "return=representation" },
+          body: JSON.stringify(newRows)
+        });
+        if (res.ok){
+          const inserted = await res.json();
+          inserted.forEach((r, n) => {
+            const idx = newRowIdx[n];
+            if (idx !== undefined && items[idx] && !items[idx]._supa_id){
               items[idx]._supa_id = r.id;
             }
           });
-          // _supa_id를 localStorage에 저장해 다음 저장 시 중복 삽입 방지
           try { localStorage.setItem(LS_KEY, JSON.stringify(items)); } catch(e){}
+        } else {
+          console.error("[purchase] insert 실패:", res.status, await res.text());
         }
-      } catch(e){}
+      }
     } catch(e){ console.warn("Supabase save failed:", e); }
+    finally{ _purUpsertLock = false; }
   }
 
   async function supaDeleteRow(item){
     if (!item._supa_id) return;
     try {
-      await fetch(SUPA_URL + "/rest/v1/" + SUPA_TABLE + "?id=eq." + item._supa_id, {
+      const res = await fetch(SUPA_URL + "/rest/v1/" + SUPA_TABLE + "?id=eq." + item._supa_id, {
         method: "DELETE",
         headers: { "apikey": SUPA_KEY, "Authorization": "Bearer " + (localStorage.getItem("supa_token") || SUPA_KEY) }
       });
+      if (!res.ok){
+        const body = await res.text();
+        console.error("[purchase] DELETE 실패 — status:", res.status, "body:", body);
+      } else {
+        console.log("[purchase] DELETE 성공 id=" + item._supa_id);
+      }
     } catch(e){ console.warn("Supabase delete failed:", e); }
   }
-  // 행 삭제 시 Supabase에서도 삭제 — ctx-delete 버튼 패치
-  (function(){
-    const orig = document.getElementById("ctx-delete");
-    if (!orig) return;
-    orig.addEventListener("click", function(){
-      // ctxTargetIdx는 이미 처리됐으므로 마지막으로 삭제된 item을 추적
-      // saveLocal()이 이미 호출되기 때문에 supaUpsertAll()로 전체 재동기화
-    }, true);
-  })();
 
   /* ── 실시간 동기화 (Supabase Realtime) ── */
   function startPurchaseRealtime(){
     const wsUrl = SUPA_URL.replace("https://", "wss://") + "/realtime/v1/websocket?apikey=" + SUPA_KEY + "&vsn=1.0.0";
-    let ws;
+    let ws, heartbeatTimer, refCount = 1;
+
+    function sendJson(obj){ if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj)); }
+
+    function startHeartbeat(){
+      clearInterval(heartbeatTimer);
+      heartbeatTimer = setInterval(() => {
+        sendJson({ topic: "phoenix", event: "heartbeat", payload: {}, ref: String(refCount++) });
+      }, 5000);
+    }
+
     function connect(){
       ws = new WebSocket(wsUrl);
+
       ws.onopen = () => {
-        ws.send(JSON.stringify({ topic: "realtime:public:" + SUPA_TABLE, event: "phx_join", payload: {}, ref: "1" }));
+        // postgres_changes 필터를 포함한 올바른 구독 페이로드
+        sendJson({
+          topic: "realtime:public:" + SUPA_TABLE,
+          event: "phx_join",
+          payload: {
+            config: {
+              broadcast: { self: false },
+              presence: { key: "" },
+              postgres_changes: [{ event: "*", schema: "public", table: SUPA_TABLE }]
+            }
+          },
+          ref: String(refCount++)
+        });
+        startHeartbeat();
       };
+
       ws.onmessage = async (e) => {
-        const msg = JSON.parse(e.data);
-        if (msg.event === "postgres_changes" || msg.payload?.data?.type){
-          const ok = await supaLoad();
-          if (ok){
-            items.forEach(function(item){
-              item.subtotal = (Number(item.unit_price) || 0) * (Number(item.purchase_qty) || 0);
-            });
-            buildTable();
-            updateKpis();
-          }
+        let msg;
+        try { msg = JSON.parse(e.data); } catch { return; }
+
+        // postgres_changes 이벤트: INSERT/UPDATE/DELETE 모두 처리
+        const isDbChange =
+          msg.event === "postgres_changes" ||
+          (msg.event === "INSERT" || msg.event === "UPDATE" || msg.event === "DELETE") ||
+          msg.payload?.data?.type === "INSERT" ||
+          msg.payload?.data?.type === "UPDATE" ||
+          msg.payload?.data?.type === "DELETE";
+
+        if (!isDbChange) return;
+
+        // 내가 저장 중이면 Realtime 리로드 차단
+        if (_purSaving) return;
+
+        const ok = await supaLoad();
+        if (ok){
+          items.forEach(function(item){
+            item.subtotal = (Number(item.unit_price) || 0) * (Number(item.purchase_qty) || 0);
+          });
+          buildTable();
+          updateKpis();
         }
       };
-      ws.onclose = () => setTimeout(connect, 3000);
+
+      ws.onerror = (err) => console.warn("[Realtime] WebSocket 오류:", err);
+
+      ws.onclose = () => {
+        clearInterval(heartbeatTimer);
+        setTimeout(connect, 3000);
+      };
     }
+
     connect();
   }
   // commitField 후 자동저장 훅
@@ -2546,7 +2631,7 @@
       /<script type="application\/json" id="seed-data"[^>]*>[\s\S]*?<\/script>/,
       `<script type="application/json" id="seed-data" data-fid="${newFid}">${json}<\/script>`
     );
-    saveToFile(html, `LLNL POC_${ds}.html`);
+    saveToFile(html, `USA POC_${ds}.html`);
   }
 
   function buildReadonlyTableHtml(){
@@ -2599,7 +2684,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LLNL 시험장비 구매 계획 – 보고 (${date})</title>
+  <title>USA 시험장비 구매 계획 – 보고 (${date})</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -2613,7 +2698,7 @@
       <div class="header-inner">
         <div class="header-left">
           <div>
-            <h1>LLNL 시험장비 <span>구매 계획</span></h1>
+            <h1>USA 시험장비 <span>구매 계획</span></h1>
             <p class="header-sub">보고용(읽기 전용) · ${escapeHtml(stamp)}</p>
           </div>
         </div>
@@ -2634,7 +2719,7 @@
   </div>
 </body>
 </html>`;
-    saveToFile(html, `LLNL POC_구매리스트_${ds}.html`);
+    saveToFile(html, `USA POC_구매리스트_${ds}.html`);
   }
 
   function exportReportPdf(){
@@ -2673,7 +2758,18 @@
   document.addEventListener("keydown", e => {
     const mod = e.ctrlKey || e.metaKey;
     if (!mod) return;
-    if (e.key === "z" && !e.shiftKey){
+    if (e.key === "s"){
+      e.preventDefault();
+      // 편집 중인 셀이 있으면 먼저 커밋
+      const editing = document.querySelector(".cell-edit[contenteditable='true']");
+      if (editing) editing.blur();
+      clearTimeout(window._purchaseSaveTimer);
+      window._purchaseSaveTimer = null;
+      supaUpsertAll().then(() => {
+        const btn = document.getElementById("save-status-indicator");
+        if (btn){ btn.textContent = "저장됨 ✓"; setTimeout(() => { btn.textContent = ""; }, 1500); }
+      });
+    } else if (e.key === "z" && !e.shiftKey){
       e.preventDefault();
       undo();
     } else if (e.key === "y" || (e.key === "z" && e.shiftKey)){
@@ -2681,6 +2777,21 @@
       redo();
     }
   }, true);
+
+  // 저장 버튼
+  async function triggerSaveNow(){
+    const editing = document.querySelector(".cell-edit[contenteditable='true']");
+    if (editing) editing.blur();
+    clearTimeout(window._purchaseSaveTimer);
+    window._purchaseSaveTimer = null;
+    _purSaving = true;
+    const ind = document.getElementById("save-status-indicator");
+    if (ind) ind.textContent = "저장 중…";
+    await supaUpsertAll();
+    _purSaving = false;
+    if (ind){ ind.textContent = "저장됨 ✓"; setTimeout(() => { ind.textContent = ""; }, 1500); }
+  }
+  document.getElementById("saveNowBtn")?.addEventListener("click", triggerSaveNow);
 
   function goHome(){ window.location.href = 'index.html'; }
   function goEquip(){ /* 현재 페이지 */ }

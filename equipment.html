@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LLNL POC — 시험장비 목록</title>
+  <title>USA POC — 시험장비 목록</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -280,6 +280,7 @@
     <span class="nav-icon">📋</span>
     <div><div class="nav-label">구매리스트</div><div class="nav-sub">구매 필요내역</div></div>
   </a>
+  <a class="nav-item" href="fund.html"><span class="nav-icon">💰</span><div><div class="nav-label">자금계획</div><div class="nav-sub">발주 · 자금 계획</div></div></a>
   <div class="nav-sep"></div>
   <a class="nav-item" href="incoming.html"><span class="nav-icon">📦</span><div><div class="nav-label">입고관리</div><div class="nav-sub">장비 일정관리</div></div></a>
   <div class="nav-item disabled"><span class="nav-icon">📖</span><div><div class="nav-label">시험절차서</div><div class="nav-sub">준비중</div></div><span class="nav-soon-tag">SOON</span></div>
@@ -301,7 +302,7 @@
     <div class="pg-vdiv"></div>
     <button class="pg-btn" id="eq-nav-btn">이동 ▾</button>
     <div class="pg-vdiv no-mobile"></div>
-    <span class="pg-title no-mobile">LLNL POC <span>시험장비</span></span>
+    <span class="pg-title no-mobile">USA POC <span>시험장비</span></span>
     <span class="pg-badge no-mobile">EQUIPMENT</span>
   </div>
   <div class="pg-topbar-r">
@@ -310,6 +311,8 @@
     <div class="pg-vdiv"></div>
     <button class="pg-btn" id="eq-undoBtn" title="Ctrl+Z" disabled>↩ 취소</button>
     <button class="pg-btn" id="eq-redoBtn" title="Ctrl+Y" disabled>↪ 다시</button>
+    <button class="pg-btn" id="eq-saveNowBtn" title="즉시 저장" style="font-weight:700;color:#22c55e;border-color:rgba(34,197,94,.4)">💾 저장</button>
+    <span id="eq-save-status" style="font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:#22c55e;padding:0 4px"></span>
     <div class="pg-vdiv no-mobile"></div>
     <button class="pg-btn pg-btn-export no-mobile" id="eq-export-pdf">📄 PDF저장</button>
     <button class="pg-btn no-mobile" onclick="window.print()">🖨 인쇄</button>
@@ -331,7 +334,7 @@
           <path d="M12 16c0-5 4-8 9-8s9 3 9 8" stroke="#166534" stroke-width="1.5" stroke-linecap="round" fill="none"/>
         </svg>
         <div>
-          <h1>LLNL POC <span>시험장비 목록</span></h1>
+          <h1>USA POC <span>시험장비 목록</span></h1>
           <p class="header-sub"><span id="eq-gen-time">--</span> update</p>
         </div>
       </div>
@@ -443,11 +446,15 @@
     return false;
   }
 
+  let _upsertLock = false;
   async function supaUpsertAll(){
+    if(_upsertLock) return;
+    _upsertLock = true;
     try{
       const token = localStorage.getItem("supa_token") || SUPA_KEY;
       const headers = { "apikey":SUPA_KEY, "Authorization":"Bearer "+token, "Content-Type":"application/json" };
       const existing = [], newRows = [];
+      const seenIds = new Set();
       eqItems.forEach((r,i)=>{
         const obj = {
           part_no: r.part_no||"", qty: r.qty||"", name: r.name||"",
@@ -459,15 +466,19 @@
           sort_order: i,
           _cat: r._cat||"", _group: r._group||false, _label: r._label||"", _color: r._color||"", _bg: r._bg||""
         };
-        if(r._supa_id){ obj.id = r._supa_id; existing.push(obj); }
-        else newRows.push(obj);
+        if(r._supa_id && !seenIds.has(r._supa_id)){
+          obj.id = r._supa_id; seenIds.add(r._supa_id); existing.push(obj);
+        } else if(!r._supa_id){
+          newRows.push(obj);
+        }
       });
       if(existing.length > 0){
-        await fetch(SUPA_URL+"/rest/v1/"+SUPA_TABLE, {
+        const res = await fetch(SUPA_URL+"/rest/v1/"+SUPA_TABLE, {
           method:"POST",
           headers:{...headers, "Prefer":"resolution=merge-duplicates,return=representation"},
           body:JSON.stringify(existing)
         });
+        if(!res.ok) console.error("[equipment] upsert 실패:", res.status, await res.text());
       }
       if(newRows.length > 0){
         const res = await fetch(SUPA_URL+"/rest/v1/"+SUPA_TABLE, {
@@ -479,50 +490,89 @@
           const inserted = await res.json();
           let ni = 0;
           eqItems.forEach(r=>{ if(!r._supa_id && inserted[ni]){ r._supa_id=inserted[ni].id; ni++; } });
+        } else {
+          console.error("[equipment] insert 실패:", res.status, await res.text());
         }
       }
     }catch(e){ console.warn("Supabase save failed:", e); }
+    finally{ _upsertLock = false; }
   }
 
   async function supaDeleteRow(id){
     try{
       const token = localStorage.getItem("supa_token") || SUPA_KEY;
-      await fetch(SUPA_URL+"/rest/v1/"+SUPA_TABLE+"?id=eq."+id, {
+      const res = await fetch(SUPA_URL+"/rest/v1/"+SUPA_TABLE+"?id=eq."+id, {
         method:"DELETE",
         headers:{"apikey":SUPA_KEY,"Authorization":"Bearer "+token}
       });
+      if(!res.ok){
+        const body = await res.text();
+        console.error("[equipment] DELETE 실패 — status:", res.status, "body:", body);
+      } else {
+        console.log("[equipment] DELETE 성공 id=" + id);
+      }
     }catch(e){ console.warn("Supabase delete failed:", e); }
   }
 
   /* ── 실시간 동기화 ── */
   function startRealtime(){
     const wsUrl = SUPA_URL.replace("https://","wss://") + "/realtime/v1/websocket?apikey="+SUPA_KEY+"&vsn=1.0.0";
-    let ws;
+    let ws, heartbeatTimer, refCount = 1;
+    function sendJson(obj){ if(ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj)); }
+    function startHeartbeat(){
+      clearInterval(heartbeatTimer);
+      heartbeatTimer = setInterval(() => {
+        sendJson({topic:"phoenix",event:"heartbeat",payload:{},ref:String(refCount++)});
+      }, 5000);
+    }
     function connect(){
       ws = new WebSocket(wsUrl);
-      ws.onopen = () => ws.send(JSON.stringify({topic:"realtime:public:"+SUPA_TABLE,event:"phx_join",payload:{},ref:"1"}));
-      ws.onmessage = async (e) => {
-        const msg = JSON.parse(e.data);
-        if(msg.event==="postgres_changes"||msg.payload?.data?.type){
-          const ok = await supaLoad();
-          if(ok) build();
-        }
+      ws.onopen = () => {
+        sendJson({topic:"realtime:public:"+SUPA_TABLE,event:"phx_join",payload:{config:{broadcast:{self:false},presence:{key:""},postgres_changes:[{event:"*",schema:"public",table:SUPA_TABLE}]}},ref:String(refCount++)});
+        startHeartbeat();
       };
-      ws.onclose = () => setTimeout(connect, 3000);
+      ws.onmessage = async (e) => {
+        let msg; try{ msg=JSON.parse(e.data); }catch{ return; }
+        const isDbChange = msg.event==="postgres_changes"||msg.event==="INSERT"||msg.event==="UPDATE"||msg.event==="DELETE"||msg.payload?.data?.type==="INSERT"||msg.payload?.data?.type==="UPDATE"||msg.payload?.data?.type==="DELETE";
+        if(!isDbChange) return;
+        if(_eqSaving) return;
+        const ok = await supaLoad();
+        if(ok) build();
+      };
+      ws.onerror = (err) => console.warn("[Realtime] 오류:", err);
+      ws.onclose = () => { clearInterval(heartbeatTimer); setTimeout(connect, 3000); };
     }
     connect();
   }
 
+  async function triggerEqSaveNow(){
+    const ind = document.getElementById("eq-save-status");
+    if(ind) ind.textContent = "저장 중…";
+    clearTimeout(_saveTimer);
+    _saveTimer = null;
+    _eqSaving = true;
+    await supaUpsertAll();
+    _eqSaving = false;
+    if(ind){ ind.textContent="저장됨 ✓"; setTimeout(()=>{ ind.textContent=""; },1500); }
+  }
+  document.getElementById("eq-saveNowBtn")?.addEventListener("click", triggerEqSaveNow);
+
   /* ── 상태 ── */
   let eqItems = [];
   let _saveTimer = null;
+  let _eqSaving = false;
   let activeCat = "ALL";
   let eqUndoStack = [], eqRedoStack = [];
 
   function save(){
     try{ localStorage.setItem(EQ_LS, JSON.stringify(eqItems)); }catch(e){}
     clearTimeout(_saveTimer);
-    _saveTimer = setTimeout(()=> supaUpsertAll(), 500);
+    _eqSaving = true;
+    _saveTimer = setTimeout(async () => {
+      await supaUpsertAll();
+      _saveTimer = null;
+      _eqSaving = false;
+    }, 500);
   }
 
   function loadLocal(){
@@ -785,11 +835,12 @@
   /* ── KPI ── */
   function updateKpi(){
     const items = eqItems.filter(r=>!r._group);
-    document.getElementById("kpi-total").textContent = items.length;
-    document.getElementById("kpi-measure").textContent = items.filter(r=>r.usage==="계측").length;
-    document.getElementById("kpi-exproof").textContent = items.filter(r=>r.usage==="방폭").length;
-    document.getElementById("kpi-control").textContent = items.filter(r=>r.usage==="제어").length;
-    document.getElementById("kpi-daq").textContent = items.filter(r=>r.usage==="데이터수집").length;
+    const set = (id, v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
+    set("kpi-total",   items.length);
+    set("kpi-measure", items.filter(r=>r.usage==="계측").length);
+    set("kpi-exproof", items.filter(r=>r.usage==="방폭").length);
+    set("kpi-control", items.filter(r=>r.usage==="제어").length);
+    set("kpi-daq",     items.filter(r=>r.usage==="데이터수집").length);
   }
 
   /* ── Usage dropdown ── */
@@ -924,8 +975,13 @@
     saveUndo();
     const item=eqItems[idx];
     eqItems.splice(idx,1);
-    save(); build(); updateUndoBtns();
+    build(); updateUndoBtns();
+    clearTimeout(_saveTimer);
+    _saveTimer = null;
+    _eqSaving = true;
     if(item._supa_id) await supaDeleteRow(item._supa_id);
+    await supaUpsertAll();
+    _eqSaving = false;
   }
 
   /* ── 플로팅 핸들 ── */
