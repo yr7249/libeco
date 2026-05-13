@@ -37,7 +37,7 @@
 
     /* ── Table controls ── */
     .table-controls{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px}
-    .search-input{background:rgba(255,255,255,.96);border:1px solid var(--border);border-radius:10px;padding:9px 16px 9px 38px;color:var(--text);font-size:.86rem;width:min(280px,100%);font-family:var(--font-heading);transition:border-color .3s;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.868-3.834zm-5.242.156a5 5 0 1 1 0-10 5 5 0 0 1 0 10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:12px center}
+    .search-input{background:rgba(255,255,255,.96);border:1px solid var(--border);border-radius:10px;padding:9px 16px 9px 38px;color:var(--text);font-size:.86rem;width:min(280px,100%);font-family:var(--font-heading);transition:border-color .3s;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.868-3.834zm-5.242.156a5 5 0 1 1 0-10 5 5 0 0 1 0 10z'/%3E%3C\/svg%3E");background-repeat:no-repeat;background-position:12px center}
     .search-input:focus{outline:none;border-color:rgba(22,101,52,.55);box-shadow:0 0 0 3px rgba(22,101,52,.12)}
     .btn{appearance:none;border:1px solid rgba(15,23,42,.14);background:rgba(255,255,255,.9);color:var(--text);padding:8px 14px;border-radius:10px;cursor:pointer;font-size:.82rem;font-weight:600;font-family:var(--font-heading);transition:transform .15s,border-color .15s,background .15s,box-shadow .15s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
     .btn:hover:not(:disabled){transform:translateY(-1px);border-color:rgba(22,101,52,.45);box-shadow:var(--glow)}
@@ -152,7 +152,7 @@
     }catch(e){}
     window._isAdmin=isAdmin;
     if(authOk && !isAdmin){ location.href="index.html"; return; }
-  })();<\/script>
+  })();</script>
 
   <!-- User panel -->
   <div class="user-panel" id="fundUserPanel">
@@ -172,11 +172,11 @@
     <a class="nav-item" href="diagram.html"><span class="nav-icon">📐</span><div><div class="nav-label">구성도</div><div class="nav-sub">P&amp;ID Schematic</div></div></a>
     <a class="nav-item" href="equipment.html"><span class="nav-icon">🔬</span><div><div class="nav-label">시험장비</div><div class="nav-sub">계측/제어 장비 목록</div></div></a>
     <a class="nav-item" href="purchase.html"><span class="nav-icon">📋</span><div><div class="nav-label">구매리스트</div><div class="nav-sub">구매 필요내역</div></div></a>
-    <div class="nav-item active"><span class="nav-icon">💰</span><div><div class="nav-label">자금계획</div><div class="nav-sub">발주 &middot; 자금 계획</div></div></div>
+    <div class="nav-item active"><span class="nav-icon">💰</span><div><div class="nav-label">자금계획</div><div class="nav-sub">발주 7 자금 계획</div></div></div>
     <div class="nav-sep"></div>
     <a class="nav-item" href="incoming.html"><span class="nav-icon">📦</span><div><div class="nav-label">입고관리</div><div class="nav-sub">장비 일정관리</div></div></a>
     <div class="nav-item disabled"><span class="nav-icon">📖</span><div><div class="nav-label">시험절차서</div><div class="nav-sub">준비중</div></div><span class="nav-soon-tag">SOON</span></div>
-    <a class="nav-item" href="share.html"><span class="nav-icon">💬</span><div><div class="nav-label">기타 공유사항</div><div class="nav-sub">팀 공지 &middot; 공유 자료</div></div></a>
+    <a class="nav-item" href="share.html"><span class="nav-icon">💬</span><div><div class="nav-label">기타 공유사항</div><div class="nav-sub">팀 공지 7 공유 자료</div></div></a>
   </div>
 
   <!-- Context menu -->
@@ -212,7 +212,7 @@
       <button class="pg-btn" id="saveNowBtn" title="즉시 저장 (Ctrl+S)" style="font-weight:700;color:#166534;border-color:rgba(22,101,52,.4)">💾 저장</button>
       <span id="save-status" style="font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:#22c55e;padding:0 4px;transition:opacity .3s;opacity:0"></span>
       <div class="pg-vdiv no-mobile"></div>
-      <button class="pg-btn no-mobile" onclick="window.print()">🖸 인쇄</button>
+      <button class="pg-btn no-mobile" onclick="window.print()">🖨 인쇄</button>
       <div class="pg-vdiv no-mobile"></div>
       <span id="fund-user-display" class="no-mobile" style="font-size:.75rem;font-weight:600;color:var(--text)"></span>
       <button class="pg-btn" id="fund-user-btn" title="계정">👤</button>
@@ -227,7 +227,7 @@
           <p class="header-sub" id="updateTime">로딩 중...</p>
         </div>
         <div class="header-total">
-          <div class="total-label">전체 발주금액 (부가세 별도)</div>
+          <div class="total-label">열 발주금액 (부가세 별도)</div>
           <div class="total-amount" id="header-total-amount">₩0</div>
         </div>
       </div>
@@ -276,9 +276,9 @@
               <th rowspan="2">분류번호</th>
               <th rowspan="2" style="text-align:left;padding-left:12px">발주건</th>
               <th rowspan="2">발주일</th>
-              <th rowspan="2">전체 발주금액</th>
+              <th rowspan="2">열 발주금액</th>
               <th colspan="4" class="group-head">집행예정</th>
-              <th colspan="2" class="group-head">자금출체</th>
+              <th colspan="2" class="group-head">자금출처</th>
               <th rowspan="2">비고</th>
             </tr>
             <tr>
@@ -300,7 +300,7 @@
     <footer class="site-footer">
       <div class="footer-left">
         <span style="color:#166534;font-weight:800;font-size:.85rem;letter-spacing:-.02em;opacity:.6">LIBECO E&amp;C</span>
-        <span class="footer-copy">&copy; 2026 LIBECO E&amp;C &middot; All Rights Reserved</span>
+        <span class="footer-copy">© 2026 LIBECO E&amp;C · All Rights Reserved</span>
       </div>
     </footer>
   </div>
@@ -585,7 +585,7 @@
   }
   function esc(v){ return String(v||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 
-  /* ── 헤더 역장 업데이트 ── */
+  /* ── 헤더 열국 업데이트 ── */
   function updateKpi(){
     const total = items.reduce((s, r) => s + parseMoney(r.total_amount), 0);
     const el = document.getElementById("header-total-amount");
@@ -703,7 +703,7 @@
     const s = String(text||"").trim();
     if(!s.startsWith("=")) return text;
     try{
-      const expr = s.slice(1).replace(/[^0-9+\-*/().\s]/g,"");
+      const expr = s.slice(1).replace(/[^0-9+\-*\/().\s]/g,"");
       if(!expr.trim()) return text;
       const result = Function('"use strict"; return (' + expr + ')')();
       if(typeof result !== "number" || !isFinite(result)) return text;
@@ -1030,6 +1030,6 @@
     renderTable();
     startRealtime();
   })();
-  <\/script>
+  </script>
 </body>
 </html>
