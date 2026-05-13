@@ -65,7 +65,7 @@
     .pt-선금{background:rgba(59,130,246,.12);color:#1d4ed8}
     .pt-계약금{background:rgba(168,85,247,.12);color:#7e22ce}
     .pt-중도금{background:rgba(249,115,22,.12);color:#c2410c}
-    .pt-잔금{background:rgba(34,197,94,.12);color:#15803d}
+    .pt-잠금{background:rgba(34,197,94,.12);color:#15803d}
     .pt-일시불{background:rgba(100,116,139,.12);color:#475569}
 
     /* Popover */
@@ -220,7 +220,7 @@
       <button class="pg-btn" id="saveNowBtn" style="font-weight:700;color:#166534;border-color:rgba(22,101,52,.4)">💾 저장</button>
       <span id="save-status" style="font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:#22c55e;padding:0 4px;transition:opacity .3s;opacity:0"></span>
       <div class="pg-vdiv no-mobile"></div>
-      <button class="pg-btn no-mobile" onclick="window.print()">🖨 인쇄</button>
+      <button class="pg-btn no-mobile" onclick="window.print()">🖸 인쇄</button>
       <div class="pg-vdiv no-mobile"></div>
       <span id="fund-user-display" class="no-mobile" style="font-size:.75rem;font-weight:600;color:var(--text)"></span>
       <button class="pg-btn" id="fund-user-btn">👤</button>
@@ -235,7 +235,7 @@
           <p class="header-sub" id="updateTime">로딩 중...</p>
         </div>
         <div class="header-total">
-          <div class="total-label">열 지급예정금액</div>
+          <div class="total-label">종 지급예정금액</div>
           <div class="total-amount" id="header-total-amount">₩0</div>
         </div>
       </div>
@@ -264,7 +264,7 @@
               <th>분류번호</th>
               <th class="left">발주건</th>
               <th>업체</th>
-              <th>총발주금액</th>
+              <th>전발주금액</th>
               <th>구분</th>
               <th>지급일</th>
               <th>지급금액</th>
@@ -281,7 +281,7 @@
     <footer class="site-footer">
       <div style="display:flex;align-items:center;gap:10px">
         <span style="color:#166534;font-weight:800;font-size:.85rem;opacity:.6">LIBECO E&amp;C</span>
-        <span class="footer-copy">© 2026 LIBECO E&amp;C · All Rights Reserved</span>
+        <span class="footer-copy">&copy; 2026 LIBECO E&amp;C &middot; All Rights Reserved</span>
       </div>
     </footer>
   </div>
@@ -291,8 +291,8 @@
   const SK = "sb_publishable_fbbdwjCZCL9AFD-eUIs0bg_XwdlhxFN";
   const O_TBL = "orders";
   const P_TBL = "payment_schedule";
-  const PT_LIST = ["선금","계약금","중도금","잔금","일시불"];
-  const PT_ORDER = {"선금":0,"계약금":1,"중도금":2,"잔금":3,"일시불":4};
+  const PT_LIST = ["선금","계약금","중도금","잠금","일시불"];
+  const PT_ORDER = {"선금":0,"계약금":1,"중도금":2,"잠금":3,"일시불":4};
 
   function getToken(){ return localStorage.getItem("supa_token") || SK; }
 
@@ -661,7 +661,7 @@
     if(e.key==="Escape"){e.preventDefault();el.textContent=el._orig||"";el.contentEditable="false";el.classList.remove("cell-edit");return;}
   }
 
-  /* ── Seed from purchase ── */
+  /* ── Seed from purchase (one-time, only when orders is empty) ── */
   async function seedFromPurchase(){
     try{
       const h={"apikey":SK,"Authorization":"Bearer "+getToken()};
