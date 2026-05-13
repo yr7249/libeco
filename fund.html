@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>USA POC — 자금집행</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#ffffff;--surface:#ffffff;
+      --border:rgba(15,23,42,.12);--text:#0f172a;--text2:#334155;
+      --accent:#166534;--accent-strong:#14532d;
+      --accent-wash:rgba(22,101,52,.12);--accent-wash2:rgba(22,101,52,.06);
+      --glow:0 10px 26px rgba(15,23,42,.10);
+      --font-heading:'Outfit',sans-serif;--font-mono:'IBM Plex Mono',monospace;
+    }
+    body{font-family:var(--font-heading);color:var(--text);background:var(--bg);min-height:100vh;line-height:1.6;font-weight:600}
+    .container{max-width:1200px;margin:0 auto;padding:0 24px;position:relative;z-index:1}
+
+    /* Header */
+    .header{padding:32px 0 20px;border-bottom:1px solid var(--border);position:relative;overflow:hidden}
+    .header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--accent),transparent)}
+    .header-inner{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:14px}
+    .header h1{font-size:clamp(1.4rem,2.6vw,2.1rem);font-weight:800;letter-spacing:-.02em}
+    .header h1 span{color:var(--accent)}
+    .header-sub{font-size:.92rem;color:var(--text2);margin-top:4px;font-weight:400}
+    .header-total{text-align:right}
+    .total-label{font-size:.72rem;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+    .total-amount{font-family:var(--font-mono);font-size:1.5rem;font-weight:700;color:var(--accent)}
+
+    /* Table controls */
+    .table-controls{display:flex;justify-content:space-between;align-items:center;margin:16px 0 10px;flex-wrap:wrap;gap:8px}
+
+    /* Table */
+    .table-wrap{background:var(--surface);border:1px solid var(--border)}
+    .table-scroll{overflow-x:auto}
+    table{width:100%;border-collapse:collapse;min-width:700px}
+    thead{position:sticky;top:50px;z-index:2}
+    thead th{background:#166534;padding:9px 12px;text-align:center;font-size:.70rem;color:#fff;text-transform:uppercase;letter-spacing:.05em;font-weight:700;white-space:nowrap}
+    thead th.left{text-align:left;padding-left:14px}
+
+    tbody tr{border-bottom:1px solid rgba(15,23,42,.05);transition:background .15s}
+    tbody tr.group-start td{border-top:2px solid rgba(15,23,42,.14)}
+    tbody tr.group-even td{background:rgba(15,23,42,.013)}
+    tbody tr:hover td{background:rgba(22,101,52,.045)!important}
+
+    tbody td{padding:0;font-size:.82rem;color:var(--text);vertical-align:middle;border-right:1px solid rgba(15,23,42,.04)}
+    tbody td:last-child{border-right:none}
+
+    .cell-inner{display:block;padding:7px 10px;min-height:34px;outline:none;cursor:default;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .cell-inner:hover{background:rgba(15,23,42,.03)}
+    .cell-inner.cell-sel{background:rgba(37,99,235,.07)!important;box-shadow:inset 0 0 0 2px #2563eb!important}
+    .cell-inner.cell-edit{cursor:text!important;background:#fff!important;box-shadow:inset 0 0 0 2px rgba(22,101,52,.55)!important;white-space:pre-wrap!important;overflow:visible!important;border-radius:6px!important}
+
+    td.mono .cell-inner{font-family:var(--font-mono);font-size:.78rem}
+    td.amount .cell-inner{font-family:var(--font-mono);color:var(--accent);text-align:right}
+    td.center .cell-inner{text-align:center}
+
+    /* Payment type */
+    td.pay-type .cell-inner{cursor:pointer;text-align:center}
+    .pt-badge{display:inline-block;padding:2px 9px;border-radius:12px;font-size:.72rem;font-weight:700}
+    .pt-선금{background:rgba(59,130,246,.12);color:#1d4ed8}
+    .pt-계약금{background:rgba(168,85,247,.12);color:#7e22ce}
+    .pt-중도금{background:rgba(249,115,22,.12);color:#c2410c}
+    .pt-잠금{background:rgba(34,197,94,.12);color:#15803d}
+    .pt-일시불{background:rgba(100,116,139,.12);color:#475569}
+
+    /* Popover */
+    #pt-popover{position:fixed;z-index:9999;background:#fff;border:1px solid var(--border);border-radius:12px;padding:8px;box-shadow:0 8px 24px rgba(0,0,0,.15);display:none;min-width:120px}
+    #pt-popover.open{display:block;animation:popIn .12s ease}
+    @keyframes popIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+    .pt-pop-title{font-family:var(--font-mono);font-size:.62rem;color:var(--text2);font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:2px 6px 7px}
+    .pt-pop-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;cursor:pointer;font-size:.83rem;font-weight:600;transition:background .1s;user-select:none}
+    .pt-pop-item:hover{background:var(--accent-wash2)}
+    .pt-pop-item input[type=checkbox]{accent-color:var(--accent);width:14px;height:14px;cursor:pointer;flex-shrink:0}
+
+    /* Topbar */
+    .pg-topbar{display:flex;align-items:center;justify-content:space-between;padding:0 14px;height:50px;background:#fff;border-bottom:1px solid rgba(15,23,42,.12);box-shadow:0 1px 4px rgba(0,0,0,.08);position:sticky;top:0;z-index:100;gap:8px}
+    .pg-topbar-l,.pg-topbar-r{display:flex;align-items:center;gap:5px;flex-shrink:0}
+    .pg-topbar-l{flex:1;min-width:0;overflow:hidden}
+    .pg-ci-logo{color:#166534;font-weight:800;font-size:.95rem;letter-spacing:-.02em;font-family:inherit;text-decoration:none;flex-shrink:0}
+    .pg-vdiv{width:1px;height:22px;background:rgba(15,23,42,.12);margin:0 3px;flex-shrink:0}
+    .pg-title{font-size:.88rem;font-weight:800;color:#0f172a;white-space:nowrap}
+    .pg-title span{color:var(--accent)}
+    .pg-badge{font-family:var(--font-mono);font-size:.66rem;background:var(--accent-wash);color:var(--accent);padding:2px 7px;border-radius:5px;font-weight:600;flex-shrink:0}
+    .pg-btn{padding:5px 11px;border-radius:7px;border:1px solid rgba(15,23,42,.12);background:#fff;cursor:pointer;font-size:.75rem;font-weight:600;font-family:var(--font-heading);display:inline-flex;align-items:center;gap:4px;transition:background .12s,border-color .12s;white-space:nowrap;flex-shrink:0}
+    .pg-btn:hover:not(:disabled){background:var(--accent-wash2);border-color:rgba(22,101,52,.35)}
+    .pg-btn:disabled{opacity:.35;cursor:not-allowed}
+    .pg-btn-nav{background:rgba(15,23,42,.04)}
+    .pg-btn.active{background:var(--accent);color:#fff;border-color:var(--accent-strong)}
+    .pg-btn.active:hover{background:var(--accent-strong)!important}
+    .btn-add{background:var(--accent);color:#fff;border-color:var(--accent-strong);padding:7px 14px;border-radius:9px;font-size:.82rem}
+    .btn-add:hover{background:var(--accent-strong)!important;border-color:var(--accent-strong)!important}
+
+    /* Nav panel */
+    .nav-panel{position:fixed;z-index:9998;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:10px;box-shadow:0 8px 32px rgba(15,23,42,.14);min-width:240px;display:none}
+    .nav-panel.open{display:block;animation:navFadeIn .15s ease}
+    @keyframes navFadeIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+    .nav-panel-title{font-family:var(--font-mono);font-size:.65rem;color:var(--text2);font-weight:700;letter-spacing:.1em;padding:4px 10px 8px;text-transform:uppercase}
+    .nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;cursor:pointer;text-decoration:none;color:var(--text);transition:background .12s}
+    .nav-item:hover{background:var(--accent-wash2)}
+    .nav-item.active{background:var(--accent-wash);color:var(--accent-strong)}
+    .nav-item.disabled{opacity:.45;cursor:default;pointer-events:none}
+    .nav-icon{font-size:.9rem;width:22px;text-align:center;flex-shrink:0}
+    .nav-label{font-size:.83rem;font-weight:700}
+    .nav-sub{font-size:.67rem;color:var(--text2);font-weight:500;margin-top:1px;font-family:var(--font-mono)}
+    .nav-soon-tag{font-family:var(--font-mono);font-size:.6rem;color:#94a3b8;background:rgba(148,163,184,.12);border:1px solid rgba(148,163,184,.2);padding:1px 6px;border-radius:4px;margin-left:auto}
+    .nav-sep{height:1px;background:var(--border);margin:6px 2px}
+
+    /* User panel */
+    .user-panel{position:fixed;top:54px;right:12px;z-index:9999;width:200px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 32px rgba(15,23,42,.14);padding:8px 0;display:none;flex-direction:column}
+    .user-panel.open{display:flex}
+    .user-panel-info{padding:8px 14px 6px}
+    .user-panel-name{font-size:.82rem;font-weight:700}
+    .user-panel-sub{font-size:.68rem;color:var(--text2);margin-top:2px}
+    .user-panel-sep{height:1px;background:var(--border);margin:6px 0}
+    .user-panel-item{display:flex;align-items:center;width:100%;padding:7px 14px;background:none;border:none;cursor:pointer;font-size:.78rem;font-weight:600;font-family:var(--font-heading);color:var(--text);text-align:left;transition:background .12s}
+    .user-panel-item:hover{background:var(--accent-wash2)}
+    .user-panel-logout{color:#dc2626}
+    .user-panel-logout:hover{background:#fee2e2!important}
+
+    /* Context menu */
+    #fund-ctx-menu{position:fixed;z-index:9999;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:4px 0;box-shadow:0 8px 24px rgba(0,0,0,.15);display:none;min-width:160px}
+    #fund-ctx-menu button{display:block;width:100%;padding:8px 14px;background:none;border:none;cursor:pointer;font-size:.82rem;font-weight:600;text-align:left;font-family:var(--font-heading);color:var(--text);transition:background .1s}
+    #fund-ctx-menu button:hover{background:var(--accent-wash2)}
+    #fund-ctx-menu .danger{color:#dc2626}
+    #fund-ctx-menu .danger:hover{background:#fee2e2!important}
+    #fund-ctx-menu hr{border:none;border-top:1px solid var(--border);margin:4px 0}
+
+    /* Footer */
+    .site-footer{padding:32px 0 24px;display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border);margin-top:24px;flex-wrap:wrap;gap:8px}
+    .footer-copy{font-size:.75rem;color:var(--text2)}
+
+    @media print{.pg-topbar,.pg-btn,.table-controls{display:none!important}}
+    @media(max-width:640px){.no-mobile{display:none!important}.pg-topbar{padding:0 8px}.pg-btn{padding:5px 8px;font-size:.7rem}}
+  </style>
+</head>
+<body>
+
+<script>(async function(){
+    const SU="https://ikfjpzdzrgsmhaobqnai.supabase.co",SK="sb_publishable_fbbdwjCZCL9AFD-eUIs0bg_XwdlhxFN";
+    const token=localStorage.getItem("supa_token")||"";
+    if(!token){location.href="login.html";return;}
+    const _ta=sessionStorage.getItem("libeco_tab_active");
+    if(_ta&&Date.now()>Number(_ta)){localStorage.removeItem("supa_token");location.href="login.html";return;}
+    if(!_ta)sessionStorage.setItem("libeco_tab_active",String(Date.now()+7200000));
+    let authOk=false,isAdmin=false;
+    try{
+      const ur=await fetch(SU+"/auth/v1/user",{headers:{"apikey":SK,"Authorization":"Bearer "+token}});
+      if(ur.ok){
+        authOk=true;
+        const u=await ur.json();
+        const pr=await fetch(SU+"/rest/v1/profiles?id=eq."+u.id+"&select=role",{headers:{"apikey":SK,"Authorization":"Bearer "+token}});
+        const profiles=await pr.json();
+        if((profiles&&profiles[0]&&profiles[0].role==="admin")||u.email==="yr@libeco.kr")isAdmin=true;
+      }
+    }catch(e){}
+    window._isAdmin=isAdmin;
+    if(authOk&&!isAdmin){location.href="index.html";return;}
+  })();</script>
+
+  <!-- User panel -->
+  <div class="user-panel" id="fundUserPanel">
+    <div class="user-panel-info">
+      <div class="user-panel-name" id="fund-upanel-name">--</div>
+      <div class="user-panel-sub" id="fund-upanel-sub"></div>
+    </div>
+    <div class="user-panel-sep"></div>
+    <button class="user-panel-item user-panel-logout" onclick="(function(){localStorage.removeItem('supa_token');localStorage.removeItem('supa_refresh');sessionStorage.removeItem('libeco_tab_active');location.href='login.html';})()">로그아웃</button>
+  </div>
+
+  <!-- Nav panel -->
+  <div class="nav-panel" id="fundNavPanel">
+    <div class="nav-panel-title">페이지 이동</div>
+    <a class="nav-item" href="index.html"><span class="nav-icon">🏠</span><div><div class="nav-label">홈</div><div class="nav-sub">메인 화면</div></div></a>
+    <div class="nav-sep"></div>
+    <a class="nav-item" href="diagram.html"><span class="nav-icon">📐</span><div><div class="nav-label">구성도</div><div class="nav-sub">P&amp;ID Schematic</div></div></a>
+    <a class="nav-item" href="equipment.html"><span class="nav-icon">🔬</span><div><div class="nav-label">시험장비</div><div class="nav-sub">계측/제어 장비 목록</div></div></a>
+    <a class="nav-item" href="purchase.html"><span class="nav-icon">📋</span><div><div class="nav-label">구매리스트</div><div class="nav-sub">구매 필요내역</div></div></a>
+    <div class="nav-item active"><span class="nav-icon">💰</span><div><div class="nav-label">자금집행</div><div class="nav-sub">발주 · 자금 계획</div></div></div>
+    <div class="nav-sep"></div>
+    <a class="nav-item" href="incoming.html"><span class="nav-icon">📦</span><div><div class="nav-label">입고관리</div><div class="nav-sub">장비 일정관리</div></div></a>
+    <div class="nav-item disabled"><span class="nav-icon">📖</span><div><div class="nav-label">시험절차서</div><div class="nav-sub">준비중</div></div><span class="nav-soon-tag">SOON</span></div>
+    <a class="nav-item" href="share.html"><span class="nav-icon">💬</span><div><div class="nav-label">기타 공유사항</div><div class="nav-sub">팀 공지 · 공유 자료</div></div></a>
+  </div>
+
+  <!-- Context menu -->
+  <div id="fund-ctx-menu">
+    <button id="ctx-add-order">+ 발주건 추가</button>
+    <button id="ctx-pay-type">구분 선택...</button>
+    <hr>
+    <button id="ctx-delete-payment" class="danger">이 지급 행 삭제</button>
+    <button id="ctx-delete-order" class="danger">발주건 전체 삭제</button>
+  </div>
+
+  <!-- Payment type popover -->
+  <div id="pt-popover">
+    <div class="pt-pop-title">지급 구분</div>
+  </div>
+
+  <!-- Topbar -->
+  <div class="pg-topbar">
+    <div class="pg-topbar-l">
+      <a href="index.html" class="pg-ci-logo">LIBECO E&amp;C</a>
+      <div class="pg-vdiv"></div>
+      <button class="pg-btn pg-btn-nav" id="fund-nav-btn">이동 ▾</button>
+      <div class="pg-vdiv no-mobile"></div>
+      <span class="pg-title no-mobile">USA POC <span>자금집행</span></span>
+      <span class="pg-badge no-mobile">FUND</span>
+    </div>
+    <div class="pg-topbar-r">
+      <span id="fund-session-display" style="font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:var(--text2);padding:0 4px">⏱ --</span>
+      <button class="pg-btn" id="fund-extend-btn">연장하기</button>
+      <div class="pg-vdiv"></div>
+      <button class="pg-btn" id="undoBtn" title="Ctrl+Z" disabled>↩ 취소</button>
+      <button class="pg-btn" id="redoBtn" title="Ctrl+Y" disabled>↪ 다시</button>
+      <button class="pg-btn" id="saveNowBtn" style="font-weight:700;color:#166534;border-color:rgba(22,101,52,.4)">💾 저장</button>
+      <span id="save-status" style="font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:#22c55e;padding:0 4px;transition:opacity .3s;opacity:0"></span>
+      <div class="pg-vdiv no-mobile"></div>
+      <button class="pg-btn no-mobile" onclick="window.print()">🖸 인쇄</button>
+      <div class="pg-vdiv no-mobile"></div>
+      <span id="fund-user-display" class="no-mobile" style="font-size:.75rem;font-weight:600;color:var(--text)"></span>
+      <button class="pg-btn" id="fund-user-btn">👤</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <header class="header">
+      <div class="header-inner">
+        <div>
+          <h1>USA POC <span>자금집행</span></h1>
+          <p class="header-sub" id="updateTime">로딩 중...</p>
+        </div>
+        <div class="header-total">
+          <div class="total-label">종 지급예정금액</div>
+          <div class="total-amount" id="header-total-amount">₩0</div>
+        </div>
+      </div>
+    </header>
+
+    <div class="table-controls">
+      <button class="pg-btn btn-add" id="addOrderBtn">+ 발주건 추가</button>
+      <button class="pg-btn" id="sortDateBtn">📅 지급일 순 보기</button>
+    </div>
+
+    <div class="table-wrap">
+      <div class="table-scroll">
+        <table id="fundTable">
+          <colgroup>
+            <col style="width:7%">
+            <col style="width:20%">
+            <col style="width:12%">
+            <col style="width:11%">
+            <col style="width:8%">
+            <col style="width:10%">
+            <col style="width:11%">
+            <col style="width:21%">
+          </colgroup>
+          <thead>
+            <tr>
+              <th>분류번호</th>
+              <th class="left">발주건</th>
+              <th>업체</th>
+              <th>전발주금액</th>
+              <th>구분</th>
+              <th>지급일</th>
+              <th>지급금액</th>
+              <th class="left">비고</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <tr><td colspan="8" style="text-align:center;padding:48px;color:#94a3b8;font-size:.9rem">⏳ 데이터 불러오는 중...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <footer class="site-footer">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="color:#166534;font-weight:800;font-size:.85rem;opacity:.6">LIBECO E&amp;C</span>
+        <span class="footer-copy">&copy; 2026 LIBECO E&amp;C &middot; All Rights Reserved</span>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+  const SU = "https://ikfjpzdzrgsmhaobqnai.supabase.co";
+  const SK = "sb_publishable_fbbdwjCZCL9AFD-eUIs0bg_XwdlhxFN";
+  const O_TBL = "orders";
+  const P_TBL = "payment_schedule";
+  const PT_LIST = ["선금","계약금","중도금","잠금","일시불"];
+  const PT_ORDER = {"선금":0,"계약금":1,"중도금":2,"잠금":3,"일시불":4};
+
+  function getToken(){ return localStorage.getItem("supa_token") || SK; }
+
+  /* ── Nav / User ── */
+  (function(){
+    const navBtn=document.getElementById("fund-nav-btn"),navPanel=document.getElementById("fundNavPanel");
+    const userBtn=document.getElementById("fund-user-btn"),userPanel=document.getElementById("fundUserPanel");
+    navBtn.addEventListener("click",e=>{e.stopPropagation();navPanel.classList.toggle("open");userPanel.classList.remove("open");const r=navBtn.getBoundingClientRect();navPanel.style.top=(r.bottom+6)+"px";navPanel.style.left=r.left+"px";});
+    userBtn.addEventListener("click",e=>{e.stopPropagation();userPanel.classList.toggle("open");navPanel.classList.remove("open");});
+    document.addEventListener("click",()=>{navPanel.classList.remove("open");userPanel.classList.remove("open");});
+    navPanel.addEventListener("click",e=>e.stopPropagation());
+    userPanel.addEventListener("click",e=>e.stopPropagation());
+  })();
+
+  /* ── Session timer ── */
+  (function(){
+    const MS=7200000;
+    async function refresh(){
+      const r=localStorage.getItem("supa_refresh");if(!r)return;
+      try{const res=await fetch(SU+"/auth/v1/token?grant_type=refresh_token",{method:"POST",headers:{"apikey":SK,"Content-Type":"application/json"},body:JSON.stringify({refresh_token:r})});
+        if(!res.ok)return;const d=await res.json();
+        if(d.access_token){localStorage.setItem("supa_token",d.access_token);if(d.refresh_token)localStorage.setItem("supa_refresh",d.refresh_token);}
+      }catch(e){}
+    }
+    const extBtn=document.getElementById("fund-extend-btn");
+    extBtn.addEventListener("click",async()=>{extBtn.disabled=true;extBtn.textContent="연장 중...";await refresh();sessionStorage.setItem("libeco_tab_active",String(Date.now()+MS));tick();extBtn.disabled=false;extBtn.textContent="연장하기";});
+    function tick(){
+      const exp=Number(sessionStorage.getItem("libeco_tab_active")||0);
+      if(!exp||Date.now()>exp){localStorage.removeItem("supa_token");localStorage.removeItem("supa_refresh");sessionStorage.removeItem("libeco_tab_active");location.href="login.html";return;}
+      const rem=exp-Date.now();
+      const disp=document.getElementById("fund-session-display");
+      if(disp){const h=Math.floor(rem/3600000),m=Math.floor((rem%3600000)/60000);disp.textContent="⏱ "+(h>0?h+"h ":"")+m+"분";disp.style.color=rem<=600000?"#dc2626":"";}
+    }
+    tick();setInterval(tick,30000);
+  })();
+
+  /* ── User info ── */
+  (async()=>{
+    try{
+      const h={"apikey":SK,"Authorization":"Bearer "+getToken()};
+      const ur=await fetch(SU+"/auth/v1/user",{headers:h});if(!ur.ok)return;
+      const u=await ur.json();
+      const pr=await fetch(SU+"/rest/v1/profiles?id=eq."+u.id+"&select=name,department,position",{headers:h});
+      const prof=(await pr.json())?.[0]||{};
+      const nm=prof.name||(u.email||"").split("@")[0];
+      const sb=[prof.department,prof.position].filter(Boolean).join(" · ");
+      const ud=document.getElementById("fund-user-display");if(ud)ud.textContent=nm;
+      document.getElementById("fund-upanel-name").textContent=nm;
+      document.getElementById("fund-upanel-sub").textContent=sb;
+    }catch(e){}
+  })();
+
+  /* ── Data ── */
+  let orders=[], payments=[], sortByDate=false;
+
+  /* ── Load ── */
+  async function supaLoad(){
+    try{
+      const h={"apikey":SK,"Authorization":"Bearer "+getToken()};
+      const [or,pr]=await Promise.all([
+        fetch(SU+"/rest/v1/"+O_TBL+"?select=*&order=sort_order.asc,created_at.asc",{headers:h}),
+        fetch(SU+"/rest/v1/"+P_TBL+"?select=*&order=sort_order.asc,created_at.asc",{headers:h})
+      ]);
+      if(!or.ok||!pr.ok)return false;
+      const oR=await or.json(),pR=await pr.json();
+      orders=oR.map(r=>({_id:r.id,code:r.code??"",order_name:r.order_name??"",vendor:r.vendor??"",total_amount:r.total_amount??0,sort_order:r.sort_order??0}));
+      payments=pR.map(r=>({_id:r.id,order_id:r.order_id,payment_type:r.payment_type??"일시불",scheduled_date:r.scheduled_date??"",amount:r.amount??0,note:r.note??"",sort_order:r.sort_order??0}));
+      return true;
+    }catch(e){console.warn("[fund] load:",e);return false;}
+  }
+
+  /* ── Save ── */
+  let _saving=false,_saveTimer=null;
+  function saveDebounce(){clearTimeout(_saveTimer);_saving=true;_saveTimer=setTimeout(flushSave,700);}
+
+  async function flushSave(){
+    clearTimeout(_saveTimer);_saveTimer=null;
+    try{
+      const h={"apikey":SK,"Authorization":"Bearer "+getToken(),"Content-Type":"application/json","Prefer":"resolution=merge-duplicates,return=representation"};
+      if(orders.length){
+        const res=await fetch(SU+"/rest/v1/"+O_TBL,{method:"POST",headers:h,
+          body:JSON.stringify(orders.map((o,i)=>({id:o._id,code:o.code,order_name:o.order_name,vendor:o.vendor,total_amount:parseMoney(o.total_amount)||0,sort_order:i})))});
+        if(!res.ok)console.error("[fund] orders save:",res.status,await res.text());
+      }
+      if(payments.length){
+        const res=await fetch(SU+"/rest/v1/"+P_TBL,{method:"POST",headers:h,
+          body:JSON.stringify(payments.map((p,i)=>({id:p._id,order_id:p.order_id,payment_type:p.payment_type,scheduled_date:p.scheduled_date||null,amount:parseMoney(p.amount)||0,note:p.note,sort_order:i})))});
+        if(!res.ok)console.error("[fund] payments save:",res.status,await res.text());
+      }
+    }catch(e){console.warn("[fund] save:",e);}
+    _saving=false;showSaveStatus("저장됨");
+  }
+
+  function showSaveStatus(msg){
+    const el=document.getElementById("save-status");if(!el)return;
+    el.textContent=msg;el.style.opacity="1";
+    clearTimeout(el._t);el._t=setTimeout(()=>{el.style.opacity="0";},2000);
+  }
+
+  document.getElementById("saveNowBtn").addEventListener("click",async()=>{clearTimeout(_saveTimer);await flushSave();});
+  document.addEventListener("keydown",e=>{
+    if((e.ctrlKey||e.metaKey)&&e.key==="s"){e.preventDefault();document.getElementById("saveNowBtn").click();}
+    if((e.ctrlKey||e.metaKey)&&e.key==="z"&&!e.shiftKey){e.preventDefault();document.getElementById("undoBtn").click();}
+    if((e.ctrlKey||e.metaKey)&&(e.key==="y"||(e.key==="z"&&e.shiftKey))){e.preventDefault();document.getElementById("redoBtn").click();}
+  });
+
+  /* ── Undo/Redo ── */
+  let undoStack=[],redoStack=[];
+  function snapshot(){undoStack.push(JSON.stringify({orders,payments}));if(undoStack.length>50)undoStack.shift();redoStack=[];updateUndoRedo();}
+  function updateUndoRedo(){document.getElementById("undoBtn").disabled=!undoStack.length;document.getElementById("redoBtn").disabled=!redoStack.length;}
+  document.getElementById("undoBtn").addEventListener("click",()=>{
+    if(!undoStack.length)return;
+    redoStack.push(JSON.stringify({orders,payments}));
+    const s=JSON.parse(undoStack.pop());orders=s.orders;payments=s.payments;
+    renderTable();updateUndoRedo();saveDebounce();
+  });
+  document.getElementById("redoBtn").addEventListener("click",()=>{
+    if(!redoStack.length)return;
+    undoStack.push(JSON.stringify({orders,payments}));
+    const s=JSON.parse(redoStack.pop());orders=s.orders;payments=s.payments;
+    renderTable();updateUndoRedo();saveDebounce();
+  });
+
+  /* ── Format ── */
+  function fmtMoney(v){const n=parseMoney(v);return n>0?n.toLocaleString("ko-KR"):"";}  
+  function parseMoney(v){if(typeof v==="number")return v;return parseInt(String(v||"").replace(/[^0-9]/g,""))||0;}
+  function esc(v){return String(v||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+
+  function updateKpi(){
+    document.getElementById("header-total-amount").textContent="₩"+payments.reduce((s,p)=>s+parseMoney(p.amount),0).toLocaleString("ko-KR");
+    document.getElementById("updateTime").textContent=new Date().toLocaleString("ko-KR")+" update";
+  }
+
+  /* ── Sort ── */
+  document.getElementById("sortDateBtn").addEventListener("click",()=>{
+    sortByDate=!sortByDate;
+    document.getElementById("sortDateBtn").classList.toggle("active",sortByDate);
+    renderTable();
+  });
+
+  /* ── Display rows ── */
+  function getDisplayRows(){
+    if(sortByDate){
+      return payments
+        .map(p=>({order:orders.find(o=>o._id===p.order_id)||{},payment:p,groupIdx:-1,isGroupStart:false}))
+        .sort((a,b)=>(a.payment.scheduled_date||"9999").localeCompare(b.payment.scheduled_date||"9999"));
+    }
+    const rows=[];
+    [...orders].sort((a,b)=>a.sort_order-b.sort_order).forEach((o,gi)=>{
+      const ops=payments.filter(p=>p.order_id===o._id)
+        .sort((a,b)=>(PT_ORDER[a.payment_type]??99)-(PT_ORDER[b.payment_type]??99)||a.sort_order-b.sort_order);
+      if(!ops.length){
+        rows.push({order:o,payment:null,groupIdx:gi,isGroupStart:true});
+      } else {
+        ops.forEach((p,pi)=>rows.push({order:o,payment:p,groupIdx:gi,isGroupStart:pi===0}));
+      }
+    });
+    return rows;
+  }
+
+  function ptBadge(type){return `<span class="pt-badge pt-${esc(type)}">${esc(type)}</span>`;}
+
+  /* ── Render ── */
+  function renderTable(){
+    const tbody=document.getElementById("tableBody");
+    const rows=getDisplayRows();
+    if(!rows.length){
+      tbody.innerHTML=`<tr><td colspan="8" style="text-align:center;padding:48px;color:#94a3b8;font-size:.9rem">+ 발주건 추가 버튼이나 우클릭으로 시작하세요.</td></tr>`;
+      updateKpi();return;
+    }
+    tbody.innerHTML=rows.map(({order:o,payment:p,groupIdx:gi,isGroupStart})=>{
+      const cls=[(gi%2===1&&gi>=0?"group-even":""),((!sortByDate&&isGroupStart)?"group-start":"")].filter(Boolean).join(" ");
+      const oid=o?._id||"",pid=p?._id||"";
+      return `<tr class="${cls}" data-oid="${oid}" data-pid="${pid}">
+        <td class="mono center"><div class="cell-inner" tabindex="0" data-field="code" data-oid="${oid}">${esc(o?.code)}</div></td>
+        <td><div class="cell-inner" tabindex="0" data-field="order_name" data-oid="${oid}">${esc(o?.order_name)}</div></td>
+        <td class="center"><div class="cell-inner" tabindex="0" data-field="vendor" data-oid="${oid}">${esc(o?.vendor)}</div></td>
+        <td class="amount"><div class="cell-inner" tabindex="0" data-field="total_amount" data-oid="${oid}">${fmtMoney(o?.total_amount)}</div></td>
+        <td class="pay-type"><div class="cell-inner" tabindex="0" data-field="payment_type" data-oid="${oid}" data-pid="${pid}">${p?ptBadge(p.payment_type):`<span style="color:#94a3b8;font-size:.75rem">클릭</span>`}</div></td>
+        <td class="mono center"><div class="cell-inner" tabindex="0" data-field="scheduled_date" data-pid="${pid}">${esc(p?.scheduled_date)}</div></td>
+        <td class="amount"><div class="cell-inner" tabindex="0" data-field="amount" data-pid="${pid}">${fmtMoney(p?.amount)}</div></td>
+        <td><div class="cell-inner" tabindex="0" data-field="note" data-pid="${pid}">${esc(p?.note)}</div></td>
+      </tr>`;
+    }).join("");
+    updateKpi();
+    bindEvents();
+  }
+
+  /* ── Payment type popover ── */
+  const popover=document.getElementById("pt-popover");
+  let popOid=null;
+
+  function showPopover(oid,anchorEl){
+    popOid=oid;
+    const checked=new Set(payments.filter(p=>p.order_id===oid).map(p=>p.payment_type));
+    popover.innerHTML=`<div class="pt-pop-title">지급 구분</div>`+
+      PT_LIST.map(t=>`<label class="pt-pop-item"><input type="checkbox" value="${t}"${checked.has(t)?" checked":""}>${t}</label>`).join("");
+    const rect=anchorEl.getBoundingClientRect();
+    popover.style.top=(rect.bottom+4)+"px";
+    popover.style.left=Math.min(rect.left,window.innerWidth-150)+"px";
+    popover.classList.add("open");
+    popover.querySelectorAll("input").forEach(cb=>{
+      cb.addEventListener("change",async()=>{
+        if(cb.checked){
+          await addPaymentDB(oid,cb.value);
+        } else {
+          const ex=payments.find(p=>p.order_id===oid&&p.payment_type===cb.value);
+          if(ex){
+            const hasData=parseMoney(ex.amount)>0||ex.scheduled_date;
+            if(hasData&&!confirm(`'${cb.value}' 행 삭제 시 입력 데이터가 사라집니다. 삭제할까요?`)){cb.checked=true;return;}
+            await removePaymentDB(ex._id);
+          }
+        }
+        showPopover(oid,anchorEl);
+      });
+    });
+  }
+
+  document.addEventListener("click",e=>{
+    if(!popover.contains(e.target)&&!e.target.closest("[data-field='payment_type']")){
+      popover.classList.remove("open");popOid=null;
+    }
+  });
+  popover.addEventListener("click",e=>e.stopPropagation());
+
+  /* ── DB ops ── */
+  async function addPaymentDB(oid,type){
+    try{
+      const res=await fetch(SU+"/rest/v1/"+P_TBL,{
+        method:"POST",
+        headers:{"apikey":SK,"Authorization":"Bearer "+getToken(),"Content-Type":"application/json","Prefer":"return=representation"},
+        body:JSON.stringify({order_id:oid,payment_type:type,amount:0,note:"",sort_order:payments.length})
+      });
+      if(res.ok){const[r]=await res.json();payments.push({_id:r.id,order_id:oid,payment_type:type,scheduled_date:"",amount:0,note:"",sort_order:payments.length});renderTable();}
+      else console.error("[fund] add payment:",await res.text());
+    }catch(e){console.warn(e);}
+  }
+
+  async function removePaymentDB(pid){
+    try{
+      await fetch(SU+"/rest/v1/"+P_TBL+"?id=eq."+pid,{method:"DELETE",headers:{"apikey":SK,"Authorization":"Bearer "+getToken()}});
+      payments=payments.filter(p=>p._id!==pid);renderTable();
+    }catch(e){console.warn(e);}
+  }
+
+  async function addOrder(){
+    try{
+      const res=await fetch(SU+"/rest/v1/"+O_TBL,{
+        method:"POST",
+        headers:{"apikey":SK,"Authorization":"Bearer "+getToken(),"Content-Type":"application/json","Prefer":"return=representation"},
+        body:JSON.stringify({code:"",order_name:"",vendor:"",total_amount:0,sort_order:orders.length})
+      });
+      if(res.ok){
+        const[r]=await res.json();
+        orders.push({_id:r.id,code:"",order_name:"",vendor:"",total_amount:0,sort_order:orders.length});
+        await addPaymentDB(r.id,"일시불");
+        setTimeout(()=>{const el=document.querySelector(`[data-field="order_name"][data-oid="${r.id}"]`);if(el){el.focus();enterCellEdit(el);}},60);
+      }
+    }catch(e){console.warn(e);}
+  }
+
+  async function deleteOrder(oid){
+    if(!confirm("이 발주건과 모든 지급 행을 삭제할까요?"))return;
+    snapshot();
+    try{
+      await fetch(SU+"/rest/v1/"+O_TBL+"?id=eq."+oid,{method:"DELETE",headers:{"apikey":SK,"Authorization":"Bearer "+getToken()}});
+      orders=orders.filter(o=>o._id!==oid);payments=payments.filter(p=>p.order_id!==oid);renderTable();
+    }catch(e){console.warn(e);}
+  }
+
+  async function deletePayment(pid){
+    const p=payments.find(x=>x._id===pid);if(!p)return;
+    if(!confirm("이 지급 행을 삭제할까요?"))return;
+    snapshot();
+    await removePaymentDB(pid);
+  }
+
+  document.getElementById("addOrderBtn").addEventListener("click",addOrder);
+
+  /* ── Context menu ── */
+  let ctxOid=null,ctxPid=null;
+  const ctxMenu=document.getElementById("fund-ctx-menu");
+  document.addEventListener("click",()=>{ctxMenu.style.display="none";});
+  document.getElementById("ctx-add-order").addEventListener("click",addOrder);
+  document.getElementById("ctx-pay-type").addEventListener("click",()=>{
+    if(!ctxOid)return;
+    const el=document.querySelector(`[data-field="payment_type"][data-oid="${ctxOid}"]`);
+    if(el)showPopover(ctxOid,el);
+  });
+  document.getElementById("ctx-delete-payment").addEventListener("click",()=>{if(ctxPid)deletePayment(ctxPid);});
+  document.getElementById("ctx-delete-order").addEventListener("click",()=>{if(ctxOid)deleteOrder(ctxOid);});
+
+  /* ── Cell editing ── */
+  function bindEvents(){
+    document.querySelectorAll("#tableBody .cell-inner[data-field]").forEach(el=>{
+      const field=el.dataset.field;
+      if(field==="payment_type"){
+        el.addEventListener("click",e=>{e.stopPropagation();if(el.dataset.oid)showPopover(el.dataset.oid,el);});
+        return;
+      }
+      el.addEventListener("focus",()=>{if(el.contentEditable!=="true")el.classList.add("cell-sel");});
+      el.addEventListener("dblclick",e=>{e.preventDefault();enterCellEdit(el);});
+      el.addEventListener("blur",()=>{
+        el.classList.remove("cell-sel");
+        if(el.contentEditable==="true"){el.contentEditable="false";el.classList.remove("cell-edit");onCellCommit(el);}
+      });
+      el.addEventListener("keydown",onCellKeydown);
+    });
+    document.querySelectorAll("#tableBody tr[data-oid]").forEach(tr=>{
+      tr.addEventListener("contextmenu",e=>{
+        e.preventDefault();
+        ctxOid=tr.dataset.oid||null;ctxPid=tr.dataset.pid||null;
+        document.getElementById("ctx-delete-payment").style.display=ctxPid?"block":"none";
+        document.getElementById("ctx-pay-type").style.display=ctxOid?"block":"none";
+        ctxMenu.style.display="block";
+        ctxMenu.style.left=Math.min(e.clientX,window.innerWidth-170)+"px";
+        ctxMenu.style.top=Math.min(e.clientY,window.innerHeight-160)+"px";
+      });
+    });
+  }
+
+  function enterCellEdit(el){
+    el._orig=el.textContent;
+    el.contentEditable="true";el.classList.remove("cell-sel");el.classList.add("cell-edit");
+    if(el.dataset.field==="amount"||el.dataset.field==="total_amount"){
+      const v=parseMoney(el.textContent);el.textContent=v>0?String(v):"";
+    }
+    const r=document.createRange();r.selectNodeContents(el);
+    const s=getSelection();s.removeAllRanges();s.addRange(r);
+  }
+
+  function onCellCommit(el){
+    const field=el.dataset.field,oid=el.dataset.oid,pid=el.dataset.pid;
+    const val=el.textContent.trim();
+    if(["code","order_name","vendor","total_amount"].includes(field)&&oid){
+      const o=orders.find(x=>x._id===oid);if(!o)return;
+      if(field==="total_amount"){
+        const nv=parseMoney(val);if(nv===parseMoney(o.total_amount)){el.textContent=fmtMoney(nv);return;}
+        snapshot();o.total_amount=nv;el.textContent=fmtMoney(nv);
+      } else {
+        if(val===o[field])return;snapshot();o[field]=val;
+      }
+      updateKpi();saveDebounce();return;
+    }
+    if(["scheduled_date","amount","note"].includes(field)&&pid){
+      const p=payments.find(x=>x._id===pid);if(!p)return;
+      if(field==="amount"){
+        const nv=parseMoney(val);if(nv===parseMoney(p.amount)){el.textContent=fmtMoney(nv);return;}
+        snapshot();p.amount=nv;el.textContent=fmtMoney(nv);
+      } else {
+        if(val===p[field])return;snapshot();p[field]=val;
+      }
+      updateKpi();saveDebounce();
+    }
+  }
+
+  function onCellKeydown(e){
+    const el=e.currentTarget,isEdit=el.contentEditable==="true";
+    if(!isEdit){
+      if(e.key==="Enter"||e.key==="F2"){e.preventDefault();enterCellEdit(el);return;}
+      if(e.key==="Escape"){el.blur();return;}
+      if(e.key.length===1&&!e.ctrlKey&&!e.metaKey&&!e.altKey){enterCellEdit(el);el.textContent="";}
+      return;
+    }
+    if(e.key==="Enter"&&!e.altKey){e.preventDefault();el.blur();return;}
+    if(e.key==="Escape"){e.preventDefault();el.textContent=el._orig||"";el.contentEditable="false";el.classList.remove("cell-edit");return;}
+  }
+
+  /* ── Seed from purchase (one-time, only when orders is empty) ── */
+  async function seedFromPurchase(){
+    try{
+      const h={"apikey":SK,"Authorization":"Bearer "+getToken()};
+      const res=await fetch(SU+"/rest/v1/purchase?select=*&total_qty=gte.1&order=sort_order.asc,id.asc",{headers:h});
+      if(!res.ok)return;
+      const rows=await res.json();
+      if(!rows.length)return;
+      for(let i=0;i<rows.length;i++){
+        const r=rows[i];
+        const oRes=await fetch(SU+"/rest/v1/"+O_TBL,{
+          method:"POST",
+          headers:{...h,"Content-Type":"application/json","Prefer":"return=representation"},
+          body:JSON.stringify({code:r.code??"",order_name:r.equipment??"",vendor:r.supplier??"",total_amount:r.subtotal??0,sort_order:i})
+        });
+        if(!oRes.ok)continue;
+        const[o]=await oRes.json();
+        orders.push({_id:o.id,code:r.code??"",order_name:r.equipment??"",vendor:r.supplier??"",total_amount:r.subtotal??0,sort_order:i});
+        const pRes=await fetch(SU+"/rest/v1/"+P_TBL,{
+          method:"POST",
+          headers:{...h,"Content-Type":"application/json","Prefer":"return=representation"},
+          body:JSON.stringify({order_id:o.id,payment_type:"일시불",amount:0,note:"",sort_order:0})
+        });
+        if(pRes.ok){const[p]=await pRes.json();payments.push({_id:p.id,order_id:o.id,payment_type:"일시불",scheduled_date:"",amount:0,note:"",sort_order:0});}
+      }
+      console.log("[fund] seeded",orders.length,"orders from purchase");
+    }catch(e){console.warn("[fund] seed:",e);}
+  }
+
+  /* ── Init ── */
+  (async function(){
+    await supaLoad();
+    if(!orders.length) await seedFromPurchase();
+    renderTable();
+  })();
+  </script>
+</body>
+</html>
