@@ -129,7 +129,20 @@
     .site-footer{padding:32px 0 24px;display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border);margin-top:24px;flex-wrap:wrap;gap:8px}
     .footer-copy{font-size:.75rem;color:var(--text2)}
 
-    @media print{.pg-topbar,.pg-btn,.table-controls{display:none!important}}
+    @media print{
+      @page{size:A4 portrait;margin:10mm 8mm}
+      .pg-topbar,.pg-btn,.table-controls,.site-footer,.header{display:none!important}
+      .container{max-width:100%;padding:0}
+      .table-wrap{border:none}
+      .table-scroll{overflow:visible}
+      table{min-width:0!important;width:100%!important;border-collapse:collapse}
+      thead{position:static}
+      thead th{font-size:7pt!important;padding:4px 5px!important;background:#166534!important;color:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      tbody td{font-size:7.5pt!important}
+      .cell-inner{padding:3px 5px!important;min-height:auto!important;font-size:7.5pt!important}
+      td.mono .cell-inner{font-size:7pt!important}
+      tbody tr{border-bottom:1px solid #e5e7eb!important}
+    }
     @media(max-width:640px){.no-mobile{display:none!important}.pg-topbar{padding:0 8px}.pg-btn{padding:5px 8px;font-size:.7rem}}
   </style>
 </head>
@@ -469,7 +482,7 @@
         <td class="pay-type"><div class="cell-inner" tabindex="0" data-field="payment_type" data-oid="${oid}" data-pid="${pid}">${p?ptBadge(p.payment_type):`<span style="color:#94a3b8;font-size:.75rem">클릭</span>`}</div></td>
         <td class="mono center"><div class="cell-inner" tabindex="0" data-field="scheduled_date" data-pid="${pid}">${esc(p?.scheduled_date)}</div></td>
         <td class="amount"><div class="cell-inner" tabindex="0" data-field="amount" data-pid="${pid}">${fmtMoney(p?.amount)}</div></td>
-        <td><div class="cell-inner" tabindex="0" data-field="note" data-pid="${pid}">${esc(p?.note)}</div></td>
+        <td><div class="cell-inner" tabindex="0" data-field="note" data-pid="${pid}">${esc(p?.note??'').replaceAll('\n','<br>')}</div></td>
       </tr>`;
     }).join("");
     updateKpi();
@@ -610,10 +623,12 @@
   }
 
   function enterCellEdit(el){
-    el._orig=el.textContent;
+    el._origHTML=el.innerHTML;
     el.contentEditable="true";el.classList.remove("cell-sel");el.classList.add("cell-edit");
     if(el.dataset.field==="amount"||el.dataset.field==="total_amount"){
       const v=parseMoney(el.textContent);el.textContent=v>0?String(v):"";
+    } else if(el.dataset.field==="note"){
+      el.textContent=el.innerHTML.replace(/<br\s*\/?>/gi,"\n");
     }
     const r=document.createRange();r.selectNodeContents(el);
     const s=getSelection();s.removeAllRanges();s.addRange(r);
@@ -639,6 +654,7 @@
         snapshot();p.amount=nv;el.textContent=fmtMoney(nv);
       } else {
         if(val===p[field])return;snapshot();p[field]=val;
+        if(field==="note"){el.innerHTML=esc(val).replaceAll("\n","<br>");}
       }
       updateKpi();saveDebounce();
     }
@@ -652,8 +668,9 @@
       if(e.key.length===1&&!e.ctrlKey&&!e.metaKey&&!e.altKey){enterCellEdit(el);el.textContent="";}
       return;
     }
+    if(e.key==="Enter"&&e.altKey){e.preventDefault();document.execCommand('insertLineBreak');return;}
     if(e.key==="Enter"&&!e.altKey){e.preventDefault();el.blur();return;}
-    if(e.key==="Escape"){e.preventDefault();el.textContent=el._orig||"";el.contentEditable="false";el.classList.remove("cell-edit");return;}
+    if(e.key==="Escape"){e.preventDefault();el.innerHTML=el._origHTML||"";el.contentEditable="false";el.classList.remove("cell-edit");return;}
   }
 
   /* ── Init ── */
