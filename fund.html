@@ -355,8 +355,8 @@
   const SK = "sb_publishable_fbbdwjCZCL9AFD-eUIs0bg_XwdlhxFN";
   const O_TBL = "orders";
   const P_TBL = "payment_schedule";
-  const PT_LIST = ["선금","계약금","중도금","잔금","일시불"];
-  const PT_ORDER = {"선금":0,"계약금":1,"중도금":2,"잔금":3,"일시불":4};
+  const PT_LIST = ["선금","계약금","중도금1","중도금2","잔금","일시불"];
+  const PT_ORDER = {"선금":0,"계약금":1,"중도금1":2,"중도금2":3,"잔금":4,"일시불":5};
 
   function getToken(){ return localStorage.getItem("supa_token") || SK; }
 
@@ -593,12 +593,21 @@
   /* ── DB ops ── */
   async function addPaymentDB(oid,type){
     try{
+      const order=orders.find(o=>o._id===oid);
+      const totalAmt=parseMoney(order?.total_amount)||0;
+      let autoAmt=0;
+      if(type==="일시불"){
+        autoAmt=totalAmt;
+      } else if(type==="잔금"){
+        const others=payments.filter(p=>p.order_id===oid);
+        autoAmt=Math.max(0,totalAmt-others.reduce((s,p)=>s+parseMoney(p.amount),0));
+      }
       const res=await fetch(SU+"/rest/v1/"+P_TBL,{
         method:"POST",
         headers:{"apikey":SK,"Authorization":"Bearer "+getToken(),"Content-Type":"application/json","Prefer":"return=representation"},
-        body:JSON.stringify({order_id:oid,payment_type:type,amount:0,note:"",source:"",budget_item:"",paid:false,sort_order:payments.length})
+        body:JSON.stringify({order_id:oid,payment_type:type,amount:autoAmt,note:"",source:"",budget_item:"",paid:false,sort_order:payments.length})
       });
-      if(res.ok){const[r]=await res.json();payments.push({_id:r.id,order_id:oid,payment_type:type,scheduled_date:"",amount:0,note:"",source:"",budget_item:"",paid:false,sort_order:payments.length});renderTable();}
+      if(res.ok){const[r]=await res.json();payments.push({_id:r.id,order_id:oid,payment_type:type,scheduled_date:"",amount:autoAmt,note:"",source:"",budget_item:"",paid:false,sort_order:payments.length});renderTable();}
       else console.error("[fund] add payment:",await res.text());
     }catch(e){console.warn(e);}
   }
@@ -785,6 +794,15 @@
     const s=getSelection();s.removeAllRanges();s.addRange(r);
   }
 
+  function autoFillJanGeum(orderId){
+    const order=orders.find(o=>o._id===orderId);if(!order)return;
+    const jg=payments.find(p=>p.order_id===orderId&&p.payment_type==="잔금");if(!jg)return;
+    const others=payments.filter(p=>p.order_id===orderId&&p._id!==jg._id);
+    const otherSum=others.reduce((s,p)=>s+parseMoney(p.amount),0);
+    jg.amount=Math.max(0,parseMoney(order.total_amount)-otherSum);
+    saveDebounce();renderTable();
+  }
+
   function onCellCommit(el){
     const field=el.dataset.field,oid=el.dataset.oid,pid=el.dataset.pid;
     const val=el.textContent.trim();
@@ -793,22 +811,33 @@
       if(field==="total_amount"){
         const nv=parseMoney(val);if(nv===parseMoney(o.total_amount)){el.textContent=fmtMoney(nv);return;}
         snapshot();o.total_amount=nv;el.textContent=fmtMoney(nv);
+        updateKpi();saveDebounce();
+        autoFillJanGeum(oid);
       } else {
         if(val===o[field])return;snapshot();o[field]=val;
         el.innerHTML=esc(val).replaceAll("\n","<br>");
+        updateKpi();saveDebounce();
       }
-      updateKpi();saveDebounce();return;
+      return;
     }
     if(["scheduled_date","amount","note","source","budget_item"].includes(field)&&pid){
       const p=payments.find(x=>x._id===pid);if(!p)return;
       if(field==="amount"){
-        const nv=parseMoney(val);if(nv===parseMoney(p.amount)){el.textContent=fmtMoney(nv);return;}
+        let nv;
+        if(val.includes("%")){
+          const pct=parseFloat(val);
+          const o=orders.find(x=>x._id===p.order_id);
+          nv=o?Math.round(parseMoney(o.total_amount)*pct/100):0;
+        } else {nv=parseMoney(val);}
+        if(nv===parseMoney(p.amount)){el.textContent=fmtMoney(nv);return;}
         snapshot();p.amount=nv;el.textContent=fmtMoney(nv);
+        updateKpi();saveDebounce();
+        autoFillJanGeum(p.order_id);
       } else {
         if(val===p[field])return;snapshot();p[field]=val;
         el.innerHTML=esc(val).replaceAll("\n","<br>");
+        updateKpi();saveDebounce();
       }
-      updateKpi();saveDebounce();
     }
   }
 
