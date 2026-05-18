@@ -237,10 +237,7 @@
     </header>
 
     <div class="table-controls">
-      <div style="display:flex;gap:6px;align-items:center">
-        <button class="pg-btn btn-add" id="addOrderBtn">+ 발주건 추가</button>
-        <button class="pg-btn" id="seedBtn" title="구매리스트(필요수량=1)에서 1회 불러오기">📥 구매리스트 불러오기</button>
-      </div>
+      <button class="pg-btn btn-add" id="addOrderBtn">+ 발주건 추가</button>
       <button class="pg-btn" id="sortDateBtn">📅 지급일 순 보기</button>
     </div>
 
@@ -659,50 +656,9 @@
     if(e.key==="Escape"){e.preventDefault();el.textContent=el._orig||"";el.contentEditable="false";el.classList.remove("cell-edit");return;}
   }
 
-  /* ── Seed from purchase (one-time, only when orders is empty) ── */
-  async function seedFromPurchase(){
-    try{
-      const h={"apikey":SK,"Authorization":"Bearer "+getToken()};
-      const res=await fetch(SU+"/rest/v1/purchase?select=*&total_qty=eq.1&order=sort_order.asc,id.asc",{headers:h});
-      if(!res.ok)return;
-      const rows=await res.json();
-      if(!rows.length)return;
-      for(let i=0;i<rows.length;i++){
-        const r=rows[i];
-        const oRes=await fetch(SU+"/rest/v1/"+O_TBL,{
-          method:"POST",
-          headers:{...h,"Content-Type":"application/json","Prefer":"return=representation"},
-          body:JSON.stringify({code:r.code??"",order_name:r.equipment??"",vendor:r.supplier??"",total_amount:r.subtotal??0,sort_order:i})
-        });
-        if(!oRes.ok)continue;
-        const[o]=await oRes.json();
-        orders.push({_id:o.id,code:r.code??"",order_name:r.equipment??"",vendor:r.supplier??"",total_amount:r.subtotal??0,sort_order:i});
-        const pRes=await fetch(SU+"/rest/v1/"+P_TBL,{
-          method:"POST",
-          headers:{...h,"Content-Type":"application/json","Prefer":"return=representation"},
-          body:JSON.stringify({order_id:o.id,payment_type:"일시불",amount:0,note:r.remark??"",sort_order:0})
-        });
-        if(pRes.ok){const[p]=await pRes.json();payments.push({_id:p.id,order_id:o.id,payment_type:"일시불",scheduled_date:"",amount:0,note:"",sort_order:0});}
-      }
-      console.log("[fund] seeded",orders.length,"orders from purchase");
-    }catch(e){console.warn("[fund] seed:",e);}
-  }
-
-  /* ── 구매리스트 불러오기 버튼 ── */
-  document.getElementById("seedBtn").addEventListener("click",async()=>{
-    const btn=document.getElementById("seedBtn");
-    if(!confirm("구매리스트에서 필요수량=1인 항목을 불러옵니다.\n기존 발주건과 중복될 수 있습니다. 계속할까요?"))return;
-    btn.disabled=true;btn.textContent="불러오는 중...";
-    await seedFromPurchase();
-    renderTable();
-    btn.textContent="✅ 완료";
-    setTimeout(()=>{btn.disabled=false;btn.textContent="📥 구매리스트 불러오기";},3000);
-  });
-
   /* ── Init ── */
   (async function(){
     await supaLoad();
-    if(!orders.length) await seedFromPurchase();
     renderTable();
   })();
   </script>
