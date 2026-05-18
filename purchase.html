@@ -259,6 +259,15 @@
     }
     #float-done:hover{border-color:rgba(22,163,74,.5);color:#16a34a;background:#fff}
     #float-done.done{background:#16a34a;border-color:#15803d;color:#fff}
+    #send-to-fund-btn{
+      position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+      z-index:9100;cursor:pointer;font-size:13px;font-weight:600;
+      padding:9px 24px;border-radius:8px;
+      background:#ef4444;color:#fff;border:none;
+      box-shadow:0 4px 16px rgba(239,68,68,.4);
+      white-space:nowrap;transition:background .15s,box-shadow .15s;
+    }
+    #send-to-fund-btn:hover{background:#dc2626;box-shadow:0 4px 20px rgba(239,68,68,.55)}
     tbody tr.row-dragging{opacity:.45;background:rgba(22,101,52,.08) !important}
     tbody tr.drag-over-top td{border-top:2px solid var(--accent) !important}
     tbody tr.drag-over-bot td{border-bottom:2px solid var(--accent) !important}
@@ -343,7 +352,7 @@
       tbody tr.row-checked td .cell-inner{color:#ef4444 !important}
       tbody tr.row-checked{background:rgba(239,68,68,.07) !important}
       tbody tr.row-done td .cell-inner{color:#16a34a !important}
-      #float-check,#float-drag,#float-done{display:none !important}
+      #float-check,#float-drag,#float-done,#send-to-fund-btn{display:none !important}
       body.report-print-mode .cell-inner{cursor:default !important}
       body.report-print-mode .cell-inner:focus{box-shadow:none !important;background:transparent !important;border-radius:0}
       tbody td:not(.inc-date-cell) .cell-inner{font-size:7pt !important}
@@ -812,6 +821,7 @@
   <div id="float-drag" title="드래그로 순서 변경" draggable="true" style="display:none;">⠿</div>
   <div id="float-check" title="품의 강조" style="display:none;">☆</div>
   <div id="float-done" title="품의/발주완료" style="display:none;">✓</div>
+  <div id="send-to-fund-btn" style="display:none;">▶ 자금집행으로</div>
 
   <!-- Right-click context menu -->
   <div id="ctx-menu" style="display:none;">
@@ -2003,7 +2013,54 @@
     requestAnimationFrame(() => {
       if (typeof autoFitCells === "function") autoFitCells(document);
     });
+    updateSendToFundBtn();
   }
+
+  /* ── 자금집행으로 버튼 ─────────────────────────────────── */
+  const sendToFundBtn = document.getElementById("send-to-fund-btn");
+
+  function updateSendToFundBtn(){
+    const hasChecked = items.some(r => r.checked);
+    sendToFundBtn.style.display = hasChecked ? "block" : "none";
+  }
+
+  sendToFundBtn.addEventListener("click", async () => {
+    const checked = items.filter(r => r.checked);
+    if (!checked.length) return;
+
+    const code        = checked.map(r => r.code).filter(Boolean).join(", ");
+    const order_name  = checked[0].equipment || "";
+    const vendor      = checked[0].supplier  || "";
+    const total_amount= checked.reduce((s, r) => s + (Number(r.subtotal) || 0), 0);
+
+    const token = localStorage.getItem("supa_token");
+    const headers = {
+      "Content-Type": "application/json",
+      "apikey": SUPA_KEY,
+      "Authorization": `Bearer ${token || SUPA_KEY}`,
+      "Prefer": "return=representation"
+    };
+
+    try {
+      const ordRes = await fetch(`${SUPA_URL}/rest/v1/orders`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ code, order_name, vendor, total_amount })
+      });
+      if (!ordRes.ok) throw new Error(`orders 저장 실패: ${ordRes.status}`);
+      const [newOrder] = await ordRes.json();
+
+      await fetch(`${SUPA_URL}/rest/v1/payment_schedule`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ order_id: newOrder.id, payment_type: "일시불", amount: 0, note: "" })
+      });
+
+      alert(`자금집행으로 전송 완료!\n발주건: ${order_name}\n금액: ${total_amount.toLocaleString()}원`);
+    } catch(err) {
+      alert("전송 중 오류가 발생했습니다.\n" + err.message);
+    }
+  });
 
   /* ── Context menu ─────────────────────────────────────── */
   let ctxTargetIdx = null;

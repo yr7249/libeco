@@ -66,9 +66,71 @@ ALTER TABLE 테이블명 ADD COLUMN 컬럼명 타입 DEFAULT 기본값;
 ## 작업 히스토리 (최근순)
 | 날짜 | 파일 | 작업 내용 |
 |------|------|-----------|
+| 2026-05-18 | `purchase.html` | 체크된 행 묶어서 자금집행으로 보내기 — `#send-to-fund-btn` (fixed bottom, 체크 시 표시, 인쇄 숨김), `updateSendToFundBtn()`, 클릭 시 `orders` + `payment_schedule` INSERT (code 콤마 묶음, order_name=첫째 장비명, vendor=첫째 업체, total_amount=subtotal 합계) |
+| 2026-05-13 | `fund.html` | 상단 짤림 현상 수정 — `.pg-topbar` `position:sticky;top:0;z-index:100` 제거 → `flex-shrink:0` 적용, `thead{top:50px}` → `top:0` 변경 (구매리스트와 동일 방식) |
+| 2026-05-06 | `pid-tool.html` | SE + P&ID 대규모 UX 개선: ① SE 드래그 smooth (raw 좌표, snap 제거) ② 스마트 가이드라인 — 드래그 중 8px 이내 엣지/중앙/정렬 감지 시 빨간 가이드 + 자동 스냅, Alt키 무시 (`_seSmartSnap`) ③ P&ID 동일 스마트 가이드 적용 (`_pidSmartSnap`, 12px 임계) ④ SE 포트 도형 엣지 자동 스냅 — 마우스 22px 이내 가장 가까운 엣지점에 달라붙음, Alt=자유 배치, 미리보기 표시 (`seNearestEdgePt`) ⑤ 정삼각형 Shift 드로잉 수정 (h=w×√3/2) ⑥ 우클릭 컨텍스트 메뉴 SE (`seShowCtxMenu`) / P&ID (`pid-ctx-menu`) 모두 구현 ⑦ P&ID 배관 그리기 중 Backspace = 마지막 지점 제거, 우클릭 = 전체 취소 |
+| 2026-05-06 | `pid-tool.html` | SE(심볼에디터) 5종 개선: ① + 버튼 confirm 제거, 드래프트 모달 닫혀도 페이지 새로고침 전까지 유지 ② Ctrl+C/V/D 복붙·복제 (`se_clipboard`, `sePasteClipboard`, `seDuplicateSelected`) ③ 리사이즈 시 스냅 제거 — 매끄럽게 (Ctrl 누르면 스냅) ④ boolean merge 결과(path) 리사이즈 시 `sx`/`sy` 적용 — 단순 translate가 아닌 정확한 스케일링 (`getElementBBox`, `elToSVG`, `seApplyBBoxToEl` path 분기 모두 수정) ⑤ 다중선택 그룹 리사이즈 핸들 4개 추가 (`se_groupResize`, `seScaleElInBBox`) — 모든 요소 타입 비례 스케일 |
+| 2026-05-04 | `pid-tool.html` | P&ID resize 핸들을 bbox 정확한 꼭짓점에 배치 (pad 제거), 스케일 계산을 X/Y ratio max 방식으로 교체 — 잡은 모서리가 마우스를 따라가고 반대 꼭짓점은 고정 |
 | 2026-04-27 | `CLAUDE.md` | pnid-tool 관련 내용 전체 제거 (재설계 예정) |
 | 2026-04-24 | `purchase.html` | Tab키로 단가→소계(자동계산) 건너뛰고 상태로 바로 이동하도록 수정 (`getNextCell`, `moveFocus`에 contentEditable 건너뛰기 로직 추가) |
 | 2026-04-24 | `diagram.html` | 클립보드 붙여넣기(Ctrl+V) 이미지 업로드 기능 추가 — Canvas API로 JPEG 변환 후 Supabase Storage 업로드, `uploadImageBlob()` 공통 함수 추출 |
+
+## P&ID Tool 전용 기억 파일
+`PNID_TOOL.md` — P&ID Tool 아키텍처, 변수/함수 목록, 단축키, 동작 특성, 작업 히스토리 전체 기록.
+pid-tool.html 관련 작업 시 반드시 먼저 읽을 것.
+
+## AI 코딩 행동 지침
+
+**Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
+
+### 1. Think Before Coding
+
+**Don't assume. Don't hide confusion. Surface tradeoffs.**
+
+Before implementing:
+- State your assumptions explicitly. If uncertain, ask.
+- If multiple interpretations exist, present them - don't pick silently.
+- If a simpler approach exists, say so. Push back when warranted.
+- If something is unclear, stop. Name what's confusing. Ask.
+
+### 2. Simplicity First
+
+**Minimum code that solves the problem. Nothing speculative.**
+
+- No features beyond what was asked.
+- No abstractions for single-use code.
+- No "flexibility" or "configurability" that wasn't requested.
+- No error handling for impossible scenarios.
+- If you write 200 lines and it could be 50, rewrite it.
+
+Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
+
+### 3. Surgical Changes
+
+**Touch only what you must. Clean up only your own mess.**
+
+When editing existing code:
+- Don't "improve" adjacent code, comments, or formatting.
+- Don't refactor things that aren't broken.
+- Match existing style, even if you'd do it differently.
+- If you notice unrelated dead code, mention it - don't delete it.
+
+When your changes create orphans:
+- Remove imports/variables/functions that YOUR changes made unused.
+- Don't remove pre-existing dead code unless asked.
+
+The test: Every changed line should trace directly to the user's request.
+
+### 4. Goal-Driven Execution
+
+**Define success criteria. Loop until verified.**
+
+Transform tasks into verifiable goals:
+- "Add validation" → "Write tests for invalid inputs, then make them pass"
+- "Fix the bug" → "Write a test that reproduces it, then make it pass"
+- "Refactor X" → "Ensure tests pass before and after"
+
+---
 
 ## 코드 패턴 / 주요 규칙
 - `purchase.html` 컬럼 순서: `no → code → equipment → product → supplier → total_qty → purchase_qty → unit_price → subtotal(읽기전용) → status → remark`
