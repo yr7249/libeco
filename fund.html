@@ -531,23 +531,37 @@
     const tbody=document.getElementById("tableBody");
     const rows=getDisplayRows();
     if(!rows.length){
-      tbody.innerHTML=`<tr><td colspan="8" style="text-align:center;padding:48px;color:#94a3b8;font-size:.9rem">+ 발주건 추가 버튼이나 우클릭으로 시작하세요.</td></tr>`;
+      tbody.innerHTML=`<tr><td colspan="10" style="text-align:center;padding:48px;color:#94a3b8;font-size:.9rem">+ 발주건 추가 버튼이나 우클릭으로 시작하세요.</td></tr>`;
       updateKpi();return;
     }
-    tbody.innerHTML=rows.map(({order:o,payment:p,groupIdx:gi,isGroupStart})=>{
+    // Pre-calculate rowspan per order (only in default grouped mode)
+    if(!sortByDate){
+      const cnt={};
+      rows.forEach(r=>{const id=r.order._id;cnt[id]=(cnt[id]||0)+1;});
+      rows.forEach(r=>{r._rs=r.isGroupStart?cnt[r.order._id]:0;});
+    } else {
+      rows.forEach(r=>{r._rs=1;});
+    }
+    tbody.innerHTML=rows.map(({order:o,payment:p,groupIdx:gi,isGroupStart,_rs})=>{
       const cls=[(gi%2===1&&gi>=0?"group-even":""),((!sortByDate&&isGroupStart)?"group-start":""),(p?.paid?"row-paid":"")].filter(Boolean).join(" ");
       const oid=o?._id||"",pid=p?._id||"";
+      const rs=_rs||0;
+      // Columns 1-4 and 10(비고): merged with rowspan when rs>=1, skipped when rs===0
+      const merged=rs>=1?`
+        <td class="mono center" rowspan="${rs}"><div class="cell-inner" tabindex="0" data-field="code" data-oid="${oid}">${esc(o?.code)}</div></td>
+        <td rowspan="${rs}"><div class="cell-inner" tabindex="0" data-field="order_name" data-oid="${oid}">${esc(o?.order_name)}</div></td>
+        <td class="center" rowspan="${rs}"><div class="cell-inner" tabindex="0" data-field="vendor" data-oid="${oid}">${esc(o?.vendor)}</div></td>
+        <td class="amount" rowspan="${rs}"><div class="cell-inner" tabindex="0" data-field="total_amount" data-oid="${oid}">${fmtMoney(o?.total_amount)}</div></td>`:"";
+      const bigo=rs>=1?`
+        <td rowspan="${rs}"><div class="cell-inner" tabindex="0" data-field="note" data-pid="${pid}">${esc(p?.note??'').replaceAll('\n','<br>')}</div></td>`:"";
       return `<tr class="${cls}" data-oid="${oid}" data-pid="${pid}">
-        <td class="mono center"><div class="cell-inner" tabindex="0" data-field="code" data-oid="${oid}">${esc(o?.code)}</div></td>
-        <td><div class="cell-inner" tabindex="0" data-field="order_name" data-oid="${oid}">${esc(o?.order_name)}</div></td>
-        <td class="center"><div class="cell-inner" tabindex="0" data-field="vendor" data-oid="${oid}">${esc(o?.vendor)}</div></td>
-        <td class="amount"><div class="cell-inner" tabindex="0" data-field="total_amount" data-oid="${oid}">${fmtMoney(o?.total_amount)}</div></td>
+        ${merged}
         <td class="pay-type"><div class="cell-inner" tabindex="0" data-field="payment_type" data-oid="${oid}" data-pid="${pid}">${p?ptBadge(p.payment_type):`<span style="color:#94a3b8;font-size:.82rem">—</span>`}</div></td>
         <td class="period-cell"><div class="cell-inner" tabindex="0" data-field="scheduled_date" data-pid="${pid}">${esc(p?.scheduled_date)}</div></td>
         <td class="amount"><div class="cell-inner" tabindex="0" data-field="amount" data-pid="${pid}">${fmtMoney(p?.amount)}</div></td>
         <td><div class="cell-inner" tabindex="0" data-field="source" data-pid="${pid}">${esc(p?.source??'')}</div></td>
         <td><div class="cell-inner" tabindex="0" data-field="budget_item" data-pid="${pid}">${esc(p?.budget_item??'')}</div></td>
-        <td><div class="cell-inner" tabindex="0" data-field="note" data-pid="${pid}">${esc(p?.note??'').replaceAll('\n','<br>')}</div></td>
+        ${bigo}
       </tr>`;
     }).join("");
     updateKpi();
