@@ -638,7 +638,7 @@
     el.contentEditable="true";el.classList.remove("cell-sel");el.classList.add("cell-edit");
     if(el.dataset.field==="amount"||el.dataset.field==="total_amount"){
       const v=parseMoney(el.textContent);el.textContent=v>0?String(v):"";
-    } else if(el.dataset.field==="note"){
+    } else {
       el.textContent=el.innerHTML.replace(/<br\s*\/?>/gi,"\n");
     }
     const r=document.createRange();r.selectNodeContents(el);
@@ -655,6 +655,7 @@
         snapshot();o.total_amount=nv;el.textContent=fmtMoney(nv);
       } else {
         if(val===o[field])return;snapshot();o[field]=val;
+        el.innerHTML=esc(val).replaceAll("\n","<br>");
       }
       updateKpi();saveDebounce();return;
     }
@@ -665,7 +666,7 @@
         snapshot();p.amount=nv;el.textContent=fmtMoney(nv);
       } else {
         if(val===p[field])return;snapshot();p[field]=val;
-        if(field==="note"){el.innerHTML=esc(val).replaceAll("\n","<br>");}
+        el.innerHTML=esc(val).replaceAll("\n","<br>");
       }
       updateKpi();saveDebounce();
     }
