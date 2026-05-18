@@ -74,6 +74,38 @@
     #pt-confirm-btn{display:block;width:100%;margin-top:8px;padding:5px 0;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600}
     #pt-confirm-btn:hover{background:#15803d}
 
+    /* Period picker */
+    #period-picker{position:fixed;z-index:9999;background:#fff;border:1px solid var(--border);border-radius:12px;padding:10px;box-shadow:0 8px 24px rgba(0,0,0,.15);display:none;width:200px}
+    #period-picker.open{display:block;animation:popIn .12s ease}
+    .pp-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+    .pp-nav{background:none;border:none;cursor:pointer;font-size:1rem;padding:2px 6px;border-radius:5px;color:var(--text)}
+    .pp-nav:hover{background:var(--accent-wash2)}
+    .pp-month{font-size:.85rem;font-weight:700;color:var(--text)}
+    .pp-weeks{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-bottom:8px}
+    .pp-week-btn{border:1px solid var(--border);background:#fff;border-radius:6px;cursor:pointer;font-size:.75rem;font-weight:600;padding:5px 2px;transition:background .1s}
+    .pp-week-btn:hover{background:var(--accent-wash2);border-color:rgba(22,101,52,.35)}
+    .pp-week-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+    .pp-clear{display:block;width:100%;padding:4px 0;background:none;border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:.72rem;color:var(--text2);font-weight:600}
+    .pp-clear:hover{background:#f8fafc}
+    td.period-cell .cell-inner{cursor:pointer;text-align:center;font-size:.82rem}
+
+    /* Paid row */
+    tr.row-paid td{background:rgba(22,163,74,.06)!important}
+    tr.row-paid .cell-inner{color:#15803d!important;text-decoration:line-through}
+    tr.row-paid .pt-badge{text-decoration:none!important}
+
+    /* Weekly summary */
+    #weekly-summary{margin:16px 0 8px;padding:0 2px}
+    .wsum-title{font-size:.75rem;font-weight:700;color:var(--text2);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px;font-family:var(--font-mono)}
+    .wsum-grid{display:flex;flex-wrap:wrap;gap:8px}
+    .wsum-card{border:1px solid var(--border);border-radius:10px;padding:10px 14px;min-width:130px;background:var(--surface)}
+    .wsum-card.done{border-color:rgba(22,163,74,.4);background:rgba(22,163,74,.05)}
+    .wsum-period{font-size:.8rem;font-weight:700;color:var(--text);margin-bottom:4px}
+    .wsum-total{font-size:.92rem;font-weight:800;color:var(--accent)}
+    .wsum-paid{font-size:.72rem;color:#15803d;margin-top:2px}
+    .wsum-remain{font-size:.72rem;color:#94a3b8;margin-top:1px}
+    @media print{#weekly-summary{display:none!important}}
+
     /* Topbar */
     .pg-topbar{display:flex;align-items:center;justify-content:space-between;padding:0 14px;height:50px;background:#fff;border-bottom:1px solid rgba(15,23,42,.12);box-shadow:0 1px 4px rgba(0,0,0,.08);flex-shrink:0;gap:8px}
     .pg-topbar-l,.pg-topbar-r{display:flex;align-items:center;gap:5px;flex-shrink:0}
@@ -202,6 +234,7 @@
   <div id="fund-ctx-menu">
     <button id="ctx-add-order">+ 발주건 추가</button>
     <button id="ctx-pay-type">구분 선택...</button>
+    <button id="ctx-paid-toggle">✓ 지급 완료 처리</button>
     <hr>
     <button id="ctx-delete-payment" class="danger">이 지급 행 삭제</button>
     <button id="ctx-delete-order" class="danger">발주건 전체 삭제</button>
@@ -210,6 +243,17 @@
   <!-- Payment type popover -->
   <div id="pt-popover">
     <div class="pt-pop-title">지급 구분</div>
+  </div>
+
+  <!-- Period picker -->
+  <div id="period-picker">
+    <div class="pp-header">
+      <button class="pp-nav" id="pp-prev">◀</button>
+      <span class="pp-month" id="pp-month-label"></span>
+      <button class="pp-nav" id="pp-next">▶</button>
+    </div>
+    <div class="pp-weeks" id="pp-weeks"></div>
+    <button class="pp-clear" id="pp-clear">지우기</button>
   </div>
 
   <!-- Topbar -->
@@ -284,18 +328,19 @@
             </tr>
             <tr>
               <th>구분</th>
-              <th>지급일</th>
+              <th>지급시기</th>
               <th>지급금액</th>
               <th>출처</th>
               <th>비목</th>
             </tr>
           </thead>
           <tbody id="tableBody">
-            <tr><td colspan="8" style="text-align:center;padding:48px;color:#94a3b8;font-size:.9rem">⏳ 데이터 불러오는 중...</td></tr>
+            <tr><td colspan="10" style="text-align:center;padding:48px;color:#94a3b8;font-size:.9rem">⏳ 데이터 불러오는 중...</td></tr>
           </tbody>
         </table>
       </div>
     </div>
+    <div id="weekly-summary"></div>
 
     <footer class="site-footer">
       <div style="display:flex;align-items:center;gap:10px">
@@ -378,7 +423,7 @@
       if(!or.ok||!pr.ok)return false;
       const oR=await or.json(),pR=await pr.json();
       orders=oR.map(r=>({_id:r.id,code:r.code??"",order_name:r.order_name??"",vendor:r.vendor??"",total_amount:r.total_amount??0,sort_order:r.sort_order??0}));
-      payments=pR.map(r=>({_id:r.id,order_id:r.order_id,payment_type:r.payment_type??"일시불",scheduled_date:r.scheduled_date??"",amount:r.amount??0,note:r.note??"",source:r.source??"",budget_item:r.budget_item??"",sort_order:r.sort_order??0}));
+      payments=pR.map(r=>({_id:r.id,order_id:r.order_id,payment_type:r.payment_type??"일시불",scheduled_date:r.scheduled_date??"",amount:r.amount??0,note:r.note??"",source:r.source??"",budget_item:r.budget_item??"",paid:r.paid??false,sort_order:r.sort_order??0}));
       return true;
     }catch(e){console.warn("[fund] load:",e);return false;}
   }
@@ -398,7 +443,7 @@
       }
       if(payments.length){
         const res=await fetch(SU+"/rest/v1/"+P_TBL,{method:"POST",headers:h,
-          body:JSON.stringify(payments.map((p,i)=>({id:p._id,order_id:p.order_id,payment_type:p.payment_type,scheduled_date:p.scheduled_date||null,amount:parseMoney(p.amount)||0,note:p.note,source:p.source??"",budget_item:p.budget_item??"",sort_order:i})))});
+          body:JSON.stringify(payments.map((p,i)=>({id:p._id,order_id:p.order_id,payment_type:p.payment_type,scheduled_date:p.scheduled_date||null,amount:parseMoney(p.amount)||0,note:p.note,source:p.source??"",budget_item:p.budget_item??"",paid:!!p.paid,sort_order:i})))});
         if(!res.ok)console.error("[fund] payments save:",res.status,await res.text());
       }
     }catch(e){console.warn("[fund] save:",e);}
@@ -440,9 +485,12 @@
   function parseMoney(v){if(typeof v==="number")return v;return parseInt(String(v||"").replace(/[^0-9]/g,""))||0;}
   function esc(v){return String(v||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
 
+  function parsePeriod(s){const m=s&&s.match(/(\d+)월\s*(\d+)주/);return m?parseInt(m[1])*10+parseInt(m[2]):9999;}
+
   function updateKpi(){
     document.getElementById("header-total-amount").textContent="₩"+payments.reduce((s,p)=>s+parseMoney(p.amount),0).toLocaleString("ko-KR");
     document.getElementById("updateTime").textContent=new Date().toLocaleString("ko-KR")+" update";
+    buildWeeklySummary();
   }
 
   /* ── Sort ── */
@@ -457,7 +505,7 @@
     if(sortByDate){
       return payments
         .map(p=>({order:orders.find(o=>o._id===p.order_id)||{},payment:p,groupIdx:-1,isGroupStart:false}))
-        .sort((a,b)=>(a.payment.scheduled_date||"9999").localeCompare(b.payment.scheduled_date||"9999"));
+        .sort((a,b)=>parsePeriod(a.payment.scheduled_date)-parsePeriod(b.payment.scheduled_date));
     }
     const rows=[];
     [...orders].sort((a,b)=>a.sort_order-b.sort_order).forEach((o,gi)=>{
@@ -483,7 +531,7 @@
       updateKpi();return;
     }
     tbody.innerHTML=rows.map(({order:o,payment:p,groupIdx:gi,isGroupStart})=>{
-      const cls=[(gi%2===1&&gi>=0?"group-even":""),((!sortByDate&&isGroupStart)?"group-start":"")].filter(Boolean).join(" ");
+      const cls=[(gi%2===1&&gi>=0?"group-even":""),((!sortByDate&&isGroupStart)?"group-start":""),(p?.paid?"row-paid":"")].filter(Boolean).join(" ");
       const oid=o?._id||"",pid=p?._id||"";
       return `<tr class="${cls}" data-oid="${oid}" data-pid="${pid}">
         <td class="mono center"><div class="cell-inner" tabindex="0" data-field="code" data-oid="${oid}">${esc(o?.code)}</div></td>
@@ -491,7 +539,7 @@
         <td class="center"><div class="cell-inner" tabindex="0" data-field="vendor" data-oid="${oid}">${esc(o?.vendor)}</div></td>
         <td class="amount"><div class="cell-inner" tabindex="0" data-field="total_amount" data-oid="${oid}">${fmtMoney(o?.total_amount)}</div></td>
         <td class="pay-type"><div class="cell-inner" tabindex="0" data-field="payment_type" data-oid="${oid}" data-pid="${pid}">${p?ptBadge(p.payment_type):`<span style="color:#94a3b8;font-size:.75rem">클릭</span>`}</div></td>
-        <td class="mono center"><div class="cell-inner" tabindex="0" data-field="scheduled_date" data-pid="${pid}">${esc(p?.scheduled_date)}</div></td>
+        <td class="period-cell"><div class="cell-inner" tabindex="0" data-field="scheduled_date" data-pid="${pid}">${esc(p?.scheduled_date)}</div></td>
         <td class="amount"><div class="cell-inner" tabindex="0" data-field="amount" data-pid="${pid}">${fmtMoney(p?.amount)}</div></td>
         <td><div class="cell-inner" tabindex="0" data-field="source" data-pid="${pid}">${esc(p?.source??'')}</div></td>
         <td><div class="cell-inner" tabindex="0" data-field="budget_item" data-pid="${pid}">${esc(p?.budget_item??'')}</div></td>
@@ -548,9 +596,9 @@
       const res=await fetch(SU+"/rest/v1/"+P_TBL,{
         method:"POST",
         headers:{"apikey":SK,"Authorization":"Bearer "+getToken(),"Content-Type":"application/json","Prefer":"return=representation"},
-        body:JSON.stringify({order_id:oid,payment_type:type,amount:0,note:"",source:"",budget_item:"",sort_order:payments.length})
+        body:JSON.stringify({order_id:oid,payment_type:type,amount:0,note:"",source:"",budget_item:"",paid:false,sort_order:payments.length})
       });
-      if(res.ok){const[r]=await res.json();payments.push({_id:r.id,order_id:oid,payment_type:type,scheduled_date:"",amount:0,note:"",source:"",budget_item:"",sort_order:payments.length});renderTable();}
+      if(res.ok){const[r]=await res.json();payments.push({_id:r.id,order_id:oid,payment_type:type,scheduled_date:"",amount:0,note:"",source:"",budget_item:"",paid:false,sort_order:payments.length});renderTable();}
       else console.error("[fund] add payment:",await res.text());
     }catch(e){console.warn(e);}
   }
@@ -608,6 +656,87 @@
   });
   document.getElementById("ctx-delete-payment").addEventListener("click",()=>{if(ctxPid)deletePayment(ctxPid);});
   document.getElementById("ctx-delete-order").addEventListener("click",()=>{if(ctxOid)deleteOrder(ctxOid);});
+  document.getElementById("ctx-paid-toggle").addEventListener("click",()=>{
+    if(!ctxPid)return;
+    const p=payments.find(x=>x._id===ctxPid);if(!p)return;
+    snapshot();p.paid=!p.paid;saveDebounce();renderTable();
+  });
+
+  /* ── Period picker ── */
+  const periodPicker=document.getElementById("period-picker");
+  let ppPid=null,ppYear=new Date().getFullYear(),ppMonth=new Date().getMonth()+1;
+
+  function renderPeriodPicker(){
+    document.getElementById("pp-month-label").textContent=`${ppYear}년 ${ppMonth}월`;
+    const p=payments.find(x=>x._id===ppPid);
+    const cur=p?.scheduled_date||"";
+    const curMatch=cur.match(/(\d+)월\s*(\d+)주/);
+    const weeks=document.getElementById("pp-weeks");
+    weeks.innerHTML=[1,2,3,4,5].map(w=>{
+      const label=`${ppMonth}월 ${w}주차`;
+      const isActive=curMatch&&parseInt(curMatch[1])===ppMonth&&parseInt(curMatch[2])===w;
+      return `<button class="pp-week-btn${isActive?" active":""}" data-week="${w}">${w}주차</button>`;
+    }).join("");
+    weeks.querySelectorAll(".pp-week-btn").forEach(btn=>{
+      btn.addEventListener("click",()=>{
+        const val=`${ppMonth}월 ${btn.dataset.week}주차`;
+        const p=payments.find(x=>x._id===ppPid);if(!p)return;
+        snapshot();p.scheduled_date=val;saveDebounce();
+        periodPicker.classList.remove("open");ppPid=null;
+        renderTable();
+      });
+    });
+  }
+
+  function showPeriodPicker(pid,anchorEl){
+    ppPid=pid;
+    const p=payments.find(x=>x._id===pid);
+    const m=p?.scheduled_date?.match(/(\d+)월/);
+    if(m){ppMonth=parseInt(m[1]);}else{ppMonth=new Date().getMonth()+1;}
+    const rect=anchorEl.getBoundingClientRect();
+    periodPicker.style.top=(rect.bottom+4)+"px";
+    periodPicker.style.left=Math.min(rect.left,window.innerWidth-210)+"px";
+    periodPicker.classList.add("open");
+    renderPeriodPicker();
+  }
+
+  document.getElementById("pp-prev").addEventListener("click",()=>{ppMonth--;if(ppMonth<1){ppMonth=12;ppYear--;}renderPeriodPicker();});
+  document.getElementById("pp-next").addEventListener("click",()=>{ppMonth++;if(ppMonth>12){ppMonth=1;ppYear++;}renderPeriodPicker();});
+  document.getElementById("pp-clear").addEventListener("click",()=>{
+    const p=payments.find(x=>x._id===ppPid);if(p){snapshot();p.scheduled_date="";saveDebounce();renderTable();}
+    periodPicker.classList.remove("open");ppPid=null;
+  });
+  document.addEventListener("click",e=>{
+    if(!periodPicker.contains(e.target)&&!e.target.closest("[data-field='scheduled_date']")){
+      periodPicker.classList.remove("open");ppPid=null;
+    }
+  });
+  periodPicker.addEventListener("click",e=>e.stopPropagation());
+
+  /* ── Weekly summary ── */
+  function buildWeeklySummary(){
+    const el=document.getElementById("weekly-summary");if(!el)return;
+    const groups={};
+    payments.forEach(p=>{
+      if(!parseMoney(p.amount))return;
+      const key=p.scheduled_date||"미정";
+      if(!groups[key])groups[key]={total:0,paidAmt:0};
+      groups[key].total+=parseMoney(p.amount);
+      if(p.paid)groups[key].paidAmt+=parseMoney(p.amount);
+    });
+    const sorted=Object.entries(groups).sort(([a],[b])=>parsePeriod(a)-parsePeriod(b));
+    if(!sorted.length){el.innerHTML="";return;}
+    el.innerHTML=`<div class="wsum-title">📅 지급 일정 요약</div><div class="wsum-grid">`+
+      sorted.map(([period,g])=>{
+        const remain=g.total-g.paidAmt;
+        return `<div class="wsum-card${g.paidAmt>=g.total&&g.total>0?" done":""}">
+          <div class="wsum-period">${period}</div>
+          <div class="wsum-total">${fmtMoney(g.total)}</div>
+          ${g.paidAmt>0?`<div class="wsum-paid">✓ 완료 ${fmtMoney(g.paidAmt)}</div>`:""}
+          ${remain>0?`<div class="wsum-remain">잔여 ${fmtMoney(remain)}</div>`:""}
+        </div>`;
+      }).join("")+`</div>`;
+  }
 
   /* ── Cell editing ── */
   function bindEvents(){
@@ -615,6 +744,10 @@
       const field=el.dataset.field;
       if(field==="payment_type"){
         el.addEventListener("click",e=>{e.stopPropagation();if(el.dataset.oid)showPopover(el.dataset.oid,el);});
+        return;
+      }
+      if(field==="scheduled_date"){
+        el.addEventListener("click",e=>{e.stopPropagation();if(el.dataset.pid)showPeriodPicker(el.dataset.pid,el);});
         return;
       }
       el.addEventListener("focus",()=>{if(el.contentEditable!=="true")el.classList.add("cell-sel");});
@@ -631,6 +764,8 @@
         ctxOid=tr.dataset.oid||null;ctxPid=tr.dataset.pid||null;
         document.getElementById("ctx-delete-payment").style.display=ctxPid?"block":"none";
         document.getElementById("ctx-pay-type").style.display=ctxOid?"block":"none";
+        document.getElementById("ctx-paid-toggle").style.display=ctxPid?"block":"none";
+        if(ctxPid){const p=payments.find(x=>x._id===ctxPid);document.getElementById("ctx-paid-toggle").textContent=p?.paid?"↩ 지급 완료 취소":"✓ 지급 완료 처리";}
         ctxMenu.style.display="block";
         ctxMenu.style.left=Math.min(e.clientX,window.innerWidth-170)+"px";
         ctxMenu.style.top=Math.min(e.clientY,window.innerHeight-160)+"px";
