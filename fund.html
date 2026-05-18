@@ -71,6 +71,8 @@
     .pt-pop-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;cursor:pointer;font-size:.83rem;font-weight:600;transition:background .1s;user-select:none}
     .pt-pop-item:hover{background:var(--accent-wash2)}
     .pt-pop-item input[type=checkbox]{accent-color:var(--accent);width:14px;height:14px;cursor:pointer;flex-shrink:0}
+    #pt-confirm-btn{display:block;width:100%;margin-top:8px;padding:5px 0;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600}
+    #pt-confirm-btn:hover{background:#15803d}
 
     /* Topbar */
     .pg-topbar{display:flex;align-items:center;justify-content:space-between;padding:0 14px;height:50px;background:#fff;border-bottom:1px solid rgba(15,23,42,.12);box-shadow:0 1px 4px rgba(0,0,0,.08);flex-shrink:0;gap:8px}
@@ -275,7 +277,7 @@
               <th rowspan="2">분류번호</th>
               <th class="left" rowspan="2">발주건</th>
               <th rowspan="2">업체</th>
-              <th rowspan="2">전발주금액</th>
+              <th rowspan="2">발주금액<br><span style="font-size:.7em;font-weight:400">(VAT 제외)</span></th>
               <th colspan="3">지급방법</th>
               <th colspan="2">자금출처</th>
               <th class="left" rowspan="2">비고</th>
@@ -308,8 +310,8 @@
   const SK = "sb_publishable_fbbdwjCZCL9AFD-eUIs0bg_XwdlhxFN";
   const O_TBL = "orders";
   const P_TBL = "payment_schedule";
-  const PT_LIST = ["선금","계약금","중도금","잠금","일시불"];
-  const PT_ORDER = {"선금":0,"계약금":1,"중도금":2,"잠금":3,"일시불":4};
+  const PT_LIST = ["선금","계약금","중도금","잔금","일시불"];
+  const PT_ORDER = {"선금":0,"계약금":1,"중도금":2,"잔금":3,"일시불":4};
 
   function getToken(){ return localStorage.getItem("supa_token") || SK; }
 
@@ -506,27 +508,30 @@
 
   function showPopover(oid,anchorEl){
     popOid=oid;
-    const checked=new Set(payments.filter(p=>p.order_id===oid).map(p=>p.payment_type));
+    const original=new Set(payments.filter(p=>p.order_id===oid).map(p=>p.payment_type));
     popover.innerHTML=`<div class="pt-pop-title">지급 구분</div>`+
-      PT_LIST.map(t=>`<label class="pt-pop-item"><input type="checkbox" value="${t}"${checked.has(t)?" checked":""}>${t}</label>`).join("");
+      PT_LIST.map(t=>`<label class="pt-pop-item"><input type="checkbox" value="${t}"${original.has(t)?" checked":""}>${t}</label>`).join("")+
+      `<button id="pt-confirm-btn">확인</button>`;
     const rect=anchorEl.getBoundingClientRect();
     popover.style.top=(rect.bottom+4)+"px";
     popover.style.left=Math.min(rect.left,window.innerWidth-150)+"px";
     popover.classList.add("open");
-    popover.querySelectorAll("input").forEach(cb=>{
-      cb.addEventListener("change",async()=>{
-        if(cb.checked){
-          await addPaymentDB(oid,cb.value);
-        } else {
-          const ex=payments.find(p=>p.order_id===oid&&p.payment_type===cb.value);
+    document.getElementById("pt-confirm-btn").addEventListener("click",async()=>{
+      const current=new Set(Array.from(popover.querySelectorAll("input:checked")).map(cb=>cb.value));
+      for(const t of current){
+        if(!original.has(t)) await addPaymentDB(oid,t);
+      }
+      for(const t of original){
+        if(!current.has(t)){
+          const ex=payments.find(p=>p.order_id===oid&&p.payment_type===t);
           if(ex){
             const hasData=parseMoney(ex.amount)>0||ex.scheduled_date;
-            if(hasData&&!confirm(`'${cb.value}' 행 삭제 시 입력 데이터가 사라집니다. 삭제할까요?`)){cb.checked=true;return;}
+            if(hasData&&!confirm(`'${t}' 행 삭제 시 입력 데이터가 사라집니다. 삭제할까요?`))continue;
             await removePaymentDB(ex._id);
           }
         }
-        showPopover(oid,anchorEl);
-      });
+      }
+      popover.classList.remove("open");popOid=null;
     });
   }
 
