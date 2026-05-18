@@ -503,9 +503,13 @@
   /* ── Display rows ── */
   function getDisplayRows(){
     if(sortByDate){
-      return payments
+      const withPayment=payments
         .map(p=>({order:orders.find(o=>o._id===p.order_id)||{},payment:p,groupIdx:-1,isGroupStart:false}))
         .sort((a,b)=>parsePeriod(a.payment.scheduled_date)-parsePeriod(b.payment.scheduled_date));
+      const paidOids=new Set(payments.map(p=>p.order_id));
+      const withoutPayment=orders.filter(o=>!paidOids.has(o._id))
+        .map(o=>({order:o,payment:null,groupIdx:-1,isGroupStart:true}));
+      return [...withPayment,...withoutPayment];
     }
     const rows=[];
     [...orders].sort((a,b)=>a.sort_order-b.sort_order).forEach((o,gi)=>{
@@ -538,7 +542,7 @@
         <td><div class="cell-inner" tabindex="0" data-field="order_name" data-oid="${oid}">${esc(o?.order_name)}</div></td>
         <td class="center"><div class="cell-inner" tabindex="0" data-field="vendor" data-oid="${oid}">${esc(o?.vendor)}</div></td>
         <td class="amount"><div class="cell-inner" tabindex="0" data-field="total_amount" data-oid="${oid}">${fmtMoney(o?.total_amount)}</div></td>
-        <td class="pay-type"><div class="cell-inner" tabindex="0" data-field="payment_type" data-oid="${oid}" data-pid="${pid}">${p?ptBadge(p.payment_type):`<span style="color:#94a3b8;font-size:.75rem">클릭</span>`}</div></td>
+        <td class="pay-type"><div class="cell-inner" tabindex="0" data-field="payment_type" data-oid="${oid}" data-pid="${pid}">${p?ptBadge(p.payment_type):`<span style="color:#94a3b8;font-size:.82rem">—</span>`}</div></td>
         <td class="period-cell"><div class="cell-inner" tabindex="0" data-field="scheduled_date" data-pid="${pid}">${esc(p?.scheduled_date)}</div></td>
         <td class="amount"><div class="cell-inner" tabindex="0" data-field="amount" data-pid="${pid}">${fmtMoney(p?.amount)}</div></td>
         <td><div class="cell-inner" tabindex="0" data-field="source" data-pid="${pid}">${esc(p?.source??'')}</div></td>
