@@ -56,6 +56,7 @@
     .cell-inner.cell-edit{cursor:text!important;background:#fff!important;box-shadow:inset 0 0 0 2px rgba(22,101,52,.55)!important;white-space:pre-wrap!important;overflow:visible!important;border-radius:6px!important}
 
     td.mono .cell-inner{font-family:var(--font-mono);font-size:.78rem}
+    td.code-col .cell-inner{white-space:nowrap;word-break:keep-all}
     td.amount .cell-inner{font-family:var(--font-mono);color:var(--accent);text-align:right}
     td.center .cell-inner{text-align:center}
 
@@ -333,16 +334,16 @@
       <div class="table-scroll">
         <table id="fundTable">
           <colgroup>
-            <col style="width:6%">
-            <col style="width:16%">
             <col style="width:10%">
+            <col style="width:15%">
+            <col style="width:9%">
             <col style="width:9%">
             <col style="width:7%">
             <col style="width:9%">
             <col style="width:9%">
             <col style="width:10%">
             <col style="width:10%">
-            <col style="width:14%">
+            <col style="width:12%">
           </colgroup>
           <thead>
             <tr>
@@ -600,7 +601,7 @@
       const rs=_rs||0;
       // Columns 1-4 and 10(비고): merged with rowspan when rs>=1, skipped when rs===0
       const merged=rs>=1?`
-        <td class="mono center" rowspan="${rs}"><div class="cell-inner" tabindex="0" data-field="code" data-oid="${oid}">${esc(o?.code)}</div></td>
+        <td class="mono center code-col" rowspan="${rs}"><div class="cell-inner" tabindex="0" data-field="code" data-oid="${oid}">${esc(o?.code)}</div></td>
         <td rowspan="${rs}"><div class="cell-inner" tabindex="0" data-field="order_name" data-oid="${oid}">${esc(o?.order_name)}</div></td>
         <td class="center" rowspan="${rs}"><div class="cell-inner" tabindex="0" data-field="vendor" data-oid="${oid}">${esc(o?.vendor)}</div></td>
         <td class="amount" rowspan="${rs}"><div class="cell-inner" tabindex="0" data-field="total_amount" data-oid="${oid}">${fmtMoney(o?.total_amount)}</div></td>`:"";
