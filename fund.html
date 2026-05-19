@@ -102,6 +102,15 @@
       align-items:center;justify-content:center;
     }
     #fund-float-drag:hover{color:var(--accent);border-color:rgba(22,101,52,.5);background:#fff}
+    #fund-float-paid{
+      position:fixed;display:none;z-index:9000;cursor:pointer;
+      font-size:13px;font-weight:700;padding:3px 8px;border-radius:6px;
+      background:rgba(255,255,255,.96);border:1px solid rgba(15,23,42,.18);
+      box-shadow:0 2px 8px rgba(0,0,0,.18);line-height:1;
+      transform:translateY(-50%);white-space:nowrap;color:rgba(100,116,139,.75);
+    }
+    #fund-float-paid:hover{border-color:rgba(22,163,74,.5);color:#16a34a;background:#fff}
+    #fund-float-paid.paid{background:#16a34a;border-color:#15803d;color:#fff}
     tbody tr.row-dragging{opacity:.45;background:rgba(22,101,52,.08)!important}
     tbody tr.drag-over-top td{border-top:2px solid var(--accent)!important}
     tbody tr.drag-over-bot td{border-bottom:2px solid var(--accent)!important}
@@ -194,7 +203,7 @@
       td.mono .cell-inner{font-size:7pt!important}
       tbody tr{border-bottom:1px solid #e5e7eb!important}
       .pt-badge{font-weight:normal!important;font-size:7pt!important}
-      #fund-float-drag{display:none!important}
+      #fund-float-drag,#fund-float-paid{display:none!important}
     }
     @media(max-width:640px){.no-mobile{display:none!important}.pg-topbar{padding:0 8px}.pg-btn{padding:5px 8px;font-size:.7rem}}
   </style>
@@ -264,6 +273,7 @@
   </div>
 
   <div id="fund-float-drag" title="드래그로 순서 변경" draggable="true" style="display:none;">⠿</div>
+  <div id="fund-float-paid" title="지급 완료" style="display:none;">✓</div>
 
   <!-- Period picker -->
   <div id="period-picker">
@@ -571,7 +581,7 @@
 
   /* ── Render ── */
   function renderTable(){
-    if(sortByDate&&typeof fundHideFloatDrag==="function")fundHideFloatDrag();
+    if(sortByDate)fundHideFloats();
     const tbody=document.getElementById("tableBody");
     const rows=getDisplayRows();
     if(!rows.length){
@@ -741,10 +751,12 @@
   });
   document.getElementById("ctx-delete-payment").addEventListener("click",()=>{if(ctxPid)deletePayment(ctxPid);});
   document.getElementById("ctx-delete-order").addEventListener("click",()=>{if(ctxOid)deleteOrder(ctxOid);});
-  document.getElementById("ctx-paid-toggle").addEventListener("click",()=>{
-    if(!ctxPid)return;
-    const p=payments.find(x=>x._id===ctxPid);if(!p)return;
+  function togglePaymentPaid(pid){
+    const p=payments.find(x=>x._id===pid);if(!p)return;
     snapshot();p.paid=!p.paid;saveDebounce();renderTable();
+  }
+  document.getElementById("ctx-paid-toggle").addEventListener("click",()=>{
+    if(ctxPid)togglePaymentPaid(ctxPid);
   });
 
   /* ── Period picker ── */
@@ -1037,25 +1049,54 @@
     if(document.visibilityState==="hidden"&&_saveTimer)flushSaveNow();
   });
 
-  /* ── Row reorder (발주건 단위) ── */
+  /* ── Row floats (드래그 + 지급완료) ── */
   const fundFloatDrag=document.getElementById("fund-float-drag");
+  const fundFloatPaid=document.getElementById("fund-float-paid");
   const fundTableWrap=document.querySelector(".table-wrap");
   let fundFloatTr=null,fundDragSrcOid=null;
   let fundHideTimer=null;
 
-  function fundHideFloatDrag(){fundFloatDrag.style.display="none";fundFloatTr=null;}
+  function fundHideFloats(){
+    fundFloatDrag.style.display="none";
+    fundFloatPaid.style.display="none";
+    fundFloatTr=null;
+  }
   function fundCancelHide(){clearTimeout(fundHideTimer);}
-  function fundScheduleHide(){clearTimeout(fundHideTimer);fundHideTimer=setTimeout(fundHideFloatDrag,400);}
+  function fundScheduleHide(){clearTimeout(fundHideTimer);fundHideTimer=setTimeout(fundHideFloats,400);}
 
-  function fundPositionFloat(tr){
+  function fundPositionFloats(tr){
     if(sortByDate)return;
+    fundFloatTr=tr;
     const rect=tr.getBoundingClientRect();
     const midY=rect.top+rect.height/2;
     const wrapRect=fundTableWrap.getBoundingClientRect();
     fundFloatDrag.style.left=Math.max(2,wrapRect.left-28)+"px";
     fundFloatDrag.style.top=midY+"px";
     fundFloatDrag.style.display="flex";
+    const pid=tr.dataset.pid;
+    if(pid){
+      const p=payments.find(x=>x._id===pid);
+      fundFloatPaid.style.left=Math.min(window.innerWidth-44,wrapRect.right+4)+"px";
+      fundFloatPaid.style.top=midY+"px";
+      fundFloatPaid.style.display="flex";
+      fundFloatPaid.classList.toggle("paid",!!p?.paid);
+      fundFloatPaid.title=p?.paid?"지급 완료 취소":"지급 완료";
+    } else {
+      fundFloatPaid.style.display="none";
+    }
   }
+
+  fundFloatPaid.addEventListener("click",()=>{
+    if(!fundFloatTr?.dataset.pid)return;
+    const pid=fundFloatTr.dataset.pid;
+    togglePaymentPaid(pid);
+    setTimeout(()=>{
+      const newTr=document.querySelector(`#tableBody tr[data-pid="${pid}"]`);
+      if(newTr){fundFloatTr=newTr;fundPositionFloats(newTr);}
+    },0);
+  });
+  fundFloatPaid.addEventListener("mouseenter",fundCancelHide);
+  fundFloatPaid.addEventListener("mouseleave",fundScheduleHide);
 
   function fundClearDragMarks(){
     document.querySelectorAll("#tableBody tr.row-dragging").forEach(r=>r.classList.remove("row-dragging"));
@@ -1066,7 +1107,7 @@
 
   let _fundDragBound=false;
   function bindDragReorder(){
-    if(sortByDate){fundHideFloatDrag();return;}
+    if(sortByDate){fundHideFloats();return;}
     const tbody=document.getElementById("tableBody");
     if(_fundDragBound)return;
     _fundDragBound=true;
@@ -1076,8 +1117,7 @@
       const tr=e.target.closest("tr[data-oid]");
       if(!tr)return;
       fundCancelHide();
-      fundFloatTr=tr;
-      fundPositionFloat(tr);
+      fundPositionFloats(tr);
     });
     tbody.addEventListener("mouseleave",fundScheduleHide);
     fundFloatDrag.addEventListener("mouseenter",fundCancelHide);
@@ -1136,7 +1176,7 @@
     });
 
     window.addEventListener("scroll",()=>{
-      if(fundFloatTr&&!sortByDate)fundPositionFloat(fundFloatTr);
+      if(fundFloatTr&&!sortByDate)fundPositionFloats(fundFloatTr);
     },true);
   }
 
