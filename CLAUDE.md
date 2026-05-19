@@ -66,6 +66,7 @@ ALTER TABLE 테이블명 ADD COLUMN 컬럼명 타입 DEFAULT 기본값;
 ## 작업 히스토리 (최근순)
 | 날짜 | 파일 | 작업 내용 |
 |------|------|-----------|
+| 2026-05-18 | `fund.html` | 셀 키보드 UX — 선택 상태에서 타이핑 즉시 편집, Tab=오른쪽, Enter=아래 이동, 화살표 이동 |
 | 2026-05-18 | `purchase.html` | 체크된 행 묶어서 자금집행으로 보내기 — `#send-to-fund-btn` (fixed bottom, 체크 시 표시, 인쇄 숨김), `updateSendToFundBtn()`, 클릭 시 `orders` + `payment_schedule` INSERT (code 콤마 묶음, order_name=첫째 장비명, vendor=첫째 업체, total_amount=subtotal 합계) |
 | 2026-05-13 | `fund.html` | 상단 짤림 현상 수정 — `.pg-topbar` `position:sticky;top:0;z-index:100` 제거 → `flex-shrink:0` 적용, `thead{top:50px}` → `top:0` 변경 (구매리스트와 동일 방식) |
 | 2026-05-06 | `pid-tool.html` | SE + P&ID 대규모 UX 개선: ① SE 드래그 smooth (raw 좌표, snap 제거) ② 스마트 가이드라인 — 드래그 중 8px 이내 엣지/중앙/정렬 감지 시 빨간 가이드 + 자동 스냅, Alt키 무시 (`_seSmartSnap`) ③ P&ID 동일 스마트 가이드 적용 (`_pidSmartSnap`, 12px 임계) ④ SE 포트 도형 엣지 자동 스냅 — 마우스 22px 이내 가장 가까운 엣지점에 달라붙음, Alt=자유 배치, 미리보기 표시 (`seNearestEdgePt`) ⑤ 정삼각형 Shift 드로잉 수정 (h=w×√3/2) ⑥ 우클릭 컨텍스트 메뉴 SE (`seShowCtxMenu`) / P&ID (`pid-ctx-menu`) 모두 구현 ⑦ P&ID 배관 그리기 중 Backspace = 마지막 지점 제거, 우클릭 = 전체 취소 |
