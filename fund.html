@@ -779,6 +779,18 @@
   });
   periodPicker.addEventListener("click",e=>e.stopPropagation());
 
+  function closeAllPickers(){
+    let closed=false;
+    if(periodPicker.classList.contains("open")){periodPicker.classList.remove("open");ppPid=null;closed=true;}
+    if(popover.classList.contains("open")){popover.classList.remove("open");popOid=null;closed=true;}
+    if(ctxMenu.style.display==="block"){ctxMenu.style.display="none";closed=true;}
+    return closed;
+  }
+  document.addEventListener("keydown",e=>{
+    if(e.key!=="Escape")return;
+    if(closeAllPickers()){e.preventDefault();e.stopPropagation();}
+  },true);
+
   /* ── Weekly summary ── */
   function buildWeeklySummary(){
     const el=document.getElementById("weekly-summary");if(!el)return;
