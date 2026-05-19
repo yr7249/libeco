@@ -1713,13 +1713,17 @@
     return Array.from(document.querySelectorAll("#tableBody .cell-inner[data-idx]"));
   }
 
-  function enterCellEdit(el) {
+  function enterCellEdit(el, startChar) {
     el._origHTML = el.innerHTML;
     el.contentEditable = "true";
     el.classList.remove("cell-sel");
     el.classList.add("cell-edit");
+    if (startChar != null) {
+      el.textContent = startChar;
+    }
     const r = document.createRange();
-    r.selectNodeContents(el);
+    if (startChar != null) { r.selectNodeContents(el); r.collapse(false); }
+    else r.selectNodeContents(el);
     const s = getSelection(); s.removeAllRanges(); s.addRange(r);
   }
 
@@ -1768,6 +1772,11 @@
       if (e.key === "ArrowUp") { e.preventDefault(); moveFocus(e.target, 0, -1); return; }
       if (e.key === "ArrowRight") { e.preventDefault(); moveFocus(e.target, 1, 0); return; }
       if (e.key === "ArrowLeft") { e.preventDefault(); moveFocus(e.target, -1, 0); return; }
+      if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault();
+        enterCellEdit(e.target, e.key);
+        return;
+      }
       return;
     }
 

@@ -423,7 +423,10 @@
       if(!or.ok||!pr.ok)return false;
       const oR=await or.json(),pR=await pr.json();
       orders=oR.map(r=>({_id:r.id,code:r.code??"",order_name:r.order_name??"",vendor:r.vendor??"",total_amount:r.total_amount??0,sort_order:r.sort_order??0}));
-      payments=pR.map(r=>({_id:r.id,order_id:r.order_id,payment_type:r.payment_type??"일시불",scheduled_date:r.scheduled_date??"",amount:r.amount??0,note:r.note??"",source:r.source??"",budget_item:r.budget_item??"",paid:r.paid??false,sort_order:r.sort_order??0}));
+      payments=pR.map(r=>{
+        const sp=r.scheduled_period??((typeof r.scheduled_date==="string"&&r.scheduled_date.includes("주"))?r.scheduled_date:"");
+        return {_id:r.id,order_id:r.order_id,payment_type:r.payment_type??"일시불",scheduled_period:sp,amount:r.amount??0,note:r.note??"",source:r.source??"",budget_item:r.budget_item??"",paid:r.paid??false,sort_order:r.sort_order??0};
+      });
       return true;
     }catch(e){console.warn("[fund] load:",e);return false;}
   }
@@ -431,6 +434,11 @@
   /* ── Save ── */
   let _saving=false,_saveTimer=null;
   function saveDebounce(){clearTimeout(_saveTimer);_saving=true;_saveTimer=setTimeout(flushSave,700);}
+
+  async function flushSaveNow(){
+    clearTimeout(_saveTimer);_saveTimer=null;
+    await flushSave();
+  }
 
   async function flushSave(){
     clearTimeout(_saveTimer);_saveTimer=null;
@@ -443,8 +451,8 @@
       }
       if(payments.length){
         const res=await fetch(SU+"/rest/v1/"+P_TBL,{method:"POST",headers:h,
-          body:JSON.stringify(payments.map((p,i)=>({id:p._id,order_id:p.order_id,payment_type:p.payment_type,scheduled_date:p.scheduled_date||null,amount:parseMoney(p.amount)||0,note:p.note,source:p.source??"",budget_item:p.budget_item??"",paid:!!p.paid,sort_order:i})))});
-        if(!res.ok)console.error("[fund] payments save:",res.status,await res.text());
+          body:JSON.stringify(payments.map((p,i)=>({id:p._id,order_id:p.order_id,payment_type:p.payment_type,scheduled_period:p.scheduled_period||"",amount:parseMoney(p.amount)||0,note:p.note,source:p.source??"",budget_item:p.budget_item??"",paid:!!p.paid,sort_order:i})))});
+        if(!res.ok){const err=await res.text();console.error("[fund] payments save:",res.status,err);showSaveStatus("저장 실패");}
       }
     }catch(e){console.warn("[fund] save:",e);}
     _saving=false;showSaveStatus("저장됨");
@@ -485,7 +493,12 @@
   function parseMoney(v){if(typeof v==="number")return v;return parseInt(String(v||"").replace(/[^0-9]/g,""))||0;}
   function esc(v){return String(v||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
 
-  function parsePeriod(s){const m=s&&s.match(/(\d+)월\s*(\d+)주/);return m?parseInt(m[1])*10+parseInt(m[2]):9999;}
+  function parsePeriod(s){
+    const m=s&&s.match(/(?:(\d+)년\s*)?(\d+)월\s*(\d+)주/);
+    if(!m)return 9999;
+    const y=m[1]?parseInt(m[1]):0;
+    return y*10000+parseInt(m[2])*10+parseInt(m[3]);
+  }
 
   function updateKpi(){
     document.getElementById("header-total-amount").textContent="₩"+payments.reduce((s,p)=>s+parseMoney(p.amount),0).toLocaleString("ko-KR");
@@ -505,7 +518,7 @@
     if(sortByDate){
       const withPayment=payments
         .map(p=>({order:orders.find(o=>o._id===p.order_id)||{},payment:p,groupIdx:-1,isGroupStart:false}))
-        .sort((a,b)=>parsePeriod(a.payment.scheduled_date)-parsePeriod(b.payment.scheduled_date));
+        .sort((a,b)=>parsePeriod(a.payment.scheduled_period)-parsePeriod(b.payment.scheduled_period));
       const paidOids=new Set(payments.map(p=>p.order_id));
       const withoutPayment=orders.filter(o=>!paidOids.has(o._id))
         .map(o=>({order:o,payment:null,groupIdx:-1,isGroupStart:true}));
@@ -557,7 +570,7 @@
       return `<tr class="${cls}" data-oid="${oid}" data-pid="${pid}">
         ${merged}
         <td class="pay-type"><div class="cell-inner" tabindex="0" data-field="payment_type" data-oid="${oid}" data-pid="${pid}">${p?ptBadge(p.payment_type):`<span style="color:#94a3b8;font-size:.82rem">—</span>`}</div></td>
-        <td class="period-cell"><div class="cell-inner" tabindex="0" data-field="scheduled_date" data-pid="${pid}">${esc(p?.scheduled_date)}</div></td>
+        <td class="period-cell"><div class="cell-inner" tabindex="0" data-field="scheduled_period" data-pid="${pid}">${esc(p?.scheduled_period)}</div></td>
         <td class="amount"><div class="cell-inner" tabindex="0" data-field="amount" data-pid="${pid}">${fmtMoney(p?.amount)}</div></td>
         <td><div class="cell-inner" tabindex="0" data-field="source" data-pid="${pid}">${esc(p?.source??'')}</div></td>
         <td><div class="cell-inner" tabindex="0" data-field="budget_item" data-pid="${pid}">${esc(p?.budget_item??'')}</div></td>
@@ -591,7 +604,7 @@
         if(!current.has(t)){
           const ex=payments.find(p=>p.order_id===oid&&p.payment_type===t);
           if(ex){
-            const hasData=parseMoney(ex.amount)>0||ex.scheduled_date;
+            const hasData=parseMoney(ex.amount)>0||ex.scheduled_period;
             if(hasData&&!confirm(`'${t}' 행 삭제 시 입력 데이터가 사라집니다. 삭제할까요?`))continue;
             await removePaymentDB(ex._id);
           }
@@ -623,9 +636,9 @@
       const res=await fetch(SU+"/rest/v1/"+P_TBL,{
         method:"POST",
         headers:{"apikey":SK,"Authorization":"Bearer "+getToken(),"Content-Type":"application/json","Prefer":"return=representation"},
-        body:JSON.stringify({order_id:oid,payment_type:type,amount:autoAmt,note:"",source:"",budget_item:"",paid:false,sort_order:payments.length})
+        body:JSON.stringify({order_id:oid,payment_type:type,amount:autoAmt,note:"",source:"",budget_item:"",paid:false,scheduled_period:"",sort_order:payments.length})
       });
-      if(res.ok){const[r]=await res.json();payments.push({_id:r.id,order_id:oid,payment_type:type,scheduled_date:"",amount:autoAmt,note:"",source:"",budget_item:"",paid:false,sort_order:payments.length});renderTable();}
+      if(res.ok){const[r]=await res.json();payments.push({_id:r.id,order_id:oid,payment_type:type,scheduled_period:"",amount:autoAmt,note:"",source:"",budget_item:"",paid:false,sort_order:payments.length});renderTable();}
       else console.error("[fund] add payment:",await res.text());
     }catch(e){console.warn(e);}
   }
@@ -696,20 +709,21 @@
   function renderPeriodPicker(){
     document.getElementById("pp-month-label").textContent=`${ppYear}년 ${ppMonth}월`;
     const p=payments.find(x=>x._id===ppPid);
-    const cur=p?.scheduled_date||"";
-    const curMatch=cur.match(/(\d+)월\s*(\d+)주/);
+    const cur=p?.scheduled_period||"";
+    const curMatch=cur.match(/(?:(\d+)년\s*)?(\d+)월\s*(\d+)주/);
     const weeks=document.getElementById("pp-weeks");
     weeks.innerHTML=[1,2,3,4,5].map(w=>{
-      const label=`${ppMonth}월 ${w}주차`;
-      const isActive=curMatch&&parseInt(curMatch[1])===ppMonth&&parseInt(curMatch[2])===w;
+      const label=`${w}주차`;
+      const isActive=curMatch&&parseInt(curMatch[2])===ppMonth&&parseInt(curMatch[3])===w&&(!curMatch[1]||parseInt(curMatch[1])===ppYear);
       return `<button class="pp-week-btn${isActive?" active":""}" data-week="${w}">${w}주차</button>`;
     }).join("");
     weeks.querySelectorAll(".pp-week-btn").forEach(btn=>{
-      btn.addEventListener("click",()=>{
-        const val=`${ppMonth}월 ${btn.dataset.week}주차`;
+      btn.addEventListener("click",async()=>{
+        const val=`${ppYear}년 ${ppMonth}월 ${btn.dataset.week}주차`;
         const p=payments.find(x=>x._id===ppPid);if(!p)return;
-        snapshot();p.scheduled_date=val;saveDebounce();
+        snapshot();p.scheduled_period=val;
         periodPicker.classList.remove("open");ppPid=null;
+        await flushSaveNow();
         renderTable();
       });
     });
@@ -718,8 +732,9 @@
   function showPeriodPicker(pid,anchorEl){
     ppPid=pid;
     const p=payments.find(x=>x._id===pid);
-    const m=p?.scheduled_date?.match(/(\d+)월/);
-    if(m){ppMonth=parseInt(m[1]);}else{ppMonth=new Date().getMonth()+1;}
+    const m=p?.scheduled_period?.match(/(?:(\d+)년\s*)?(\d+)월/);
+    if(m){if(m[1])ppYear=parseInt(m[1]);ppMonth=parseInt(m[2]);}
+    else{ppYear=new Date().getFullYear();ppMonth=new Date().getMonth()+1;}
     const rect=anchorEl.getBoundingClientRect();
     periodPicker.style.top=(rect.bottom+4)+"px";
     periodPicker.style.left=Math.min(rect.left,window.innerWidth-210)+"px";
@@ -729,12 +744,12 @@
 
   document.getElementById("pp-prev").addEventListener("click",()=>{ppMonth--;if(ppMonth<1){ppMonth=12;ppYear--;}renderPeriodPicker();});
   document.getElementById("pp-next").addEventListener("click",()=>{ppMonth++;if(ppMonth>12){ppMonth=1;ppYear++;}renderPeriodPicker();});
-  document.getElementById("pp-clear").addEventListener("click",()=>{
-    const p=payments.find(x=>x._id===ppPid);if(p){snapshot();p.scheduled_date="";saveDebounce();renderTable();}
+  document.getElementById("pp-clear").addEventListener("click",async()=>{
+    const p=payments.find(x=>x._id===ppPid);if(p){snapshot();p.scheduled_period="";await flushSaveNow();renderTable();}
     periodPicker.classList.remove("open");ppPid=null;
   });
   document.addEventListener("click",e=>{
-    if(!periodPicker.contains(e.target)&&!e.target.closest("[data-field='scheduled_date']")){
+    if(!periodPicker.contains(e.target)&&!e.target.closest("[data-field='scheduled_period']")){
       periodPicker.classList.remove("open");ppPid=null;
     }
   });
@@ -746,7 +761,7 @@
     const groups={};
     payments.forEach(p=>{
       if(!parseMoney(p.amount))return;
-      const key=p.scheduled_date||"미정";
+      const key=p.scheduled_period||"미정";
       if(!groups[key])groups[key]={total:0,paidAmt:0};
       groups[key].total+=parseMoney(p.amount);
       if(p.paid)groups[key].paidAmt+=parseMoney(p.amount);
@@ -773,7 +788,7 @@
         el.addEventListener("click",e=>{e.stopPropagation();if(el.dataset.oid)showPopover(el.dataset.oid,el);});
         return;
       }
-      if(field==="scheduled_date"){
+      if(field==="scheduled_period"){
         el.addEventListener("click",e=>{e.stopPropagation();if(el.dataset.pid)showPeriodPicker(el.dataset.pid,el);});
         return;
       }
@@ -800,7 +815,7 @@
     });
   }
 
-  const NAV_SKIP_FIELDS=new Set(["payment_type","scheduled_date"]);
+  const NAV_SKIP_FIELDS=new Set(["payment_type","scheduled_period"]);
 
   function getNavCells(){
     return Array.from(document.querySelectorAll("#tableBody tr[data-oid]")).flatMap(tr=>
@@ -897,7 +912,7 @@
       }
       return;
     }
-    if(["scheduled_date","amount","note","source","budget_item"].includes(field)&&pid){
+    if(["amount","note","source","budget_item"].includes(field)&&pid){
       const p=payments.find(x=>x._id===pid);if(!p)return;
       if(field==="amount"){
         let nv;
@@ -949,6 +964,10 @@
     if(e.key==="ArrowRight"&&sel?.toString()===""&&sel?.anchorOffset===el.textContent.length){e.preventDefault();blurAndGo(el,1,0);return;}
     if(e.key==="ArrowLeft"&&sel?.toString()===""&&sel?.anchorOffset===0){e.preventDefault();blurAndGo(el,-1,0);return;}
   }
+
+  document.addEventListener("visibilitychange",()=>{
+    if(document.visibilityState==="hidden"&&_saveTimer)flushSaveNow();
+  });
 
   /* ── Init ── */
   (async function(){
