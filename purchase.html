@@ -2059,13 +2059,7 @@
       if (!ordRes.ok) throw new Error(`orders 저장 실패: ${ordRes.status}`);
       const [newOrder] = await ordRes.json();
 
-      await fetch(`${SUPA_URL}/rest/v1/payment_schedule`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({ order_id: newOrder.id, payment_type: "일시불", amount: 0, note: "" })
-      });
-
-      alert(`자금집행으로 전송 완료!\n발주건: ${order_name}\n금액: ${total_amount.toLocaleString()}원`);
+      alert(`자금집행으로 전송 완료!\n발주건: ${order_name}\n금액: ${total_amount.toLocaleString()}원\n(지급 구분은 자금집행에서 선택)`);
     } catch(err) {
       alert("전송 중 오류가 발생했습니다.\n" + err.message);
     }
