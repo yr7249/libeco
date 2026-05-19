@@ -353,7 +353,7 @@
               <th rowspan="2">발주금액<br><span style="font-size:.7em;font-weight:400">(VAT 제외)</span></th>
               <th colspan="3">지급방법</th>
               <th colspan="2">자금출처</th>
-              <th class="left" rowspan="2">비고</th>
+              <th rowspan="2">비고</th>
             </tr>
             <tr>
               <th>구분</th>
@@ -606,14 +606,14 @@
         <td class="center" rowspan="${rs}"><div class="cell-inner" tabindex="0" data-field="vendor" data-oid="${oid}">${esc(o?.vendor)}</div></td>
         <td class="amount" rowspan="${rs}"><div class="cell-inner" tabindex="0" data-field="total_amount" data-oid="${oid}">${fmtMoney(o?.total_amount)}</div></td>`:"";
       const bigo=rs>=1?`
-        <td rowspan="${rs}"><div class="cell-inner" tabindex="0" data-field="note" data-pid="${pid}">${esc(p?.note??'').replaceAll('\n','<br>')}</div></td>`:"";
+        <td class="center" rowspan="${rs}"><motion class="cell-inner" tabindex="0" data-field="note" data-pid="${pid}">${esc(p?.note??'').replaceAll('\n','<br>')}</div></td>`:"";
       return `<tr class="${cls}" data-oid="${oid}" data-pid="${pid}"${sortByDate?"":" draggable=\"true\""}>
         ${merged}
         <td class="pay-type"><div class="cell-inner" tabindex="0" data-field="payment_type" data-oid="${oid}" data-pid="${pid}">${p?ptBadge(p.payment_type):`<span style="color:#94a3b8;font-size:.82rem">—</span>`}</div></td>
         <td class="period-cell"><div class="cell-inner" tabindex="0" data-field="scheduled_period" data-pid="${pid}">${esc(normPeriod(p?.scheduled_period))}</div></td>
         <td class="amount"><div class="cell-inner" tabindex="0" data-field="amount" data-pid="${pid}">${fmtMoney(p?.amount)}</div></td>
-        <td><div class="cell-inner" tabindex="0" data-field="source" data-pid="${pid}">${esc(p?.source??'')}</div></td>
-        <td><div class="cell-inner" tabindex="0" data-field="budget_item" data-pid="${pid}">${esc(p?.budget_item??'')}</div></td>
+        <td class="center"><div class="cell-inner" tabindex="0" data-field="source" data-pid="${pid}">${esc(p?.source??'')}</div></td>
+        <td class="center"><div class="cell-inner" tabindex="0" data-field="budget_item" data-pid="${pid}">${esc(p?.budget_item??'')}</div></td>
         ${bigo}
       </tr>`;
     }).join("");
