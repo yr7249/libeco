@@ -92,6 +92,20 @@
     .pp-clear:hover{background:#f8fafc}
     td.period-cell .cell-inner{cursor:pointer;text-align:center;font-size:.82rem}
 
+    /* Row reorder (float drag) */
+    #fund-float-drag{
+      position:fixed;display:none;z-index:9000;cursor:grab;
+      font-size:15px;font-weight:400;padding:3px 7px;border-radius:6px;
+      background:rgba(255,255,255,.96);border:1px solid rgba(15,23,42,.18);
+      box-shadow:0 2px 8px rgba(0,0,0,.18);line-height:1;
+      transform:translateY(-50%);white-space:nowrap;color:rgba(100,116,139,.75);
+      align-items:center;justify-content:center;
+    }
+    #fund-float-drag:hover{color:var(--accent);border-color:rgba(22,101,52,.5);background:#fff}
+    tbody tr.row-dragging{opacity:.45;background:rgba(22,101,52,.08)!important}
+    tbody tr.drag-over-top td{border-top:2px solid var(--accent)!important}
+    tbody tr.drag-over-bot td{border-bottom:2px solid var(--accent)!important}
+
     /* Paid row */
     tr.row-paid td{background:rgba(22,163,74,.06)!important}
     tr.row-paid .cell-inner{color:#15803d!important;text-decoration:line-through}
@@ -180,6 +194,7 @@
       td.mono .cell-inner{font-size:7pt!important}
       tbody tr{border-bottom:1px solid #e5e7eb!important}
       .pt-badge{font-weight:normal!important;font-size:7pt!important}
+      #fund-float-drag{display:none!important}
     }
     @media(max-width:640px){.no-mobile{display:none!important}.pg-topbar{padding:0 8px}.pg-btn{padding:5px 8px;font-size:.7rem}}
   </style>
@@ -247,6 +262,8 @@
   <div id="pt-popover">
     <div class="pt-pop-title">지급 구분</div>
   </div>
+
+  <div id="fund-float-drag" title="드래그로 순서 변경" draggable="true" style="display:none;">⠿</div>
 
   <!-- Period picker -->
   <div id="period-picker">
@@ -554,6 +571,7 @@
 
   /* ── Render ── */
   function renderTable(){
+    if(sortByDate&&typeof fundHideFloatDrag==="function")fundHideFloatDrag();
     const tbody=document.getElementById("tableBody");
     const rows=getDisplayRows();
     if(!rows.length){
@@ -580,7 +598,7 @@
         <td class="amount" rowspan="${rs}"><div class="cell-inner" tabindex="0" data-field="total_amount" data-oid="${oid}">${fmtMoney(o?.total_amount)}</div></td>`:"";
       const bigo=rs>=1?`
         <td rowspan="${rs}"><div class="cell-inner" tabindex="0" data-field="note" data-pid="${pid}">${esc(p?.note??'').replaceAll('\n','<br>')}</div></td>`:"";
-      return `<tr class="${cls}" data-oid="${oid}" data-pid="${pid}">
+      return `<tr class="${cls}" data-oid="${oid}" data-pid="${pid}"${sortByDate?"":" draggable=\"true\""}>
         ${merged}
         <td class="pay-type"><div class="cell-inner" tabindex="0" data-field="payment_type" data-oid="${oid}" data-pid="${pid}">${p?ptBadge(p.payment_type):`<span style="color:#94a3b8;font-size:.82rem">—</span>`}</div></td>
         <td class="period-cell"><div class="cell-inner" tabindex="0" data-field="scheduled_period" data-pid="${pid}">${esc(normPeriod(p?.scheduled_period))}</div></td>
@@ -592,6 +610,20 @@
     }).join("");
     updateKpi();
     bindEvents();
+    bindDragReorder();
+  }
+
+  function reorderOrders(srcOid,targetOid,before){
+    const si=orders.findIndex(o=>o._id===srcOid);
+    if(si<0||srcOid===targetOid)return;
+    snapshot();
+    const[moved]=orders.splice(si,1);
+    const ti=orders.findIndex(o=>o._id===targetOid);
+    if(ti<0)return;
+    orders.splice(before?ti:ti+1,0,moved);
+    orders.forEach((o,i)=>{o.sort_order=i;});
+    renderTable();
+    saveDebounce();
   }
 
   /* ── Payment type popover ── */
@@ -1004,6 +1036,109 @@
   document.addEventListener("visibilitychange",()=>{
     if(document.visibilityState==="hidden"&&_saveTimer)flushSaveNow();
   });
+
+  /* ── Row reorder (발주건 단위) ── */
+  const fundFloatDrag=document.getElementById("fund-float-drag");
+  const fundTableWrap=document.querySelector(".table-wrap");
+  let fundFloatTr=null,fundDragSrcOid=null;
+  let fundHideTimer=null;
+
+  function fundHideFloatDrag(){fundFloatDrag.style.display="none";fundFloatTr=null;}
+  function fundCancelHide(){clearTimeout(fundHideTimer);}
+  function fundScheduleHide(){clearTimeout(fundHideTimer);fundHideTimer=setTimeout(fundHideFloatDrag,400);}
+
+  function fundPositionFloat(tr){
+    if(sortByDate)return;
+    const rect=tr.getBoundingClientRect();
+    const midY=rect.top+rect.height/2;
+    const wrapRect=fundTableWrap.getBoundingClientRect();
+    fundFloatDrag.style.left=Math.max(2,wrapRect.left-28)+"px";
+    fundFloatDrag.style.top=midY+"px";
+    fundFloatDrag.style.display="flex";
+  }
+
+  function fundClearDragMarks(){
+    document.querySelectorAll("#tableBody tr.row-dragging").forEach(r=>r.classList.remove("row-dragging"));
+    document.querySelectorAll("#tableBody .drag-over-top,#tableBody .drag-over-bot").forEach(r=>{
+      r.classList.remove("drag-over-top","drag-over-bot");
+    });
+  }
+
+  let _fundDragBound=false;
+  function bindDragReorder(){
+    if(sortByDate){fundHideFloatDrag();return;}
+    const tbody=document.getElementById("tableBody");
+    if(_fundDragBound)return;
+    _fundDragBound=true;
+
+    tbody.addEventListener("mouseover",e=>{
+      if(sortByDate)return;
+      const tr=e.target.closest("tr[data-oid]");
+      if(!tr)return;
+      fundCancelHide();
+      fundFloatTr=tr;
+      fundPositionFloat(tr);
+    });
+    tbody.addEventListener("mouseleave",fundScheduleHide);
+    fundFloatDrag.addEventListener("mouseenter",fundCancelHide);
+    fundFloatDrag.addEventListener("mouseleave",fundScheduleHide);
+
+    fundFloatDrag.addEventListener("dragstart",e=>{
+      if(sortByDate||!fundFloatTr){e.preventDefault();return;}
+      fundDragSrcOid=fundFloatTr.dataset.oid;
+      e.dataTransfer.effectAllowed="move";
+      e.dataTransfer.setData("text/plain",fundDragSrcOid);
+      document.querySelectorAll(`#tableBody tr[data-oid="${fundDragSrcOid}"]`).forEach(r=>r.classList.add("row-dragging"));
+      requestAnimationFrame(()=>{fundFloatDrag.style.display="none";});
+    });
+    fundFloatDrag.addEventListener("dragend",()=>{
+      fundDragSrcOid=null;
+      fundClearDragMarks();
+    });
+
+    tbody.addEventListener("dragover",e=>{
+      if(sortByDate)return;
+      const tr=e.target.closest("tr[data-oid]");
+      if(!tr)return;
+      e.preventDefault();
+      fundClearDragMarks();
+      document.querySelectorAll(`#tableBody tr[data-oid="${fundDragSrcOid}"]`).forEach(r=>r.classList.add("row-dragging"));
+      const rect=tr.getBoundingClientRect();
+      tr.classList.add(e.clientY<rect.top+rect.height/2?"drag-over-top":"drag-over-bot");
+    });
+
+    tbody.addEventListener("drop",e=>{
+      if(sortByDate)return;
+      const tr=e.target.closest("tr[data-oid]");
+      const srcOid=fundDragSrcOid;
+      if(!tr||!srcOid)return;
+      e.preventDefault();
+      const targetOid=tr.dataset.oid;
+      if(srcOid===targetOid){fundDragSrcOid=null;fundClearDragMarks();return;}
+      const rect=tr.getBoundingClientRect();
+      const before=e.clientY<rect.top+rect.height/2;
+      fundDragSrcOid=null;
+      fundClearDragMarks();
+      reorderOrders(srcOid,targetOid,before);
+    });
+
+    tbody.addEventListener("dragstart",e=>{
+      if(sortByDate)return;
+      const tr=e.target.closest("tr[data-oid]");
+      if(!tr||e.target.closest("#fund-float-drag"))return;
+      fundDragSrcOid=tr.dataset.oid;
+      document.querySelectorAll(`#tableBody tr[data-oid="${fundDragSrcOid}"]`).forEach(r=>r.classList.add("row-dragging"));
+      e.dataTransfer.effectAllowed="move";
+    });
+    tbody.addEventListener("dragend",()=>{
+      fundDragSrcOid=null;
+      fundClearDragMarks();
+    });
+
+    window.addEventListener("scroll",()=>{
+      if(fundFloatTr&&!sortByDate)fundPositionFloat(fundFloatTr);
+    },true);
+  }
 
   /* ── Init ── */
   (async function(){
