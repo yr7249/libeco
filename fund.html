@@ -606,7 +606,7 @@
         <td class="center" rowspan="${rs}"><div class="cell-inner" tabindex="0" data-field="vendor" data-oid="${oid}">${esc(o?.vendor)}</div></td>
         <td class="amount" rowspan="${rs}"><div class="cell-inner" tabindex="0" data-field="total_amount" data-oid="${oid}">${fmtMoney(o?.total_amount)}</div></td>`:"";
       const bigo=rs>=1?`
-        <td class="center" rowspan="${rs}"><motion class="cell-inner" tabindex="0" data-field="note" data-pid="${pid}">${esc(p?.note??'').replaceAll('\n','<br>')}</div></td>`:"";
+        <td class="center" rowspan="${rs}"><div class="cell-inner" tabindex="0" data-field="note" data-pid="${pid}">${esc(p?.note??'').replaceAll('\n','<br>')}</div></td>`:"";
       return `<tr class="${cls}" data-oid="${oid}" data-pid="${pid}"${sortByDate?"":" draggable=\"true\""}>
         ${merged}
         <td class="pay-type"><div class="cell-inner" tabindex="0" data-field="payment_type" data-oid="${oid}" data-pid="${pid}">${p?ptBadge(p.payment_type):`<span style="color:#94a3b8;font-size:.82rem">—</span>`}</div></td>
