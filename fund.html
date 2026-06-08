@@ -116,8 +116,10 @@
     tbody tr.drag-over-top td{border-top:2px solid var(--accent)!important}
     tbody tr.drag-over-bot td{border-bottom:2px solid var(--accent)!important}
 
-    /* Paid row */
-    tr.row-paid .cell-inner{color:#94a3b8!important}
+    /* Paid row: per-payment cells gray when that payment is paid;
+       merged (order-level) cells gray only when ALL payments are paid */
+    tr.row-paid .cell-inner:not(.merged-cell){color:#94a3b8!important}
+    tr.order-all-paid .cell-inner.merged-cell{color:#94a3b8!important}
 
     /* Weekly summary */
     #weekly-summary{margin:16px 0 8px;padding:0 2px}
@@ -595,18 +597,24 @@
     } else {
       rows.forEach(r=>{r._rs=1;});
     }
+    // Order-level "all payments paid" map: merged cells follow this, not per-row paid
+    const orderAllPaid={};
+    orders.forEach(o=>{
+      const ops=payments.filter(p=>p.order_id===o._id);
+      orderAllPaid[o._id]=ops.length>0 && ops.every(p=>p.paid);
+    });
     tbody.innerHTML=rows.map(({order:o,payment:p,groupIdx:gi,isGroupStart,_rs})=>{
-      const cls=[(gi%2===1&&gi>=0?"group-even":""),((!sortByDate&&isGroupStart)?"group-start":""),(p?.paid?"row-paid":"")].filter(Boolean).join(" ");
+      const cls=[(gi%2===1&&gi>=0?"group-even":""),((!sortByDate&&isGroupStart)?"group-start":""),(p?.paid?"row-paid":""),(orderAllPaid[o?._id]?"order-all-paid":"")].filter(Boolean).join(" ");
       const oid=o?._id||"",pid=p?._id||"";
       const rs=_rs||0;
       // Columns 1-4 and 10(비고): merged with rowspan when rs>=1, skipped when rs===0
       const merged=rs>=1?`
-        <td class="mono center code-col" rowspan="${rs}"><div class="cell-inner" tabindex="0" data-field="code" data-oid="${oid}">${esc(o?.code)}</div></td>
-        <td rowspan="${rs}"><div class="cell-inner" tabindex="0" data-field="order_name" data-oid="${oid}">${esc(o?.order_name)}</div></td>
-        <td class="center" rowspan="${rs}"><div class="cell-inner" tabindex="0" data-field="vendor" data-oid="${oid}">${esc(o?.vendor)}</div></td>
-        <td class="amount" rowspan="${rs}"><div class="cell-inner" tabindex="0" data-field="total_amount" data-oid="${oid}">${fmtMoney(o?.total_amount)}</div></td>`:"";
+        <td class="mono center code-col" rowspan="${rs}"><div class="cell-inner merged-cell" tabindex="0" data-field="code" data-oid="${oid}">${esc(o?.code)}</div></td>
+        <td rowspan="${rs}"><div class="cell-inner merged-cell" tabindex="0" data-field="order_name" data-oid="${oid}">${esc(o?.order_name)}</div></td>
+        <td class="center" rowspan="${rs}"><div class="cell-inner merged-cell" tabindex="0" data-field="vendor" data-oid="${oid}">${esc(o?.vendor)}</div></td>
+        <td class="amount" rowspan="${rs}"><div class="cell-inner merged-cell" tabindex="0" data-field="total_amount" data-oid="${oid}">${fmtMoney(o?.total_amount)}</div></td>`:"";
       const bigo=rs>=1?`
-        <td class="center" rowspan="${rs}"><div class="cell-inner" tabindex="0" data-field="note" data-pid="${pid}">${esc(p?.note??'').replaceAll('\n','<br>')}</div></td>`:"";
+        <td class="center" rowspan="${rs}"><div class="cell-inner merged-cell" tabindex="0" data-field="note" data-pid="${pid}">${esc(p?.note??'').replaceAll('\n','<br>')}</div></td>`:"";
       return `<tr class="${cls}" data-oid="${oid}" data-pid="${pid}"${sortByDate?"":" draggable=\"true\""}>
         ${merged}
         <td class="pay-type"><div class="cell-inner" tabindex="0" data-field="payment_type" data-oid="${oid}" data-pid="${pid}">${p?ptBadge(p.payment_type):`<span style="color:#94a3b8;font-size:.82rem">—</span>`}</div></td>
