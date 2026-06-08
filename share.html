@@ -217,7 +217,7 @@
 })()</script>
 
 <!-- Admin + user info check -->
-<script>(async function(){
+<script>window._shUserReady=(async function(){
   const SU="https://ikfjpzdzrgsmhaobqnai.supabase.co",SK="sb_publishable_fbbdwjCZCL9AFD-eUIs0bg_XwdlhxFN";
   const token=localStorage.getItem("supa_token")||"";
   let isAdmin=false;
@@ -548,6 +548,7 @@ async function sh_loadPosts(){
     const r=await sh_api("/rest/v1/posts?select=id,title,content,author_id,author_name,category,pinned,private,created_at,updated_at&order=pinned.desc,created_at.desc");
     if(!r.ok) throw new Error(await r.text());
     sh_posts=await r.json();
+    if(window._shUserReady) await window._shUserReady;
     sh_renderList();
   }catch(e){
     document.getElementById("sh-post-list").innerHTML=`<div class="post-empty" style="color:#dc2626">⚠ 불러오기 실패</div>`;
