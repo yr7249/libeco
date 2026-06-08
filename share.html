@@ -376,6 +376,9 @@
       <label class="editor-pin-label" id="sh-pin-wrap" style="display:none">
         <input type="checkbox" id="sh-pin-check"> 공지 고정
       </label>
+      <label class="editor-pin-label" id="sh-private-wrap">
+        <input type="checkbox" id="sh-private-check"> 🔒 나만 보기
+      </label>
     </div>
     <div id="sh-quill-editor"></div>
     <div class="file-upload-area">
@@ -542,7 +545,7 @@ function sh_show(v){
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 async function sh_loadPosts(){
   try{
-    const r=await sh_api("/rest/v1/posts?select=id,title,content,author_id,author_name,category,pinned,created_at,updated_at&order=pinned.desc,created_at.desc");
+    const r=await sh_api("/rest/v1/posts?select=id,title,content,author_id,author_name,category,pinned,private,created_at,updated_at&order=pinned.desc,created_at.desc");
     if(!r.ok) throw new Error(await r.text());
     sh_posts=await r.json();
     sh_renderList();
@@ -555,7 +558,8 @@ function sh_renderList(){
   const list=document.getElementById("sh-post-list");
   const cnt=document.getElementById("sh-post-count");
   const q=sh_searchQ.trim().toLowerCase();
-  let data=sh_posts;
+  const myId=sh_user().id;
+  let data=sh_posts.filter(p=>!p.private || p.author_id===myId);
   if(sh_filterCat!=="ALL") data=data.filter(p=>p.category===sh_filterCat);
   if(q) data=data.filter(p=>(p.title||"").toLowerCase().includes(q)||(p.content||"").replace(/<[^>]*>/g,"").toLowerCase().includes(q));
   if(cnt) cnt.textContent=data.length+"건";
@@ -571,7 +575,7 @@ function sh_renderList(){
       ${pinDot}
       ${sh_catBadge(p.category)}
       <div class="post-title-cell">
-        <div class="post-title-txt">${sh_esc(p.title||"(제목 없음)")}</div>
+        <div class="post-title-txt">${p.private?'<span title="나만 보기" style="color:#64748b;margin-right:4px">🔒</span>':''}${sh_esc(p.title||"(제목 없음)")}</div>
         ${preview?`<div class="post-preview-txt">${sh_esc(preview)}</div>`:""}
       </div>
       <div class="post-meta no-mobile">${isMine?'<span style="color:var(--accent);font-weight:700">나 · </span>':""}${sh_esc(p.author_name||"")} · ${sh_fmtDate(p.created_at)}</div>
@@ -596,7 +600,9 @@ async function sh_openPost(id){
   }catch(e){}
 
   document.getElementById("sh-detail-catpin").innerHTML=
-    sh_catBadge(post.category)+(post.pinned?`<span style="font-size:.78rem;color:#f59e0b;font-weight:700">📌 공지 고정</span>`:"");
+    sh_catBadge(post.category)
+    +(post.pinned?`<span style="font-size:.78rem;color:#f59e0b;font-weight:700">📌 공지 고정</span>`:"")
+    +(post.private?`<span style="font-size:.78rem;color:#64748b;font-weight:700">🔒 나만 보기</span>`:"");
   document.getElementById("sh-detail-title").textContent=post.title||"(제목 없음)";
   document.getElementById("sh-detail-meta").innerHTML=
     `<span>👤 ${sh_esc(post.author_name||"")}</span>`+
@@ -716,8 +722,10 @@ function sh_openEditor(postId){
   document.getElementById("sh-cat-select").value="기타";
   const pinWrap=document.getElementById("sh-pin-wrap");
   const pinChk=document.getElementById("sh-pin-check");
+  const privChk=document.getElementById("sh-private-check");
   if(pinWrap) pinWrap.style.display=window._isAdmin?"flex":"none";
   if(pinChk) pinChk.checked=false;
+  if(privChk) privChk.checked=false;
 
   // Init Quill once
   if(!sh_quill){
@@ -765,6 +773,7 @@ function sh_openEditor(postId){
     document.getElementById("sh-title-input").value=post.title||"";
     document.getElementById("sh-cat-select").value=post.category||"기타";
     if(pinChk) pinChk.checked=!!post.pinned;
+    if(privChk) privChk.checked=!!post.private;
     // Load full content
     sh_api("/rest/v1/posts?id=eq."+postId+"&select=content").then(async r=>{
       if(r.ok){const arr=await r.json();if(arr[0]?.content) sh_quill.clipboard.dangerouslyPasteHTML(arr[0].content);}
@@ -816,6 +825,7 @@ async function sh_save(){
   if(!title){sh_toast("제목을 입력해주세요.");return;}
   const cat=document.getElementById("sh-cat-select").value;
   const pinned=!!(window._isAdmin&&document.getElementById("sh-pin-check")?.checked);
+  const isPrivate=!!document.getElementById("sh-private-check")?.checked;
   const content=sh_quill.root.innerHTML;
   const u=sh_user();
   const btn=document.getElementById("sh-btn-save");
@@ -829,7 +839,7 @@ async function sh_save(){
       const r=await sh_api("/rest/v1/posts",{
         method:"POST",
         headers:{"Prefer":"return=representation"},
-        body:JSON.stringify({title,content,category:cat,pinned,
+        body:JSON.stringify({title,content,category:cat,pinned,private:isPrivate,
           author_id:u.id||null,author_name:u.displayName||u.name||u.email||"",
           created_at:new Date().toISOString(),updated_at:new Date().toISOString()})
       });
@@ -841,7 +851,7 @@ async function sh_save(){
       const r=await sh_api("/rest/v1/posts?id=eq."+postId,{
         method:"PATCH",
         headers:{"Prefer":"return=minimal"},
-        body:JSON.stringify({title,content,category:cat,pinned,updated_at:new Date().toISOString()})
+        body:JSON.stringify({title,content,category:cat,pinned,private:isPrivate,updated_at:new Date().toISOString()})
       });
       if(!r.ok) throw new Error(await r.text());
     }
@@ -975,9 +985,13 @@ CREATE TABLE IF NOT EXISTS posts (
   author_name TEXT,
   category TEXT DEFAULT '기타',
   pinned BOOLEAN DEFAULT FALSE,
+  private BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- (기존 테이블이 있을 경우) private 컬럼 추가
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS private BOOLEAN DEFAULT FALSE;
 
 CREATE TABLE IF NOT EXISTS post_files (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -992,12 +1006,23 @@ CREATE TABLE IF NOT EXISTS post_files (
 ALTER TABLE posts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE post_files ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "auth read posts" ON posts FOR SELECT TO authenticated USING (true);
+-- 나만 보기(private) 도입: 기존 SELECT 정책을 새로 만든다
+DROP POLICY IF EXISTS "auth read posts" ON posts;
+CREATE POLICY "auth read posts" ON posts FOR SELECT TO authenticated
+  USING (private = FALSE OR auth.uid() = author_id);
+
 CREATE POLICY "auth insert posts" ON posts FOR INSERT TO authenticated WITH CHECK (auth.uid() = author_id);
 CREATE POLICY "auth update posts" ON posts FOR UPDATE TO authenticated USING (auth.uid() = author_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
 CREATE POLICY "auth delete posts" ON posts FOR DELETE TO authenticated USING (auth.uid() = author_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
 
-CREATE POLICY "auth read post_files" ON post_files FOR SELECT TO authenticated USING (true);
+-- private 글의 첨부파일도 작성자만 보이게
+DROP POLICY IF EXISTS "auth read post_files" ON post_files;
+CREATE POLICY "auth read post_files" ON post_files FOR SELECT TO authenticated
+  USING (EXISTS (
+    SELECT 1 FROM posts
+    WHERE posts.id = post_files.post_id
+      AND (posts.private = FALSE OR posts.author_id = auth.uid())
+  ));
 CREATE POLICY "auth write post_files" ON post_files FOR INSERT TO authenticated WITH CHECK (true);
 CREATE POLICY "auth delete post_files" ON post_files FOR DELETE TO authenticated USING (true);
 
