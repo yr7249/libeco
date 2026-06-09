@@ -60,6 +60,9 @@
     td.amount .cell-inner{font-family:var(--font-mono);color:var(--accent);text-align:right}
     td.center .cell-inner{text-align:center}
 
+    /* 품의번호 (발주건 셀 윗줄) */
+    .cell-onum{font-family:var(--font-mono);font-size:.76rem;color:var(--accent);min-height:22px;padding:5px 10px 0;font-weight:600}
+
     /* Payment type */
     td.pay-type .cell-inner{cursor:pointer;text-align:center}
     .pt-badge{font-size:.82rem;font-weight:600;color:var(--text)}
@@ -350,7 +353,7 @@
           <thead>
             <tr>
               <th rowspan="2">분류번호</th>
-              <th class="left" rowspan="2">발주건</th>
+              <th class="left" rowspan="2">품의번호<br>발주건</th>
               <th rowspan="2">업체</th>
               <th rowspan="2">발주금액<br><span style="font-size:.7em;font-weight:400">(VAT 제외)</span></th>
               <th colspan="3">지급방법</th>
@@ -453,7 +456,7 @@
       ]);
       if(!or.ok||!pr.ok)return false;
       const oR=await or.json(),pR=await pr.json();
-      orders=oR.map(r=>({_id:r.id,code:r.code??"",order_name:r.order_name??"",vendor:r.vendor??"",total_amount:r.total_amount??0,sort_order:r.sort_order??0}));
+      orders=oR.map(r=>({_id:r.id,code:r.code??"",approval_number:r.approval_number??"",order_name:r.order_name??"",vendor:r.vendor??"",total_amount:r.total_amount??0,sort_order:r.sort_order??0}));
       const needPeriodSync=[];
       payments=pR.map(r=>{
         const fromDb=normPeriod(r.scheduled_period??((typeof r.scheduled_date==="string"&&r.scheduled_date.includes("주"))?r.scheduled_date:""));
@@ -482,7 +485,7 @@
       const h={"apikey":SK,"Authorization":"Bearer "+getToken(),"Content-Type":"application/json","Prefer":"resolution=merge-duplicates,return=representation"};
       if(orders.length){
         const res=await fetch(SU+"/rest/v1/"+O_TBL,{method:"POST",headers:h,
-          body:JSON.stringify(orders.map((o,i)=>({id:o._id,code:o.code,order_name:o.order_name,vendor:o.vendor,total_amount:parseMoney(o.total_amount)||0,sort_order:i})))});
+          body:JSON.stringify(orders.map((o,i)=>({id:o._id,code:o.code,approval_number:o.approval_number,order_name:o.order_name,vendor:o.vendor,total_amount:parseMoney(o.total_amount)||0,sort_order:i})))});
         if(!res.ok)console.error("[fund] orders save:",res.status,await res.text());
       }
       if(payments.length){
@@ -623,7 +626,10 @@
       // 비고(note)는 각 지급 행마다 개별로 입력되도록 통합 해제
       const merged=rs>=1?`
         <td class="mono center code-col" rowspan="${rs}"><div class="cell-inner merged-cell" tabindex="0" data-field="code" data-oid="${oid}">${formatCode(o?.code)}</div></td>
-        <td rowspan="${rs}"><div class="cell-inner merged-cell" tabindex="0" data-field="order_name" data-oid="${oid}">${esc(o?.order_name)}</div></td>
+        <td rowspan="${rs}">
+          <div class="cell-inner cell-onum merged-cell" tabindex="0" data-field="approval_number" data-oid="${oid}">${esc(o?.approval_number)}</div>
+          <div class="cell-inner merged-cell" tabindex="0" data-field="order_name" data-oid="${oid}">${esc(o?.order_name)}</div>
+        </td>
         <td class="center" rowspan="${rs}"><div class="cell-inner merged-cell" tabindex="0" data-field="vendor" data-oid="${oid}">${esc(o?.vendor)}</div></td>
         <td class="amount" rowspan="${rs}"><div class="cell-inner merged-cell" tabindex="0" data-field="total_amount" data-oid="${oid}">${fmtMoney(o?.total_amount)}</div></td>`:"";
       const bigo=`
@@ -974,14 +980,20 @@
   function enterCellEdit(el,startChar){
     el._origHTML=el.innerHTML;
     el.contentEditable="true";el.classList.remove("cell-sel");el.classList.add("cell-edit");
+    let cursorAtEnd=false;
     if(el.dataset.field==="amount"||el.dataset.field==="total_amount"){
       const v=parseMoney(el.textContent);
       el.textContent=startChar!=null?startChar:(v>0?String(v):"");
+    } else if(el.dataset.field==="approval_number"){
+      let initial=startChar!=null?startChar:el.textContent.trim();
+      if(!initial.startsWith("LPR-"))initial="LPR-"+initial;
+      el.textContent=initial;
+      cursorAtEnd=true;
     } else {
       el.textContent=startChar!=null?startChar:el.innerHTML.replace(/<br\s*\/?>/gi,"\n");
     }
     const r=document.createRange();
-    if(startChar!=null){r.selectNodeContents(el);r.collapse(false);}
+    if(startChar!=null||cursorAtEnd){r.selectNodeContents(el);r.collapse(false);}
     else r.selectNodeContents(el);
     const s=getSelection();s.removeAllRanges();s.addRange(r);
   }
@@ -998,7 +1010,7 @@
   function onCellCommit(el){
     const field=el.dataset.field,oid=el.dataset.oid,pid=el.dataset.pid;
     const val=el.textContent.trim();
-    if(["code","order_name","vendor","total_amount"].includes(field)&&oid){
+    if(["code","approval_number","order_name","vendor","total_amount"].includes(field)&&oid){
       const o=orders.find(x=>x._id===oid);if(!o)return;
       if(field==="total_amount"){
         const nv=parseMoney(val);if(nv===parseMoney(o.total_amount)){el.textContent=fmtMoney(nv);return;}
@@ -1011,6 +1023,13 @@
         snapshot();o.code=norm;
         el.innerHTML=formatCode(norm);
         updateKpi();saveDebounce();
+      } else if(field==="approval_number"){
+        let v=val.trim();
+        if(v==="LPR-"||v==="LPR"||v==="-")v="";
+        if(v===o.approval_number){el.innerHTML=esc(v);return;}
+        snapshot();o.approval_number=v;
+        el.innerHTML=esc(v);
+        saveDebounce();
       } else {
         if(val===o[field])return;snapshot();o[field]=val;
         el.innerHTML=esc(val).replaceAll("\n","<br>");
