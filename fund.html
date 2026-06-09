@@ -529,6 +529,18 @@
   function parseMoney(v){if(typeof v==="number")return v;return parseInt(String(v||"").replace(/[^0-9]/g,""))||0;}
   function esc(v){return String(v||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
 
+  // 분류번호 셀: 공백으로 분리된 코드들을 2개씩 줄바꿈으로 묶어 표시
+  function formatCode(s){
+    if(!s)return"";
+    const tokens=String(s).trim().split(/\s+/).filter(Boolean);
+    if(!tokens.length)return"";
+    const lines=[];
+    for(let i=0;i<tokens.length;i+=2){
+      lines.push(tokens.slice(i,i+2).map(esc).join(" "));
+    }
+    return lines.join("<br>");
+  }
+
   function normPeriod(s){
     if(!s)return "";
     const m=s.match(/(?:(\d+)년\s*)?(\d+)월\s*(\d+)주차?/);
@@ -610,7 +622,7 @@
       // Columns 1-4: merged with rowspan when rs>=1, skipped when rs===0.
       // 비고(note)는 각 지급 행마다 개별로 입력되도록 통합 해제
       const merged=rs>=1?`
-        <td class="mono center code-col" rowspan="${rs}"><div class="cell-inner merged-cell" tabindex="0" data-field="code" data-oid="${oid}">${esc(o?.code)}</div></td>
+        <td class="mono center code-col" rowspan="${rs}"><div class="cell-inner merged-cell" tabindex="0" data-field="code" data-oid="${oid}">${formatCode(o?.code)}</div></td>
         <td rowspan="${rs}"><div class="cell-inner merged-cell" tabindex="0" data-field="order_name" data-oid="${oid}">${esc(o?.order_name)}</div></td>
         <td class="center" rowspan="${rs}"><div class="cell-inner merged-cell" tabindex="0" data-field="vendor" data-oid="${oid}">${esc(o?.vendor)}</div></td>
         <td class="amount" rowspan="${rs}"><div class="cell-inner merged-cell" tabindex="0" data-field="total_amount" data-oid="${oid}">${fmtMoney(o?.total_amount)}</div></td>`:"";
@@ -993,6 +1005,12 @@
         snapshot();o.total_amount=nv;el.textContent=fmtMoney(nv);
         updateKpi();saveDebounce();
         autoFillJanGeum(oid);
+      } else if(field==="code"){
+        const norm=val.replace(/\s+/g," ").trim();
+        if(norm===o.code){el.innerHTML=formatCode(norm);return;}
+        snapshot();o.code=norm;
+        el.innerHTML=formatCode(norm);
+        updateKpi();saveDebounce();
       } else {
         if(val===o[field])return;snapshot();o[field]=val;
         el.innerHTML=esc(val).replaceAll("\n","<br>");
