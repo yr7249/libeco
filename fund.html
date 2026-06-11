@@ -139,15 +139,13 @@
 
     /* Bottom panels: 지급일정 요약(좌) + 업체 정리(우) 나란히 */
     .bottom-panels{display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start;margin:16px 0 8px}
-    .bottom-panels #weekly-summary{margin:0;flex:2 1 460px;min-width:0}
-    .bottom-panels #vendor-summary{flex:1 1 300px;min-width:0}
+    .bottom-panels #weekly-summary{margin:0;flex:1 1 340px;min-width:0}
+    .bottom-panels #vendor-summary{flex:1.4 1 420px;min-width:0}
     .vsum-title{font-size:.75rem;font-weight:700;color:var(--text2);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px;font-family:var(--font-mono)}
-    .vsum-grid{display:flex;flex-direction:column;gap:8px}
-    .vcard{border:1px solid var(--border);border-radius:10px;padding:10px 14px;background:var(--surface)}
-    .vcard-name{font-size:.86rem;font-weight:800;color:var(--text);margin-bottom:6px}
-    .vcard-row{display:flex;align-items:center;gap:8px;margin-top:4px}
-    .vcard-label{font-size:.7rem;color:var(--text2);font-weight:700;width:34px;flex-shrink:0}
-    .vcard-input{flex:1;border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:.78rem;font-family:var(--font-heading);color:var(--text);background:#fff;outline:none;min-width:0}
+    .vsum-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:6px 10px}
+    .vrow{display:flex;align-items:center;gap:6px;border:1px solid var(--border);border-radius:7px;padding:5px 8px;background:var(--surface)}
+    .vrow-name{font-size:.76rem;font-weight:700;color:var(--text);width:92px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .vcard-input{flex:1;min-width:0;border:1px solid var(--border);border-radius:5px;padding:3px 6px;font-size:.73rem;font-family:var(--font-heading);color:var(--text);background:#fff;outline:none}
     .vcard-input:focus{border-color:rgba(22,101,52,.55);box-shadow:0 0 0 2px rgba(22,101,52,.12)}
     @media print{.bottom-panels{display:none!important}}
 
@@ -916,15 +914,15 @@
     el.innerHTML=`<div class="vsum-title">🏢 업체 정리</div><div class="vsum-grid">`+
       names.map(n=>{
         const info=vendorInfo[n]||{};
-        return `<div class="vcard">
-          <div class="vcard-name">${esc(n)}</div>
-          <div class="vcard-row"><span class="vcard-label">담당</span><input class="vcard-input" data-vname="${escAttr(n)}" data-vfield="manager" value="${escAttr(info.manager||"")}" placeholder="담당자"></div>
-          <div class="vcard-row"><span class="vcard-label">연락</span><input class="vcard-input" data-vname="${escAttr(n)}" data-vfield="contact" value="${escAttr(info.contact||"")}" placeholder="연락처"></div>
+        return `<div class="vrow">
+          <span class="vrow-name" title="${escAttr(n)}">${esc(n)}</span>
+          <input class="vcard-input" data-vname="${escAttr(n)}" data-vfield="manager" value="${escAttr(info.manager||"")}" placeholder="담당자">
+          <input class="vcard-input" data-vname="${escAttr(n)}" data-vfield="contact" value="${escAttr(info.contact||"")}" placeholder="연락처">
         </div>`;
       }).join("")+`</div>`;
     el.querySelectorAll(".vcard-input").forEach(inp=>{
       inp.addEventListener("change",()=>{
-        const card=inp.closest(".vcard");
+        const card=inp.closest(".vrow");
         const name=inp.dataset.vname;
         const manager=card.querySelector('[data-vfield="manager"]').value.trim();
         const contact=card.querySelector('[data-vfield="contact"]').value.trim();
