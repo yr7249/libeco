@@ -136,7 +136,20 @@
     .wsum-total{font-size:.92rem;font-weight:800;color:var(--accent)}
     .wsum-paid{font-size:.72rem;color:#15803d;margin-top:2px}
     .wsum-remain{font-size:.72rem;color:#94a3b8;margin-top:1px}
-    @media print{#weekly-summary{display:none!important}}
+
+    /* Bottom panels: 지급일정 요약(좌) + 업체 정리(우) 나란히 */
+    .bottom-panels{display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start;margin:16px 0 8px}
+    .bottom-panels #weekly-summary{margin:0;flex:2 1 460px;min-width:0}
+    .bottom-panels #vendor-summary{flex:1 1 300px;min-width:0}
+    .vsum-title{font-size:.75rem;font-weight:700;color:var(--text2);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px;font-family:var(--font-mono)}
+    .vsum-grid{display:flex;flex-direction:column;gap:8px}
+    .vcard{border:1px solid var(--border);border-radius:10px;padding:10px 14px;background:var(--surface)}
+    .vcard-name{font-size:.86rem;font-weight:800;color:var(--text);margin-bottom:6px}
+    .vcard-row{display:flex;align-items:center;gap:8px;margin-top:4px}
+    .vcard-label{font-size:.7rem;color:var(--text2);font-weight:700;width:34px;flex-shrink:0}
+    .vcard-input{flex:1;border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:.78rem;font-family:var(--font-heading);color:var(--text);background:#fff;outline:none;min-width:0}
+    .vcard-input:focus{border-color:rgba(22,101,52,.55);box-shadow:0 0 0 2px rgba(22,101,52,.12)}
+    @media print{.bottom-panels{display:none!important}}
 
     /* Topbar */
     .pg-topbar{display:flex;align-items:center;justify-content:space-between;padding:0 14px;height:50px;background:#fff;border-bottom:1px solid rgba(15,23,42,.12);box-shadow:0 1px 4px rgba(0,0,0,.08);flex-shrink:0;gap:8px}
@@ -376,7 +389,10 @@
         </table>
       </div>
     </div>
-    <div id="weekly-summary"></div>
+    <div class="bottom-panels">
+      <div id="weekly-summary"></div>
+      <div id="vendor-summary"></div>
+    </div>
 
     <footer class="site-footer">
       <div style="display:flex;align-items:center;gap:10px">
@@ -446,18 +462,20 @@
   })();
 
   /* ── Data ── */
-  let orders=[], payments=[], sortByDate=false;
+  let orders=[], payments=[], sortByDate=false, vendorInfo={};
 
   /* ── Load ── */
   async function supaLoad(){
     try{
       const h={"apikey":SK,"Authorization":"Bearer "+getToken()};
-      const [or,pr]=await Promise.all([
+      const [or,pr,vr]=await Promise.all([
         fetch(SU+"/rest/v1/"+O_TBL+"?select=*&order=sort_order.asc,created_at.asc",{headers:h}),
-        fetch(SU+"/rest/v1/"+P_TBL+"?select=*&order=sort_order.asc,created_at.asc",{headers:h})
+        fetch(SU+"/rest/v1/"+P_TBL+"?select=*&order=sort_order.asc,created_at.asc",{headers:h}),
+        fetch(SU+"/rest/v1/vendors?select=*",{headers:h})
       ]);
       if(!or.ok||!pr.ok)return false;
       const oR=await or.json(),pR=await pr.json();
+      if(vr.ok){vendorInfo={};(await vr.json()).forEach(v=>{vendorInfo[v.vendor_name]={manager:v.manager??"",contact:v.contact??""};});}
       orders=oR.map(r=>({_id:r.id,code:r.code??"",approval_number:r.approval_number??"",order_name:r.order_name??"",vendor:r.vendor??"",total_amount:r.total_amount??0,sort_order:r.sort_order??0}));
       const needPeriodSync=[];
       payments=pR.map(r=>{
@@ -533,6 +551,7 @@
   function fmtMoney(v){const n=parseMoney(v);return n>0?n.toLocaleString("ko-KR"):"";}  
   function parseMoney(v){if(typeof v==="number")return v;return parseInt(String(v||"").replace(/[^0-9]/g,""))||0;}
   function esc(v){return String(v||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+  function escAttr(v){return esc(v).replace(/"/g,"&quot;");}
 
   // 분류번호 셀: 공백으로 분리된 코드들을 2개씩 줄바꿈으로 묶어 표시
   function formatCode(s){
@@ -562,6 +581,7 @@
     document.getElementById("header-total-amount").textContent="₩"+payments.reduce((s,p)=>s+parseMoney(p.amount),0).toLocaleString("ko-KR");
     document.getElementById("updateTime").textContent=new Date().toLocaleString("ko-KR")+" update";
     buildWeeklySummary();
+    buildVendorSummary();
   }
 
   /* ── Sort ── */
@@ -886,6 +906,43 @@
           ${remain>0?`<div class="wsum-remain">잔여 ${fmtMoney(remain)}</div>`:""}
         </div>`;
       }).join("")+`</div>`;
+  }
+
+  /* ── Vendor summary (업체 정리) ── */
+  function buildVendorSummary(){
+    const el=document.getElementById("vendor-summary");if(!el)return;
+    const names=[...new Set(orders.map(o=>(o.vendor||"").trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"ko"));
+    if(!names.length){el.innerHTML="";return;}
+    el.innerHTML=`<div class="vsum-title">🏢 업체 정리</div><div class="vsum-grid">`+
+      names.map(n=>{
+        const info=vendorInfo[n]||{};
+        return `<div class="vcard">
+          <div class="vcard-name">${esc(n)}</div>
+          <div class="vcard-row"><span class="vcard-label">담당</span><input class="vcard-input" data-vname="${escAttr(n)}" data-vfield="manager" value="${escAttr(info.manager||"")}" placeholder="담당자"></div>
+          <div class="vcard-row"><span class="vcard-label">연락</span><input class="vcard-input" data-vname="${escAttr(n)}" data-vfield="contact" value="${escAttr(info.contact||"")}" placeholder="연락처"></div>
+        </div>`;
+      }).join("")+`</div>`;
+    el.querySelectorAll(".vcard-input").forEach(inp=>{
+      inp.addEventListener("change",()=>{
+        const card=inp.closest(".vcard");
+        const name=inp.dataset.vname;
+        const manager=card.querySelector('[data-vfield="manager"]').value.trim();
+        const contact=card.querySelector('[data-vfield="contact"]').value.trim();
+        vendorInfo[name]={manager,contact};
+        upsertVendor(name,manager,contact);
+      });
+      inp.addEventListener("keydown",e=>{if(e.key==="Enter")inp.blur();});
+    });
+  }
+
+  async function upsertVendor(name,manager,contact){
+    try{
+      const h={"apikey":SK,"Authorization":"Bearer "+getToken(),"Content-Type":"application/json","Prefer":"resolution=merge-duplicates,return=minimal"};
+      const res=await fetch(SU+"/rest/v1/vendors?on_conflict=vendor_name",{method:"POST",headers:h,
+        body:JSON.stringify({vendor_name:name,manager,contact})});
+      if(!res.ok)console.error("[fund] vendor save:",res.status,await res.text());
+      else showSaveStatus("저장됨");
+    }catch(e){console.warn("[fund] vendor save:",e);}
   }
 
   /* ── Cell editing ── */
