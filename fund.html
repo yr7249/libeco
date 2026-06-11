@@ -117,6 +117,15 @@
     }
     #fund-float-paid:hover{border-color:rgba(22,163,74,.5);color:#16a34a;background:#fff}
     #fund-float-paid.paid{background:#16a34a;border-color:#15803d;color:#fff}
+    #fund-float-pending{
+      position:fixed;display:none;z-index:9000;cursor:pointer;
+      font-size:13px;font-weight:700;padding:3px 8px;border-radius:6px;
+      background:rgba(255,255,255,.96);border:1px solid rgba(15,23,42,.18);
+      box-shadow:0 2px 8px rgba(0,0,0,.18);line-height:1;
+      transform:translateY(-50%);white-space:nowrap;color:rgba(100,116,139,.75);
+    }
+    #fund-float-pending:hover{border-color:rgba(245,158,11,.6);color:#b45309;background:#fff}
+    #fund-float-pending.active{background:#f59e0b;border-color:#d97706;color:#fff}
     tbody tr.row-dragging{opacity:.45;background:rgba(22,101,52,.08)!important}
     tbody tr.drag-over-top td{border-top:2px solid var(--accent)!important}
     tbody tr.drag-over-bot td{border-bottom:2px solid var(--accent)!important}
@@ -125,6 +134,9 @@
        merged (order-level) cells gray only when ALL payments are paid */
     tr.row-paid .cell-inner:not(.merged-cell){color:#94a3b8!important}
     tr.order-all-paid .cell-inner.merged-cell{color:#94a3b8!important}
+    /* 발주예정 표시 */
+    tbody tr.row-pending td{background:rgba(245,158,11,.05)}
+    .pt-pending{display:inline-block;margin-left:5px;font-size:.6rem;font-weight:700;color:#b45309;background:rgba(245,158,11,.14);border:1px solid rgba(245,158,11,.4);border-radius:99px;padding:1px 6px;font-family:var(--font-mono);vertical-align:middle}
 
     /* Weekly summary */
     #weekly-summary{margin:16px 0 8px;padding:0 2px}
@@ -291,6 +303,7 @@
 
   <div id="fund-float-drag" title="드래그로 순서 변경" draggable="true" style="display:none;">⠿</div>
   <div id="fund-float-paid" title="지급 완료" style="display:none;">✓</div>
+  <div id="fund-float-pending" title="발주예정" style="display:none;">?</div>
 
   <!-- Period picker -->
   <div id="period-picker">
@@ -481,7 +494,7 @@
         const ls=localStorage.getItem("fund_sp_"+r.id);
         const sp=fromDb||normPeriod(ls||"");
         if(!fromDb&&sp)needPeriodSync.push({id:r.id,val:sp});
-        return {_id:r.id,order_id:r.order_id,payment_type:r.payment_type??"일시불",scheduled_period:sp,amount:r.amount??0,note:r.note??"",source:r.source??"",budget_item:r.budget_item??"",paid:r.paid??false,sort_order:r.sort_order??0};
+        return {_id:r.id,order_id:r.order_id,payment_type:r.payment_type??"일시불",scheduled_period:sp,amount:r.amount??0,note:r.note??"",source:r.source??"",budget_item:r.budget_item??"",paid:r.paid??false,pending:r.pending??false,sort_order:r.sort_order??0};
       });
       for(const {id,val} of needPeriodSync)await patchPeriodDb(id,val);
       return true;
@@ -508,7 +521,7 @@
       }
       if(payments.length){
         const res=await fetch(SU+"/rest/v1/"+P_TBL,{method:"POST",headers:h,
-          body:JSON.stringify(payments.map((p,i)=>({id:p._id,order_id:p.order_id,payment_type:p.payment_type,scheduled_period:p.scheduled_period||"",amount:parseMoney(p.amount)||0,note:p.note,source:p.source??"",budget_item:p.budget_item??"",paid:!!p.paid,sort_order:i})))});
+          body:JSON.stringify(payments.map((p,i)=>({id:p._id,order_id:p.order_id,payment_type:p.payment_type,scheduled_period:p.scheduled_period||"",amount:parseMoney(p.amount)||0,note:p.note,source:p.source??"",budget_item:p.budget_item??"",paid:!!p.paid,pending:!!p.pending,sort_order:i})))});
         if(!res.ok){const err=await res.text();console.error("[fund] payments save:",res.status,err);showSaveStatus("저장 실패");}
       }
     }catch(e){console.warn("[fund] save:",e);}
@@ -639,7 +652,7 @@
       orderAllPaid[o._id]=ops.length>0 && ops.every(p=>p.paid);
     });
     tbody.innerHTML=rows.map(({order:o,payment:p,groupIdx:gi,isGroupStart,_rs})=>{
-      const cls=[(gi%2===1&&gi>=0?"group-even":""),((!sortByDate&&isGroupStart)?"group-start":""),(p?.paid?"row-paid":""),(orderAllPaid[o?._id]?"order-all-paid":"")].filter(Boolean).join(" ");
+      const cls=[(gi%2===1&&gi>=0?"group-even":""),((!sortByDate&&isGroupStart)?"group-start":""),(p?.paid?"row-paid":""),(p?.pending?"row-pending":""),(orderAllPaid[o?._id]?"order-all-paid":"")].filter(Boolean).join(" ");
       const oid=o?._id||"",pid=p?._id||"";
       const rs=_rs||0;
       // Columns 1-4: merged with rowspan when rs>=1, skipped when rs===0.
@@ -656,7 +669,7 @@
         <td class="center"><div class="cell-inner" tabindex="0" data-field="note" data-pid="${pid}">${esc(p?.note??'').replaceAll('\n','<br>')}</div></td>`;
       return `<tr class="${cls}" data-oid="${oid}" data-pid="${pid}"${sortByDate?"":" draggable=\"true\""}>
         ${merged}
-        <td class="pay-type"><div class="cell-inner" tabindex="0" data-field="payment_type" data-oid="${oid}" data-pid="${pid}">${p?ptBadge(p.payment_type):`<span style="color:#94a3b8;font-size:.82rem">—</span>`}</div></td>
+        <td class="pay-type"><div class="cell-inner" tabindex="0" data-field="payment_type" data-oid="${oid}" data-pid="${pid}">${p?ptBadge(p.payment_type)+(p.pending?`<span class="pt-pending">발주예정</span>`:""):`<span style="color:#94a3b8;font-size:.82rem">—</span>`}</div></td>
         <td class="period-cell"><div class="cell-inner" tabindex="0" data-field="scheduled_period" data-pid="${pid}">${esc(normPeriod(p?.scheduled_period))}</div></td>
         <td class="amount"><div class="cell-inner" tabindex="0" data-field="amount" data-pid="${pid}">${fmtMoney(p?.amount)}</div></td>
         <td class="center"><div class="cell-inner" tabindex="0" data-field="source" data-pid="${pid}">${esc(p?.source??'')}</div></td>
@@ -799,7 +812,11 @@
   document.getElementById("ctx-delete-order").addEventListener("click",()=>{if(ctxOid)deleteOrder(ctxOid);});
   function togglePaymentPaid(pid){
     const p=payments.find(x=>x._id===pid);if(!p)return;
-    snapshot();p.paid=!p.paid;saveDebounce();renderTable();
+    snapshot();p.paid=!p.paid;if(p.paid)p.pending=false;saveDebounce();renderTable();
+  }
+  function togglePaymentPending(pid){
+    const p=payments.find(x=>x._id===pid);if(!p)return;
+    snapshot();p.pending=!p.pending;if(p.pending)p.paid=false;saveDebounce();renderTable();
   }
   document.getElementById("ctx-paid-toggle").addEventListener("click",()=>{
     if(ctxPid)togglePaymentPaid(ctxPid);
@@ -1154,6 +1171,7 @@
   /* ── Row floats (드래그 + 지급완료) ── */
   const fundFloatDrag=document.getElementById("fund-float-drag");
   const fundFloatPaid=document.getElementById("fund-float-paid");
+  const fundFloatPending=document.getElementById("fund-float-pending");
   const fundTableWrap=document.querySelector(".table-wrap");
   let fundFloatTr=null,fundDragSrcOid=null;
   let fundHideTimer=null;
@@ -1161,6 +1179,7 @@
   function fundHideFloats(){
     fundFloatDrag.style.display="none";
     fundFloatPaid.style.display="none";
+    fundFloatPending.style.display="none";
     fundFloatTr=null;
   }
   function fundCancelHide(){clearTimeout(fundHideTimer);}
@@ -1178,13 +1197,20 @@
     const pid=tr.dataset.pid;
     if(pid){
       const p=payments.find(x=>x._id===pid);
-      fundFloatPaid.style.left=Math.min(window.innerWidth-44,wrapRect.right+4)+"px";
+      const paidLeft=Math.min(window.innerWidth-44,wrapRect.right+4);
+      fundFloatPaid.style.left=paidLeft+"px";
       fundFloatPaid.style.top=midY+"px";
       fundFloatPaid.style.display="flex";
       fundFloatPaid.classList.toggle("paid",!!p?.paid);
       fundFloatPaid.title=p?.paid?"지급 완료 취소":"지급 완료";
+      fundFloatPending.style.left=Math.min(window.innerWidth-22,paidLeft+32)+"px";
+      fundFloatPending.style.top=midY+"px";
+      fundFloatPending.style.display="flex";
+      fundFloatPending.classList.toggle("active",!!p?.pending);
+      fundFloatPending.title=p?.pending?"발주예정 해제":"발주예정";
     } else {
       fundFloatPaid.style.display="none";
+      fundFloatPending.style.display="none";
     }
   }
 
@@ -1199,6 +1225,18 @@
   });
   fundFloatPaid.addEventListener("mouseenter",fundCancelHide);
   fundFloatPaid.addEventListener("mouseleave",fundScheduleHide);
+
+  fundFloatPending.addEventListener("click",()=>{
+    if(!fundFloatTr?.dataset.pid)return;
+    const pid=fundFloatTr.dataset.pid;
+    togglePaymentPending(pid);
+    setTimeout(()=>{
+      const newTr=document.querySelector(`#tableBody tr[data-pid="${pid}"]`);
+      if(newTr){fundFloatTr=newTr;fundPositionFloats(newTr);}
+    },0);
+  });
+  fundFloatPending.addEventListener("mouseenter",fundCancelHide);
+  fundFloatPending.addEventListener("mouseleave",fundScheduleHide);
 
   function fundClearDragMarks(){
     document.querySelectorAll("#tableBody tr.row-dragging").forEach(r=>r.classList.remove("row-dragging"));
