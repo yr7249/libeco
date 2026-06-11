@@ -64,6 +64,8 @@
 
     /* 품의번호 (발주건 셀 윗줄) */
     .cell-onum{font-family:var(--font-mono);font-size:.76rem;color:var(--accent);min-height:22px;padding:5px 10px 0;font-weight:600}
+    .onum-wrap{display:flex;align-items:center;flex-wrap:wrap}
+    .onum-wrap .cell-onum{padding-right:2px}
 
     /* Payment type */
     td.pay-type .cell-inner{cursor:pointer;text-align:center}
@@ -628,10 +630,11 @@
       rows.forEach(r=>{r._rs=1;});
     }
     // Order-level "all payments paid" map: merged cells follow this, not per-row paid
-    const orderAllPaid={};
+    const orderAllPaid={},orderPending={};
     orders.forEach(o=>{
       const ops=payments.filter(p=>p.order_id===o._id);
       orderAllPaid[o._id]=ops.length>0 && ops.every(p=>p.paid);
+      orderPending[o._id]=ops.some(p=>p.pending);
     });
     tbody.innerHTML=rows.map(({order:o,payment:p,groupIdx:gi,isGroupStart,_rs})=>{
       const cls=[(gi%2===1&&gi>=0?"group-even":""),((!sortByDate&&isGroupStart)?"group-start":""),(p?.paid?"row-paid":""),(p?.pending?"row-pending":""),(orderAllPaid[o?._id]?"order-all-paid":"")].filter(Boolean).join(" ");
@@ -642,7 +645,7 @@
       const merged=rs>=1?`
         <td class="mono center code-col" rowspan="${rs}"><div class="cell-inner merged-cell" tabindex="0" data-field="code" data-oid="${oid}">${formatCode(o?.code)}</div></td>
         <td rowspan="${rs}">
-          <div class="cell-inner cell-onum merged-cell" tabindex="0" data-field="approval_number" data-oid="${oid}">${esc(o?.approval_number)}</div>
+          <div class="onum-wrap"><div class="cell-inner cell-onum merged-cell" tabindex="0" data-field="approval_number" data-oid="${oid}">${esc(o?.approval_number)}</div>${orderPending[oid]?`<span class="pt-pending">발주예정</span>`:""}</div>
           <div class="cell-inner merged-cell" tabindex="0" data-field="order_name" data-oid="${oid}">${esc(o?.order_name)}</div>
         </td>
         <td class="center" rowspan="${rs}"><div class="cell-inner merged-cell" tabindex="0" data-field="vendor" data-oid="${oid}">${esc(o?.vendor)}</div></td>
@@ -651,7 +654,7 @@
         <td class="center"><div class="cell-inner" tabindex="0" data-field="note" data-pid="${pid}">${esc(p?.note??'').replaceAll('\n','<br>')}</div></td>`;
       return `<tr class="${cls}" data-oid="${oid}" data-pid="${pid}"${sortByDate?"":" draggable=\"true\""}>
         ${merged}
-        <td class="pay-type"><div class="cell-inner" tabindex="0" data-field="payment_type" data-oid="${oid}" data-pid="${pid}">${p?ptBadge(p.payment_type)+(p.pending?`<span class="pt-pending">발주예정</span>`:""):`<span style="color:#94a3b8;font-size:.82rem">—</span>`}</div></td>
+        <td class="pay-type"><div class="cell-inner" tabindex="0" data-field="payment_type" data-oid="${oid}" data-pid="${pid}">${p?ptBadge(p.payment_type):`<span style="color:#94a3b8;font-size:.82rem">—</span>`}</div></td>
         <td class="period-cell"><div class="cell-inner" tabindex="0" data-field="scheduled_period" data-pid="${pid}">${esc(normPeriod(p?.scheduled_period))}</div></td>
         <td class="amount"><div class="cell-inner" tabindex="0" data-field="amount" data-pid="${pid}">${fmtMoney(p?.amount)}</div></td>
         <td class="center"><div class="cell-inner" tabindex="0" data-field="source" data-pid="${pid}">${esc(p?.source??'')}</div></td>
