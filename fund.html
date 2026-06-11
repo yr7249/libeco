@@ -39,8 +39,10 @@
     .table-scroll{overflow-x:auto}
     table{width:100%;border-collapse:collapse;min-width:1100px}
     thead{position:sticky;top:0;z-index:2}
-    thead th{background:#166534;padding:9px 12px;text-align:center;font-size:.70rem;color:#fff;text-transform:uppercase;letter-spacing:.05em;font-weight:700;white-space:nowrap}
+    thead th{background:#166534;padding:9px 12px;text-align:center;font-size:.70rem;color:#fff;text-transform:uppercase;letter-spacing:.05em;font-weight:700;white-space:nowrap;border-right:1px solid rgba(255,255,255,.13);border-bottom:1px solid rgba(255,255,255,.13)}
+    thead th:last-child{border-right:none}
     thead th.left{text-align:left;padding-left:14px}
+    .th-sub{display:block;font-size:.58rem;font-weight:600;opacity:.72;letter-spacing:.04em;margin-bottom:1px}
 
     tbody tr{border-bottom:1px solid rgba(15,23,42,.05);transition:background .15s}
     tbody tr.group-start td{border-top:2px solid rgba(15,23,42,.14)}
@@ -62,6 +64,8 @@
 
     /* 품의번호 (발주건 셀 윗줄) */
     .cell-onum{font-family:var(--font-mono);font-size:.76rem;color:var(--accent);min-height:22px;padding:5px 10px 0;font-weight:600}
+    /* 담당자 (업체 셀 아랫줄) */
+    .cell-sub{font-size:.74rem;color:var(--text2);min-height:20px;padding:0 10px 5px;font-weight:600}
 
     /* Payment type */
     td.pay-type .cell-inner{cursor:pointer;text-align:center}
@@ -353,8 +357,8 @@
           <thead>
             <tr>
               <th rowspan="2">분류번호</th>
-              <th class="left" rowspan="2">품의번호<br>발주건</th>
-              <th rowspan="2">업체</th>
+              <th class="left" rowspan="2"><span class="th-sub">품의번호</span>발주건</th>
+              <th rowspan="2">업체<span class="th-sub" style="margin-top:1px">(담당자)</span></th>
               <th rowspan="2">발주금액<br><span style="font-size:.7em;font-weight:400">(VAT 제외)</span></th>
               <th colspan="3">지급방법</th>
               <th colspan="2">자금출처</th>
@@ -456,7 +460,7 @@
       ]);
       if(!or.ok||!pr.ok)return false;
       const oR=await or.json(),pR=await pr.json();
-      orders=oR.map(r=>({_id:r.id,code:r.code??"",approval_number:r.approval_number??"",order_name:r.order_name??"",vendor:r.vendor??"",total_amount:r.total_amount??0,sort_order:r.sort_order??0}));
+      orders=oR.map(r=>({_id:r.id,code:r.code??"",approval_number:r.approval_number??"",order_name:r.order_name??"",vendor:r.vendor??"",contact_person:r.contact_person??"",total_amount:r.total_amount??0,sort_order:r.sort_order??0}));
       const needPeriodSync=[];
       payments=pR.map(r=>{
         const fromDb=normPeriod(r.scheduled_period??((typeof r.scheduled_date==="string"&&r.scheduled_date.includes("주"))?r.scheduled_date:""));
@@ -485,7 +489,7 @@
       const h={"apikey":SK,"Authorization":"Bearer "+getToken(),"Content-Type":"application/json","Prefer":"resolution=merge-duplicates,return=representation"};
       if(orders.length){
         const res=await fetch(SU+"/rest/v1/"+O_TBL,{method:"POST",headers:h,
-          body:JSON.stringify(orders.map((o,i)=>({id:o._id,code:o.code,approval_number:o.approval_number,order_name:o.order_name,vendor:o.vendor,total_amount:parseMoney(o.total_amount)||0,sort_order:i})))});
+          body:JSON.stringify(orders.map((o,i)=>({id:o._id,code:o.code,approval_number:o.approval_number,order_name:o.order_name,vendor:o.vendor,contact_person:o.contact_person,total_amount:parseMoney(o.total_amount)||0,sort_order:i})))});
         if(!res.ok)console.error("[fund] orders save:",res.status,await res.text());
       }
       if(payments.length){
@@ -630,7 +634,10 @@
           <div class="cell-inner cell-onum merged-cell" tabindex="0" data-field="approval_number" data-oid="${oid}">${esc(o?.approval_number)}</div>
           <div class="cell-inner merged-cell" tabindex="0" data-field="order_name" data-oid="${oid}">${esc(o?.order_name)}</div>
         </td>
-        <td class="center" rowspan="${rs}"><div class="cell-inner merged-cell" tabindex="0" data-field="vendor" data-oid="${oid}">${esc(o?.vendor)}</div></td>
+        <td class="center" rowspan="${rs}">
+          <div class="cell-inner merged-cell" tabindex="0" data-field="vendor" data-oid="${oid}">${esc(o?.vendor)}</div>
+          <div class="cell-inner cell-sub merged-cell" tabindex="0" data-field="contact_person" data-oid="${oid}">${esc(o?.contact_person)}</div>
+        </td>
         <td class="amount" rowspan="${rs}"><div class="cell-inner merged-cell" tabindex="0" data-field="total_amount" data-oid="${oid}">${fmtMoney(o?.total_amount)}</div></td>`:"";
       const bigo=`
         <td class="center"><div class="cell-inner" tabindex="0" data-field="note" data-pid="${pid}">${esc(p?.note??'').replaceAll('\n','<br>')}</div></td>`;
@@ -1010,7 +1017,7 @@
   function onCellCommit(el){
     const field=el.dataset.field,oid=el.dataset.oid,pid=el.dataset.pid;
     const val=el.textContent.trim();
-    if(["code","approval_number","order_name","vendor","total_amount"].includes(field)&&oid){
+    if(["code","approval_number","order_name","vendor","contact_person","total_amount"].includes(field)&&oid){
       const o=orders.find(x=>x._id===oid);if(!o)return;
       if(field==="total_amount"){
         const nv=parseMoney(val);if(nv===parseMoney(o.total_amount)){el.textContent=fmtMoney(nv);return;}
