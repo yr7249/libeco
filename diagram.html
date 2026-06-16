@@ -852,6 +852,10 @@
     .dgm-thumb-name-input{flex:1;min-width:0;background:rgba(255,255,255,.1);border:1px solid rgba(22,163,74,.6);border-radius:6px;color:#f8fafc;font-size:.85rem;font-weight:700;font-family:'Outfit',sans-serif;padding:5px 9px;outline:none;width:100%}
     .dgm-thumb-del{background:rgba(239,68,68,.85);border:none;border-radius:5px;color:#fff;font-size:.68rem;font-weight:700;padding:4px 9px;cursor:pointer;flex-shrink:0;font-family:'Outfit',sans-serif;line-height:1}
     .dgm-thumb-del:hover{background:#ef4444}
+    /* 갤러리 카드 드래그 정렬 */
+    .dgm-thumb-card.draggable{cursor:grab}
+    .dgm-thumb-card.dgm-dragging{opacity:.4;cursor:grabbing}
+    .dgm-thumb-card.dgm-drag-over{outline:3px dashed #86efac;outline-offset:-3px}
     .dgm-gallery-empty{grid-column:1/-1;text-align:center;padding:60px 20px;color:rgba(248,250,252,.3);font-family:'Outfit',sans-serif}
     .dgm-gallery-empty .gi{font-size:2.5rem;margin-bottom:10px}
     .dgm-gallery-empty .gt{font-size:.95rem;font-weight:700}
@@ -1742,6 +1746,7 @@
   if(backBtn)backBtn.addEventListener("click",showGallery);
 
   /* ── 갤러리 렌더링 ── */
+  let _dgmDragSrcIdx=null;
   function renderGallery(images){
     const grid=document.getElementById("dgm-gallery-grid");
     if(!grid)return;
@@ -1754,7 +1759,48 @@
     grid.innerHTML="";
     images.forEach(function(imgData,i){
       const card=document.createElement("div");
-      card.className="dgm-thumb-card";
+      card.className="dgm-thumb-card"+(canRename?" draggable":"");
+
+      // ── 드래그 정렬 (rename 권한자만) ──
+      if(canRename){
+        card.draggable=true;
+        card.addEventListener("dragstart",function(e){
+          _dgmDragSrcIdx=i;
+          card.classList.add("dgm-dragging");
+          if(e.dataTransfer){
+            e.dataTransfer.effectAllowed="move";
+            try{ e.dataTransfer.setData("text/plain",String(i)); }catch(_){}
+          }
+        });
+        card.addEventListener("dragend",function(){
+          card.classList.remove("dgm-dragging");
+          document.querySelectorAll(".dgm-thumb-card.dgm-drag-over").forEach(function(el){el.classList.remove("dgm-drag-over");});
+          _dgmDragSrcIdx=null;
+        });
+        card.addEventListener("dragover",function(e){
+          if(_dgmDragSrcIdx===null||_dgmDragSrcIdx===i)return;
+          e.preventDefault();
+          if(e.dataTransfer)e.dataTransfer.dropEffect="move";
+          card.classList.add("dgm-drag-over");
+        });
+        card.addEventListener("dragleave",function(){
+          card.classList.remove("dgm-drag-over");
+        });
+        card.addEventListener("drop",async function(e){
+          e.preventDefault();
+          e.stopPropagation();
+          card.classList.remove("dgm-drag-over");
+          const src=_dgmDragSrcIdx;
+          _dgmDragSrcIdx=null;
+          if(src===null||src===i)return;
+          const imgs=window._dgmImages||[];
+          const [moved]=imgs.splice(src,1);
+          imgs.splice(i,0,moved);
+          window._dgmImages=imgs;
+          renderGallery(imgs);
+          await saveSetting(GALLERY_KEY,imgs);
+        });
+      }
 
       // ── 이미지 영역 ──
       const imgWrap=document.createElement("div");
