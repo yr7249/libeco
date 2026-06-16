@@ -935,6 +935,9 @@
         <button class="pg-btn pg-btn-export no-mobile" id="dgm-btn-export-report">🖼 보고용</button>
         <button class="pg-btn no-mobile" id="dgm-btn-print">🖨 인쇄</button>
         <div class="pg-vdiv"></div>
+        <span id="dgm-session-display" style="font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:var(--text2);padding:0 4px">⏱ --</span>
+        <button class="pg-btn" id="dgm-extend-btn">연장하기</button>
+        <div class="pg-vdiv"></div>
         <span id="dgm-user-display" class="no-mobile" style="font-size:.75rem;font-weight:600;font-family:'Outfit',sans-serif;color:var(--text)"></span>
         <button class="pg-btn" id="dgm-user-btn" title="계정">👤</button>
       </div>
@@ -1132,6 +1135,32 @@
   if(typeof window._dgmRerenderGallery==="function"){
     try{ window._dgmRerenderGallery(); }catch(e){}
   }
+})();
+</script>
+<script>
+// 세션 타이머 + 연장 버튼
+(function(){
+  const SU="https://ikfjpzdzrgsmhaobqnai.supabase.co";
+  const SK="sb_publishable_fbbdwjCZCL9AFD-eUIs0bg_XwdlhxFN";
+  const MS=7200000;
+  async function refresh(){
+    const r=localStorage.getItem("supa_refresh");if(!r)return;
+    try{
+      const res=await fetch(SU+"/auth/v1/token?grant_type=refresh_token",{method:"POST",headers:{"apikey":SK,"Content-Type":"application/json"},body:JSON.stringify({refresh_token:r})});
+      if(!res.ok)return;const d=await res.json();
+      if(d.access_token){localStorage.setItem("supa_token",d.access_token);if(d.refresh_token)localStorage.setItem("supa_refresh",d.refresh_token);}
+    }catch(e){}
+  }
+  const extBtn=document.getElementById("dgm-extend-btn");
+  if(extBtn)extBtn.addEventListener("click",async()=>{extBtn.disabled=true;extBtn.textContent="연장 중...";await refresh();sessionStorage.setItem("libeco_tab_active",String(Date.now()+MS));tick();extBtn.disabled=false;extBtn.textContent="연장하기";});
+  function tick(){
+    const exp=Number(sessionStorage.getItem("libeco_tab_active")||0);
+    if(!exp||Date.now()>exp){localStorage.removeItem("supa_token");localStorage.removeItem("supa_refresh");sessionStorage.removeItem("libeco_tab_active");location.href="login.html";return;}
+    const rem=exp-Date.now();
+    const disp=document.getElementById("dgm-session-display");
+    if(disp){const h=Math.floor(rem/3600000),m=Math.floor((rem%3600000)/60000);disp.textContent="⏱ "+(h>0?h+"h ":"")+m+"분";disp.style.color=rem<=600000?"#dc2626":"";}
+  }
+  tick();setInterval(tick,30000);
 })();
 </script>
 <script>
