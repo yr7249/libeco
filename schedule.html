@@ -82,6 +82,11 @@
     .leg-item{display:flex;align-items:center;gap:5px;font-size:.74rem;font-weight:700;color:var(--text2)}
     .leg-dot{width:11px;height:11px;border-radius:3px;flex-shrink:0}
 
+    .cal-months{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+    @media(max-width:900px){.cal-months{grid-template-columns:1fr}}
+    .cal-month-title{font-size:.92rem;font-weight:800;margin-bottom:8px;font-family:var(--font-mono);color:var(--text)}
+    #sc-cal.picking .cal-week{cursor:crosshair}
+    #sc-cal.picking .cal-daycell>span:hover{background:var(--accent-wash);border-radius:4px}
     .cal-weekhdr{display:grid;grid-template-columns:repeat(7,1fr);border:1px solid var(--border);border-bottom:none;border-radius:10px 10px 0 0;overflow:hidden;background:var(--surface2)}
     .cal-wd{padding:6px 0;text-align:center;font-size:.74rem;font-weight:800;color:var(--text2)}
     .cal-week{border:1px solid var(--border);border-top:none;position:relative;background:repeating-linear-gradient(to right,transparent,transparent calc(100%/7 - 1px),var(--border) calc(100%/7 - 1px),var(--border) calc(100%/7))}
@@ -109,7 +114,11 @@
     .sc-inp:hover{border-color:var(--border)}
     .sc-inp:focus{outline:none;border-color:rgba(22,101,52,.55);background:#fff;box-shadow:0 0 0 3px rgba(22,101,52,.10)}
     .sc-inp[type=date]{font-family:var(--font-mono);font-size:.78rem}
+    tr.sc-sel td{background:rgba(22,101,52,.10) !important;box-shadow:inset 2px 0 0 var(--accent)}
     .sc-act{display:inline-flex;align-items:center;gap:1px}
+    .sc-pick{background:none;border:none;cursor:pointer;color:#cbd5e1;font-size:.82rem;line-height:1;padding:2px 3px;transition:color .12s}
+    .sc-pick:hover{color:#166534}
+    .sc-pick.on{color:#166534}
     .sc-mv{background:none;border:none;cursor:pointer;color:#cbd5e1;font-size:.66rem;line-height:1;padding:3px 2px;transition:color .12s}
     .sc-mv:hover{color:#166534}
     .sc-mv:disabled{opacity:.3;cursor:default;color:#cbd5e1}
@@ -227,6 +236,10 @@
       </div>
       <div class="cal-legend" id="sc-legend"></div>
     </div>
+    <div id="sc-pick-hint" style="display:none;align-items:center;gap:10px;margin-bottom:10px;padding:9px 14px;border-radius:10px;background:var(--accent-wash);border:1px solid rgba(22,101,52,.3);font-size:.82rem;font-weight:700;color:var(--accent-strong)">
+      <span id="sc-pick-hint-txt"></span>
+      <button class="btn btn-muted" id="sc-pick-cancel" style="margin-left:auto;padding:4px 10px;font-size:.76rem">취소 (Esc)</button>
+    </div>
     <div id="sc-cal"></div>
 
     <!-- ── Editable table ── -->
@@ -239,7 +252,7 @@
             <th style="width:140px">시작일</th>
             <th style="width:140px">종료일</th>
             <th>비고</th>
-            <th style="width:76px"></th>
+            <th style="width:100px"></th>
           </tr>
         </thead>
         <tbody id="sc-table-body"></tbody>
@@ -282,6 +295,8 @@
 
   let items=[];
   let viewY, viewM;
+  let selId=null;     // 달력 기간 선택 대상 작업 id
+  let firstPick=null; // 첫 클릭 날짜(YYYY-MM-DD)
   let undoStack=[];
   const UNDO_MAX=80;
   let editSnap=null;
@@ -340,19 +355,22 @@
     const base=dated.length?dated[0]:new Date();
     viewY=base.getFullYear();viewM=base.getMonth();
   }
-  function renderCalendar(){
-    const host=document.getElementById("sc-cal");host.innerHTML="";
-    document.getElementById("sc-cal-label").textContent=viewY+"년 "+(viewM+1)+"월";
+  function renderMonth(y,m){
+    const wrap=document.createElement("div");wrap.className="cal-month";
+    const title=document.createElement("div");title.className="cal-month-title";
+    title.textContent=y+"년 "+(m+1)+"월";
+    wrap.appendChild(title);
+
     const wd=["일","월","화","수","목","금","토"];
     const hdr=document.createElement("div");hdr.className="cal-weekhdr";
     wd.forEach((w,i)=>{const c=document.createElement("div");c.className="cal-wd";c.textContent=w;if(i===0)c.style.color="#dc2626";if(i===6)c.style.color="#2563eb";hdr.appendChild(c);});
-    host.appendChild(hdr);
+    wrap.appendChild(hdr);
 
-    const first=new Date(viewY,viewM,1);
+    const first=new Date(y,m,1);
     const startWd=first.getDay();
-    const daysInMonth=new Date(viewY,viewM+1,0).getDate();
+    const daysInMonth=new Date(y,m+1,0).getDate();
     const weeks=Math.ceil((startWd+daysInMonth)/7);
-    const gridStart=new Date(viewY,viewM,1-startWd);
+    const gridStart=new Date(y,m,1-startWd);
     const valid=items.filter(it=>parseD(it.start)&&parseD(it.end)&&parseD(it.end)>=parseD(it.start));
     const todayStr=fmt(new Date());
 
@@ -360,12 +378,14 @@
       const weekStart=new Date(gridStart);weekStart.setDate(gridStart.getDate()+wk*7);
       const weekEnd=new Date(weekStart);weekEnd.setDate(weekStart.getDate()+6);
       const weekEl=document.createElement("div");weekEl.className="cal-week";
+      const wsTime=weekStart.getTime();
+      weekEl.addEventListener("click",e=>handleDayPick(wsTime,e.clientX,weekEl));
 
       const dayRow=document.createElement("div");dayRow.className="cal-dayrow";
       for(let i=0;i<7;i++){
         const d=new Date(weekStart);d.setDate(weekStart.getDate()+i);
         const cell=document.createElement("div");cell.className="cal-daycell";
-        if(d.getMonth()!==viewM)cell.classList.add("other");
+        if(d.getMonth()!==m)cell.classList.add("other");
         if(fmt(d)===todayStr)cell.classList.add("today");
         if(i===0)cell.classList.add("sun");if(i===6)cell.classList.add("sat");
         cell.innerHTML="<span>"+d.getDate()+"</span>";
@@ -403,6 +423,7 @@
         bar.style.top=(seg.lane*LANE)+"px";
         bar.style.height=BARH+"px";
         bar.style.background=cat.color;
+        if(seg.it.id===selId)bar.style.outline="2px solid #0f172a",bar.style.outlineOffset="1px";
         if(seg.cont){bar.style.borderTopLeftRadius="0";bar.style.borderBottomLeftRadius="0";}
         if(seg.contR){bar.style.borderTopRightRadius="0";bar.style.borderBottomRightRadius="0";}
         bar.innerHTML=
@@ -413,8 +434,59 @@
         evWrap.appendChild(bar);
       });
       weekEl.appendChild(evWrap);
-      host.appendChild(weekEl);
+      wrap.appendChild(weekEl);
     }
+    return wrap;
+  }
+  function renderCalendar(){
+    const host=document.getElementById("sc-cal");host.innerHTML="";
+    host.classList.toggle("picking",!!selId);
+    let y2=viewY,m2=viewM+1;if(m2>11){m2=0;y2++;}
+    document.getElementById("sc-cal-label").textContent=viewY+"."+pad(viewM+1)+" – "+y2+"."+pad(m2+1);
+    const months=document.createElement("div");months.className="cal-months";
+    months.appendChild(renderMonth(viewY,viewM));
+    months.appendChild(renderMonth(y2,m2));
+    host.appendChild(months);
+  }
+
+  /* ── 달력 클릭으로 기간 지정 ── */
+  function handleDayPick(weekStartTime,clientX,weekEl){
+    if(!selId)return;
+    const it=findItem(selId);if(!it)return;
+    const rect=weekEl.getBoundingClientRect();
+    let col=Math.floor((clientX-rect.left)/rect.width*7);
+    col=Math.max(0,Math.min(6,col));
+    const d=new Date(weekStartTime);d.setDate(d.getDate()+col);
+    const ds=fmt(d);
+    if(firstPick===null){
+      pushUndo();
+      firstPick=ds;it.start=ds;it.end=ds;
+    }else{
+      const a=firstPick,b=ds;
+      it.start=a<=b?a:b;it.end=a<=b?b:a;
+      firstPick=null;
+    }
+    renderTable();renderCalendar();updatePickHint();saveNow();
+  }
+  function selectForPick(id){
+    if(selId===id){clearPick();return;}
+    selId=id;firstPick=null;
+    renderTable();renderCalendar();updatePickHint();
+  }
+  function clearPick(){
+    selId=null;firstPick=null;
+    renderTable();renderCalendar();updatePickHint();
+  }
+  function updatePickHint(){
+    const bar=document.getElementById("sc-pick-hint");
+    const txt=document.getElementById("sc-pick-hint-txt");
+    if(!selId){bar.style.display="none";return;}
+    const it=findItem(selId);
+    const nm=it&&it.task?("'"+it.task+"'"):"선택한 작업";
+    bar.style.display="flex";
+    txt.textContent=firstPick===null
+      ? "📅 "+nm+" — 달력에서 시작일을 클릭하세요"
+      : "📅 "+nm+" — 종료일을 클릭하세요 (시작일: "+firstPick+")";
   }
 
   /* ── table ── */
@@ -427,12 +499,14 @@
       const catList=items.filter(it=>it.cat===cat.key);
       catList.forEach((it,pos)=>{
         const tr=document.createElement("tr");tr.dataset.id=it.id;
+        if(it.id===selId)tr.className="sc-sel";
         tr.innerHTML=
           '<td><input class="sc-inp" type="text" data-f="task" value="'+esc(it.task)+'" placeholder="작업명"></td>'+
           '<td><input class="sc-inp" type="date" data-f="start" value="'+esc(it.start)+'"></td>'+
           '<td><input class="sc-inp" type="date" data-f="end" value="'+esc(it.end)+'"></td>'+
           '<td><input class="sc-inp" type="text" data-f="note" value="'+esc(it.note)+'" placeholder="비고"></td>'+
           '<td style="text-align:center"><span class="sc-act">'+
+            '<button class="sc-pick'+(it.id===selId?" on":"")+'" title="달력에서 기간 선택">◎</button>'+
             '<button class="sc-mv" data-dir="-1" title="위로"'+(pos===0?" disabled":"")+'>▲</button>'+
             '<button class="sc-mv" data-dir="1" title="아래로"'+(pos===catList.length-1?" disabled":"")+'>▼</button>'+
             '<button class="sc-del" title="삭제">×</button>'+
@@ -477,6 +551,11 @@
       scheduleSave();
     });
     body.addEventListener("click",e=>{
+      const pick=e.target.closest(".sc-pick");
+      if(pick){
+        const tr=pick.closest("tr[data-id]");if(!tr)return;
+        selectForPick(tr.dataset.id);return;
+      }
       const mv=e.target.closest(".sc-mv");
       if(mv){
         const tr=mv.closest("tr[data-id]");if(!tr)return;
@@ -502,7 +581,10 @@
         if(t&&t.classList&&t.classList.contains("sc-inp")&&t.type==="text")return;
         e.preventDefault();doUndo();
       }
+      if(e.key==="Escape"&&selId)clearPick();
     });
+    const pc=document.getElementById("sc-pick-cancel");
+    if(pc)pc.addEventListener("click",clearPick);
   }
 
   /* ── nav / user panel ── */
