@@ -87,12 +87,16 @@
     .cal-week{border:1px solid var(--border);border-top:none;position:relative;background:repeating-linear-gradient(to right,transparent,transparent calc(100%/7 - 1px),var(--border) calc(100%/7 - 1px),var(--border) calc(100%/7))}
     .cal-week:last-child{border-radius:0 0 10px 10px}
     .cal-dayrow{display:grid;grid-template-columns:repeat(7,1fr)}
-    .cal-daycell{min-height:24px;padding:3px 7px;font-size:.72rem;font-weight:700;color:var(--text);font-family:var(--font-mono)}
+    .cal-daycell{min-height:26px;padding:5px 8px 2px;font-size:.74rem;font-weight:700;color:var(--text);font-family:var(--font-mono)}
     .cal-daycell.other{color:#cbd5e1}
     .cal-daycell.sun{color:#dc2626}.cal-daycell.sat{color:#2563eb}
     .cal-daycell.today{background:rgba(22,101,52,.10)}
-    .cal-events{position:relative}
-    .cal-bar{position:absolute;height:20px;line-height:20px;border-radius:5px;color:#fff;font-size:.7rem;font-weight:700;padding:0 7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 1px 2px rgba(0,0,0,.12)}
+    .cal-daycell.today>span{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;border-radius:50%;background:var(--accent);color:#fff}
+    .cal-events{position:relative;padding:0 4px 6px}
+    .cal-bar{position:absolute;display:flex;align-items:center;gap:3px;height:24px;border-radius:7px;color:#fff;font-size:.74rem;font-weight:700;padding:0 9px;white-space:nowrap;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.16);cursor:default;transition:filter .12s,transform .12s}
+    .cal-bar:hover{filter:brightness(1.08);transform:translateY(-1px);z-index:5}
+    .cal-bar .cal-bar-txt{overflow:hidden;text-overflow:ellipsis}
+    .cal-bar .cal-arr{flex-shrink:0;font-weight:900;opacity:.85}
     .cal-empty{padding:20px;text-align:center;color:#94a3b8;font-size:.82rem;border:1px dashed var(--border);border-radius:10px}
 
     /* ── Schedule table ── */
@@ -105,6 +109,10 @@
     .sc-inp:hover{border-color:var(--border)}
     .sc-inp:focus{outline:none;border-color:rgba(22,101,52,.55);background:#fff;box-shadow:0 0 0 3px rgba(22,101,52,.10)}
     .sc-inp[type=date]{font-family:var(--font-mono);font-size:.78rem}
+    .sc-act{display:inline-flex;align-items:center;gap:1px}
+    .sc-mv{background:none;border:none;cursor:pointer;color:#cbd5e1;font-size:.66rem;line-height:1;padding:3px 2px;transition:color .12s}
+    .sc-mv:hover{color:#166534}
+    .sc-mv:disabled{opacity:.3;cursor:default;color:#cbd5e1}
     .sc-del{background:none;border:none;cursor:pointer;color:#cbd5e1;font-size:1.1rem;line-height:1;padding:2px 6px;transition:color .12s}
     .sc-del:hover{color:#dc2626}
     .sc-addrow{background:none;border:none;cursor:pointer;color:var(--accent);font-size:.78rem;font-weight:700;padding:6px 4px}
@@ -231,7 +239,7 @@
             <th style="width:140px">시작일</th>
             <th style="width:140px">종료일</th>
             <th>비고</th>
-            <th style="width:40px"></th>
+            <th style="width:76px"></th>
           </tr>
         </thead>
         <tbody id="sc-table-body"></tbody>
@@ -274,6 +282,15 @@
 
   let items=[];
   let viewY, viewM;
+  let undoStack=[];
+  const UNDO_MAX=80;
+  let editSnap=null;
+  function pushUndo(){undoStack.push(JSON.stringify(items));if(undoStack.length>UNDO_MAX)undoStack.shift();}
+  function doUndo(){
+    if(!undoStack.length){setStatus("되돌릴 항목 없음","#94a3b8");return;}
+    items=JSON.parse(undoStack.pop());
+    renderTable();renderCalendar();saveNow();setStatus("↩ 되돌림","#2563eb");
+  }
 
   function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
   function pad(n){return String(n).padStart(2,"0");}
@@ -351,7 +368,7 @@
         if(d.getMonth()!==viewM)cell.classList.add("other");
         if(fmt(d)===todayStr)cell.classList.add("today");
         if(i===0)cell.classList.add("sun");if(i===6)cell.classList.add("sat");
-        cell.textContent=d.getDate();
+        cell.innerHTML="<span>"+d.getDate()+"</span>";
         dayRow.appendChild(cell);
       }
       weekEl.appendChild(dayRow);
@@ -375,18 +392,23 @@
           lane++;
         }
       });
+      const LANE=30,BARH=24,MINLANES=3;
       const evWrap=document.createElement("div");evWrap.className="cal-events";
-      evWrap.style.height=Math.max(lanes.length*24+4,6)+"px";
+      evWrap.style.height=(Math.max(lanes.length,MINLANES)*LANE)+"px";
       segs.forEach(seg=>{
         const cat=catOf(seg.it.cat);
         const bar=document.createElement("div");bar.className="cal-bar";
-        bar.style.left="calc("+(seg.col/7*100)+"% + 2px)";
-        bar.style.width="calc("+(seg.span/7*100)+"% - 4px)";
-        bar.style.top=(seg.lane*24)+"px";
+        bar.style.left="calc("+(seg.col/7*100)+"% + 3px)";
+        bar.style.width="calc("+(seg.span/7*100)+"% - 6px)";
+        bar.style.top=(seg.lane*LANE)+"px";
+        bar.style.height=BARH+"px";
         bar.style.background=cat.color;
         if(seg.cont){bar.style.borderTopLeftRadius="0";bar.style.borderBottomLeftRadius="0";}
         if(seg.contR){bar.style.borderTopRightRadius="0";bar.style.borderBottomRightRadius="0";}
-        bar.textContent=(seg.cont?"… ":"")+seg.it.task;
+        bar.innerHTML=
+          (seg.cont?'<span class="cal-arr">‹</span>':'')+
+          '<span class="cal-bar-txt">'+esc(seg.it.task)+'</span>'+
+          (seg.contR?'<span class="cal-arr">›</span>':'');
         bar.title=cat.name+" · "+seg.it.task+" ("+seg.it.start+" ~ "+seg.it.end+")";
         evWrap.appendChild(bar);
       });
@@ -402,14 +424,19 @@
       const hr=document.createElement("tr");hr.className="sc-cat-row";
       hr.innerHTML='<td colspan="5" style="border-left:4px solid '+cat.color+'">'+esc(cat.name)+'</td>';
       host.appendChild(hr);
-      items.filter(it=>it.cat===cat.key).forEach(it=>{
+      const catList=items.filter(it=>it.cat===cat.key);
+      catList.forEach((it,pos)=>{
         const tr=document.createElement("tr");tr.dataset.id=it.id;
         tr.innerHTML=
           '<td><input class="sc-inp" type="text" data-f="task" value="'+esc(it.task)+'" placeholder="작업명"></td>'+
           '<td><input class="sc-inp" type="date" data-f="start" value="'+esc(it.start)+'"></td>'+
           '<td><input class="sc-inp" type="date" data-f="end" value="'+esc(it.end)+'"></td>'+
           '<td><input class="sc-inp" type="text" data-f="note" value="'+esc(it.note)+'" placeholder="비고"></td>'+
-          '<td style="text-align:center"><button class="sc-del" title="삭제">×</button></td>';
+          '<td style="text-align:center"><span class="sc-act">'+
+            '<button class="sc-mv" data-dir="-1" title="위로"'+(pos===0?" disabled":"")+'>▲</button>'+
+            '<button class="sc-mv" data-dir="1" title="아래로"'+(pos===catList.length-1?" disabled":"")+'>▼</button>'+
+            '<button class="sc-del" title="삭제">×</button>'+
+          '</span></td>';
         host.appendChild(tr);
       });
       const ar=document.createElement("tr");
@@ -420,8 +447,27 @@
 
   function findItem(id){return items.find(it=>it.id===id);}
 
+  function moveItem(id,dir){
+    const idx=items.findIndex(it=>it.id===id);if(idx<0)return;
+    const cat=items[idx].cat;
+    let j=idx+dir;
+    while(j>=0&&j<items.length&&items[j].cat!==cat)j+=dir;
+    if(j<0||j>=items.length||items[j].cat!==cat)return;
+    pushUndo();
+    const t=items[idx];items[idx]=items[j];items[j]=t;
+    renderTable();renderCalendar();saveNow();
+  }
   function bindTable(){
     const body=document.getElementById("sc-table-body");
+    body.addEventListener("focusin",e=>{
+      if(e.target.closest(".sc-inp")&&editSnap===null)editSnap=JSON.stringify(items);
+    });
+    body.addEventListener("focusout",e=>{
+      if(e.target.closest(".sc-inp")&&editSnap!==null){
+        if(editSnap!==JSON.stringify(items)){undoStack.push(editSnap);if(undoStack.length>UNDO_MAX)undoStack.shift();}
+        editSnap=null;
+      }
+    });
     body.addEventListener("input",e=>{
       const inp=e.target.closest(".sc-inp");if(!inp)return;
       const tr=inp.closest("tr[data-id]");if(!tr)return;
@@ -431,16 +477,30 @@
       scheduleSave();
     });
     body.addEventListener("click",e=>{
+      const mv=e.target.closest(".sc-mv");
+      if(mv){
+        const tr=mv.closest("tr[data-id]");if(!tr)return;
+        moveItem(tr.dataset.id,Number(mv.dataset.dir));return;
+      }
       const del=e.target.closest(".sc-del");
       if(del){
         const tr=del.closest("tr[data-id]");if(!tr)return;
+        pushUndo();
         items=items.filter(it=>it.id!==tr.dataset.id);
         renderTable();renderCalendar();saveNow();return;
       }
       const add=e.target.closest(".sc-addrow");
       if(add){
+        pushUndo();
         items.push({id:"n"+Date.now()+Math.floor(Math.random()*1000),cat:add.dataset.cat,task:"",start:"",end:"",note:""});
         renderTable();saveNow();
+      }
+    });
+    document.addEventListener("keydown",e=>{
+      if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&(e.key==="z"||e.key==="Z")){
+        const t=e.target;
+        if(t&&t.classList&&t.classList.contains("sc-inp")&&t.type==="text")return;
+        e.preventDefault();doUndo();
       }
     });
   }
