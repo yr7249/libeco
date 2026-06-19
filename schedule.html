@@ -102,10 +102,17 @@
     .cal-daycell.first1>span{color:var(--accent-strong)}
     .cal-daycell.today>span{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;border-radius:50%;background:var(--accent);color:#fff}
     .cal-events{position:relative;padding:0 0 5px}
-    .cal-bar{position:absolute;display:flex;align-items:center;gap:3px;border-radius:6px;color:#fff;font-size:.72rem;font-weight:700;padding:0 8px;white-space:nowrap;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.16);cursor:default;transition:filter .12s,transform .12s}
+    .cal-bar{position:absolute;display:flex;align-items:center;gap:2px;border-radius:6px;color:#fff;font-size:.72rem;font-weight:700;padding:0 7px;white-space:nowrap;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.16);cursor:default;transition:filter .12s,transform .12s}
     .cal-bar:hover{filter:brightness(1.08);transform:translateY(-1px);z-index:5}
     .cal-bar .cal-bar-txt{overflow:hidden;text-overflow:ellipsis}
-    .cal-bar .cal-arr{flex-shrink:0;font-weight:900;opacity:.85}
+    .cal-bar .cal-arr{flex-shrink:0;font-weight:900;opacity:.95;font-size:.86rem;line-height:1;margin:0 -2px}
+    /* 마일스톤(하루) */
+    .cal-ms{position:absolute;display:flex;align-items:center;gap:5px;height:18px;cursor:default}
+    .cal-ms-dot{width:13px;height:13px;flex-shrink:0;transform:rotate(45deg);border-radius:3px;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+    .cal-ms:hover .cal-ms-dot{filter:brightness(1.1)}
+    .cal-ms-txt{font-size:.7rem;font-weight:800;color:var(--text);white-space:nowrap;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff}
+    /* 주별 넘침 표시 */
+    .cal-more{position:absolute;right:5px;font-size:.66rem;font-weight:800;color:var(--text2);background:rgba(15,23,42,.07);border-radius:5px;padding:1px 6px;cursor:default}
 
     /* ── Schedule table ── */
     .sc-table-wrap{border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-top:8px}
@@ -292,9 +299,9 @@
   const CATS=[
     {key:"tank",     name:"탱크제작",      color:"#2563eb"},
     {key:"wiring",   name:"와이어링&랩뷰", color:"#7c3aed"},
-    {key:"domestic", name:"국내시험",      color:"#16a34a"},
-    {key:"shipping", name:"패킹&운송",     color:"#d97706"},
-    {key:"llnl",     name:"LLNL시험",      color:"#dc2626"}
+    {key:"domestic", name:"국내시험",      color:"#0d9488"},
+    {key:"shipping", name:"패킹&운송",     color:"#ea580c"},
+    {key:"llnl",     name:"LLNL시험",      color:"#be123c"}
   ];
   function catOf(k){ return CATS.find(c=>c.key===k)||{name:"",color:"#64748b"}; }
 
@@ -369,7 +376,29 @@
     const base=dated.length?dated[0]:new Date();
     viewY=base.getFullYear();viewM=base.getMonth();
   }
-  function buildWeekBody(weekStart,weekEnd,valid,todayStr){
+  /* 작업마다 고정 레인 배치 — 겹치는 무리(cluster) 안에서만 레인을 나눠
+     다주 막대가 모든 주에서 같은 높이로 이어져 한 작업으로 추적된다. */
+  function computeLanes(list){
+    const evs=list.map(it=>({id:it.id,s:parseD(it.start).getTime(),e:parseD(it.end).getTime()}))
+                  .sort((a,b)=>a.s-b.s||a.e-b.e);
+    const map={};
+    let i=0;
+    while(i<evs.length){
+      let clusterEnd=evs[i].e,j=i+1;
+      const cluster=[evs[i]];
+      while(j<evs.length&&evs[j].s<=clusterEnd){cluster.push(evs[j]);if(evs[j].e>clusterEnd)clusterEnd=evs[j].e;j++;}
+      const laneEnd=[];
+      cluster.forEach(ev=>{
+        let lane=0;
+        while(lane<laneEnd.length&&laneEnd[lane]>=ev.s)lane++;
+        laneEnd[lane]=ev.e;map[ev.id]=lane;
+      });
+      i=j;
+    }
+    return map;
+  }
+  const LANE_H=22,BAR_H=18,MAX_LANE=4;
+  function buildWeekBody(weekStart,weekEnd,valid,todayStr,laneOf){
     const wsTime=weekStart.getTime();
     const wbody=document.createElement("div");wbody.className="cal-weekbody";
     wbody.addEventListener("click",e=>handleDayPick(wsTime,e.clientX,wbody));
@@ -392,31 +421,39 @@
       if(e<weekStart||s>weekEnd)return;
       const segS=s<weekStart?weekStart:s;
       const segE=e>weekEnd?weekEnd:e;
-      segs.push({it,col:dayDiff(weekStart,segS),span:dayDiff(segS,segE)+1,cont:s<weekStart,contR:e>weekEnd});
+      segs.push({it,col:dayDiff(weekStart,segS),span:dayDiff(segS,segE)+1,
+                 cont:s<weekStart,contR:e>weekEnd,lane:laneOf[it.id]||0,
+                 single:s.getTime()===e.getTime()});
     });
-    segs.sort((a,b)=>a.col-b.col||b.span-a.span);
-    const lanes=[];
-    segs.forEach(seg=>{
-      let lane=0;
-      while(true){
-        const occ=lanes[lane]||[];
-        const conflict=occ.some(o=>!(seg.col+seg.span-1<o.s||seg.col>o.e));
-        if(!conflict){if(!lanes[lane])lanes[lane]=[];lanes[lane].push({s:seg.col,e:seg.col+seg.span-1});seg.lane=lane;break;}
-        lane++;
-      }
-    });
-    const LANE=24,BARH=20;
+
+    const maxLane=segs.reduce((m,sg)=>Math.max(m,sg.lane),-1);
+    const visible=segs.filter(sg=>sg.lane<MAX_LANE);
+    const hidden=segs.length-visible.length;
+    const lanesShown=Math.min(maxLane+1,MAX_LANE);
+
     const evWrap=document.createElement("div");evWrap.className="cal-events";
-    evWrap.style.height=(Math.max(lanes.length,1)*LANE)+"px";
-    segs.forEach(seg=>{
+    evWrap.style.height=(Math.max(lanesShown,1)*LANE_H+(hidden>0?16:0))+"px";
+
+    visible.forEach(seg=>{
       const cat=catOf(seg.it.cat);
+      if(seg.single){
+        const ms=document.createElement("div");ms.className="cal-ms";
+        ms.style.left="calc("+(seg.col/7*100)+"% + 6px)";
+        ms.style.top=(seg.lane*LANE_H)+"px";
+        ms.innerHTML='<span class="cal-ms-dot" style="background:'+cat.color+'"></span><span class="cal-ms-txt">'+esc(seg.it.task)+'</span>';
+        if(seg.it.id===selId)ms.querySelector(".cal-ms-dot").style.outline="2px solid #0f172a";
+        ms.title=cat.name+" · "+seg.it.task+" ("+seg.it.start+")";
+        evWrap.appendChild(ms);
+        return;
+      }
+      const lInset=seg.cont?0:3, rInset=seg.contR?0:3;
       const bar=document.createElement("div");bar.className="cal-bar";
-      bar.style.left="calc("+(seg.col/7*100)+"% + 3px)";
-      bar.style.width="calc("+(seg.span/7*100)+"% - 6px)";
-      bar.style.top=(seg.lane*LANE)+"px";
-      bar.style.height=BARH+"px";
+      bar.style.left="calc("+(seg.col/7*100)+"% + "+lInset+"px)";
+      bar.style.width="calc("+(seg.span/7*100)+"% - "+(lInset+rInset)+"px)";
+      bar.style.top=(seg.lane*LANE_H)+"px";
+      bar.style.height=BAR_H+"px";
       bar.style.background=cat.color;
-      if(seg.it.id===selId){bar.style.outline="2px solid #0f172a";bar.style.outlineOffset="1px";}
+      if(seg.it.id===selId){bar.style.outline="2px solid #0f172a";bar.style.outlineOffset="1px";bar.style.zIndex="6";}
       if(seg.cont){bar.style.borderTopLeftRadius="0";bar.style.borderBottomLeftRadius="0";}
       if(seg.contR){bar.style.borderTopRightRadius="0";bar.style.borderBottomRightRadius="0";}
       bar.innerHTML=
@@ -426,6 +463,13 @@
       bar.title=cat.name+" · "+seg.it.task+" ("+seg.it.start+" ~ "+seg.it.end+")";
       evWrap.appendChild(bar);
     });
+    if(hidden>0){
+      const more=document.createElement("div");more.className="cal-more";
+      more.style.top=(lanesShown*LANE_H-2)+"px";
+      more.textContent="+"+hidden+"개 더";
+      more.title="이 주에 표시되지 않은 일정 "+hidden+"개 (아래 표에서 확인)";
+      evWrap.appendChild(more);
+    }
     wbody.appendChild(evWrap);
     return wbody;
   }
@@ -435,6 +479,7 @@
     host.innerHTML="";
     host.classList.toggle("picking",!!selId);
     const valid=items.filter(it=>parseD(it.start)&&parseD(it.end)&&parseD(it.end)>=parseD(it.start));
+    const laneOf=computeLanes(valid);
     const today=new Date();today.setHours(0,0,0,0);
     const todayStr=fmt(today);
     let minD=new Date(today),maxD=new Date(today);
@@ -470,7 +515,7 @@
       if(lblM!==null){gut.classList.add("mark");gut.innerHTML=(lblM===0?'<span class="cal-gy">'+lblY+'</span>':'')+(lblM+1);gut.title=lblY+"년 "+(lblM+1)+"월";if(!firstMonthRow)firstMonthRow=row;}
       row.appendChild(gut);
 
-      row.appendChild(buildWeekBody(weekStart,weekEnd,valid,todayStr));
+      row.appendChild(buildWeekBody(weekStart,weekEnd,valid,todayStr,laneOf));
       scroll.appendChild(row);
       if(isToday)todayRow=row;
     }
