@@ -84,20 +84,20 @@
 
     /* 세로 스크롤 연속 달력 */
     .cal-scroll{position:relative;max-height:640px;overflow-y:auto;border:1px solid var(--border);border-radius:12px;background:#fff}
-    .cal-chdr{position:sticky;top:0;z-index:4;display:grid;grid-template-columns:40px 1fr;background:var(--surface2);border-bottom:1px solid var(--border)}
-    .cal-chdr-gut{border-right:1px solid var(--border)}
+    .cal-chdr{position:sticky;top:0;z-index:4;display:grid;grid-template-columns:38px 1fr;background:var(--surface2);border-bottom:1px solid rgba(15,23,42,.08)}
+    .cal-chdr-gut{border-right:1px solid rgba(15,23,42,.06)}
     .cal-wdrow{display:grid;grid-template-columns:repeat(7,1fr)}
     .cal-wd{padding:6px 0;text-align:center;font-size:.74rem;font-weight:800;color:var(--text2)}
-    .cal-crow{display:grid;grid-template-columns:40px 1fr;border-top:1px solid var(--border)}
+    .cal-crow{display:grid;grid-template-columns:38px 1fr;border-top:1px solid rgba(15,23,42,.05)}
     .cal-crow:first-of-type{border-top:none}
-    .cal-crow.monthstart{border-top:2px solid rgba(22,101,52,.45)}
-    .cal-gutter{border-right:1px solid var(--border);background:var(--surface2);font-family:var(--font-mono);font-weight:800;color:#cbd5e1;font-size:.82rem;text-align:center;padding-top:5px;line-height:1.1}
+    .cal-crow.monthstart{border-top:1px solid rgba(22,101,52,.30)}
+    .cal-gutter{border-right:1px solid rgba(15,23,42,.06);background:var(--surface2);font-family:var(--font-mono);font-weight:800;color:#cbd5e1;font-size:.82rem;text-align:center;padding-top:5px;line-height:1.1}
     .cal-gutter.mark{color:var(--accent-strong)}
     .cal-gutter .cal-gy{display:block;font-size:.56rem;color:var(--text2);font-weight:600}
-    .cal-weekbody{position:relative;background:repeating-linear-gradient(to right,transparent,transparent calc(100%/7 - 1px),var(--border) calc(100%/7 - 1px),var(--border) calc(100%/7))}
+    .cal-weekbody{position:relative;background:repeating-linear-gradient(to right,transparent,transparent calc(100%/7 - 1px),rgba(15,23,42,.045) calc(100%/7 - 1px),rgba(15,23,42,.045) calc(100%/7))}
     #sc-cal.picking .cal-weekbody{cursor:crosshair}
     .cal-dayrow{display:grid;grid-template-columns:repeat(7,1fr)}
-    .cal-daycell{min-height:22px;padding:3px 7px 1px;font-size:.72rem;font-weight:700;color:var(--text);font-family:var(--font-mono)}
+    .cal-daycell{min-height:24px;padding:4px 7px 2px;font-size:.72rem;font-weight:700;color:var(--text);font-family:var(--font-mono)}
     .cal-daycell.sun{color:#dc2626}.cal-daycell.sat{color:#2563eb}
     .cal-daycell.first1>span{color:var(--accent-strong)}
     .cal-daycell.today>span{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;border-radius:50%;background:var(--accent);color:#fff}
@@ -121,9 +121,6 @@
     tr.row-dragging td{opacity:.4;background:rgba(22,101,52,.06) !important}
     #sc-table-body tr.drag-over-top td{border-top:2px solid var(--accent) !important}
     #sc-table-body tr.drag-over-bot td{border-bottom:2px solid var(--accent) !important}
-    .sc-pick{background:none;border:none;cursor:pointer;color:#cbd5e1;font-size:.9rem;line-height:1;padding:2px 4px;transition:color .12s}
-    .sc-pick:hover{color:#166534}
-    .sc-pick.on{color:#166534}
     .sc-hint{font-size:.72rem;color:var(--text2);font-weight:500;margin:8px 2px 0;font-family:var(--font-mono)}
     #sc-float-drag{position:fixed;display:none;z-index:9000;cursor:grab;color:rgba(100,116,139,.85);font-size:15px;user-select:none;padding:4px 7px;border-radius:6px;background:rgba(255,255,255,.96);border:1px solid rgba(15,23,42,.18);box-shadow:0 2px 8px rgba(0,0,0,.18);line-height:1;transform:translateY(-50%);align-items:center}
     #sc-float-drag:hover{color:var(--accent);border-color:rgba(22,101,52,.5)}
@@ -257,13 +254,12 @@
             <th style="width:140px">시작일</th>
             <th style="width:140px">종료일</th>
             <th>비고</th>
-            <th style="width:44px"></th>
           </tr>
         </thead>
         <tbody id="sc-table-body"></tbody>
       </table>
     </div>
-    <div class="sc-hint sc-noprint">※ 행 위에서 마우스 왼쪽 ⠿ 핸들을 잡고 드래그하면 순서가 바뀝니다 · 행에서 우클릭 → 위/아래 행 추가, 삭제 · ◎ 누른 뒤 달력을 두 번 클릭하면 기간 지정 · Ctrl+Z 되돌리기</div>
+    <div class="sc-hint sc-noprint">※ 행을 클릭하면 그 작업이 선택됩니다 → 위 달력을 클릭(처음=시작일, 다음=종료일)하면 기간이 지정됩니다 · 왼쪽 ⠿ 핸들 드래그로 순서 변경 · 행 우클릭 → 위/아래 추가·삭제 · Ctrl+Z 되돌리기</div>
 
     <footer class="footer">© 2026 LIBECO E&amp;C · All Rights Reserved</footer>
   </div>
@@ -434,7 +430,9 @@
     return wbody;
   }
   function renderCalendar(){
-    const host=document.getElementById("sc-cal");host.innerHTML="";
+    const host=document.getElementById("sc-cal");
+    const prevTop=calScrollEl?calScrollEl.scrollTop:null;
+    host.innerHTML="";
     host.classList.toggle("picking",!!selId);
     const valid=items.filter(it=>parseD(it.start)&&parseD(it.end)&&parseD(it.end)>=parseD(it.start));
     const today=new Date();today.setHours(0,0,0,0);
@@ -459,7 +457,8 @@
       const weekStart=new Date(gridStart);weekStart.setDate(gridStart.getDate()+wk*7);
       const weekEnd=new Date(weekStart);weekEnd.setDate(weekStart.getDate()+6);
       const row=document.createElement("div");row.className="cal-crow";
-      row.dataset.ym=weekStart.getFullYear()+"."+pad(weekStart.getMonth()+1);
+      const midW=new Date(weekStart);midW.setDate(weekStart.getDate()+3);
+      row.dataset.ym=midW.getFullYear()+"."+pad(midW.getMonth()+1);
 
       let lblM=null,lblY=null,hasFirst=false,isToday=false;
       for(let i=0;i<7;i++){const d=new Date(weekStart);d.setDate(weekStart.getDate()+i);if(d.getDate()===1){lblM=d.getMonth();lblY=d.getFullYear();hasFirst=true;}if(fmt(d)===todayStr)isToday=true;}
@@ -486,8 +485,12 @@
       if(cur){const p=cur.dataset.ym.split(".");document.getElementById("sc-cal-label").textContent=p[0]+"년 "+(+p[1])+"월";}
     }
     scroll.addEventListener("scroll",updateLabel);
-    const tgt=todayRow||firstMonthRow;
-    if(tgt)scroll.scrollTop=Math.max(0,tgt.offsetTop-hdr.offsetHeight-2);
+    if(prevTop!==null){
+      scroll.scrollTop=prevTop;
+    }else{
+      const tgt=todayRow||firstMonthRow;
+      if(tgt)scroll.scrollTop=Math.max(0,tgt.offsetTop-hdr.offsetHeight-2);
+    }
     updateLabel();
   }
 
@@ -510,10 +513,13 @@
     }
     renderTable();renderCalendar();updatePickHint();saveNow();
   }
-  function selectForPick(id){
-    if(selId===id){clearPick();return;}
+  function armRow(id){
+    if(selId===id)return;
     selId=id;firstPick=null;
-    renderTable();renderCalendar();updatePickHint();
+    const body=document.getElementById("sc-table-body");
+    body.querySelectorAll("tr.sc-sel").forEach(r=>r.classList.remove("sc-sel"));
+    const tr=body.querySelector('tr[data-id="'+id+'"]');if(tr)tr.classList.add("sc-sel");
+    renderCalendar();updatePickHint();
   }
   function clearPick(){
     selId=null;firstPick=null;
@@ -527,8 +533,8 @@
     const nm=it&&it.task?("'"+it.task+"'"):"선택한 작업";
     bar.style.display="flex";
     txt.textContent=firstPick===null
-      ? "📅 "+nm+" — 달력에서 시작일을 클릭하세요"
-      : "📅 "+nm+" — 종료일을 클릭하세요 (시작일: "+firstPick+")";
+      ? "📅 "+nm+" 선택됨 — 달력에서 시작일을 클릭하세요 (다음 클릭=종료일)"
+      : "📅 "+nm+" — 이제 종료일을 클릭하세요 (시작일: "+firstPick+")";
   }
 
   /* ── table ── */
@@ -536,7 +542,7 @@
     const host=document.getElementById("sc-table-body");host.innerHTML="";
     CATS.forEach(cat=>{
       const hr=document.createElement("tr");hr.className="sc-cat-row";hr.dataset.cat=cat.key;
-      hr.innerHTML='<td colspan="5" style="border-left:4px solid '+cat.color+'">'+esc(cat.name)+'</td>';
+      hr.innerHTML='<td colspan="4" style="border-left:4px solid '+cat.color+'">'+esc(cat.name)+'</td>';
       host.appendChild(hr);
       items.filter(it=>it.cat===cat.key).forEach(it=>{
         const tr=document.createElement("tr");tr.dataset.id=it.id;
@@ -545,8 +551,7 @@
           '<td><input class="sc-inp" type="text" data-f="task" value="'+esc(it.task)+'" placeholder="작업명"></td>'+
           '<td><input class="sc-inp" type="date" data-f="start" value="'+esc(it.start)+'"></td>'+
           '<td><input class="sc-inp" type="date" data-f="end" value="'+esc(it.end)+'"></td>'+
-          '<td><input class="sc-inp" type="text" data-f="note" value="'+esc(it.note)+'" placeholder="비고"></td>'+
-          '<td style="text-align:center"><button class="sc-pick'+(it.id===selId?" on":"")+'" title="달력에서 기간 선택">◎</button></td>';
+          '<td><input class="sc-inp" type="text" data-f="note" value="'+esc(it.note)+'" placeholder="비고"></td>';
         host.appendChild(tr);
       });
     });
@@ -579,7 +584,9 @@
   function bindTable(){
     const body=document.getElementById("sc-table-body");
     body.addEventListener("focusin",e=>{
-      if(e.target.closest(".sc-inp")&&editSnap===null)editSnap=JSON.stringify(items);
+      const inp=e.target.closest(".sc-inp");if(!inp)return;
+      if(editSnap===null)editSnap=JSON.stringify(items);
+      const tr=inp.closest("tr[data-id]");if(tr)armRow(tr.dataset.id);
     });
     body.addEventListener("focusout",e=>{
       if(e.target.closest(".sc-inp")&&editSnap!==null){
@@ -594,13 +601,6 @@
       it[inp.dataset.f]=inp.value;
       if(inp.dataset.f==="start"||inp.dataset.f==="end"||inp.dataset.f==="task")renderCalendar();
       scheduleSave();
-    });
-    body.addEventListener("click",e=>{
-      const pick=e.target.closest(".sc-pick");
-      if(pick){
-        const tr=pick.closest("tr[data-id]");if(!tr)return;
-        selectForPick(tr.dataset.id);return;
-      }
     });
     body.addEventListener("dragover",e=>{
       const tr=e.target.closest("tr[data-id]");if(!tr||dragSrcId===null)return;
