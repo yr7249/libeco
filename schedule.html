@@ -75,20 +75,17 @@
     @media(max-width:640px){.no-mobile{display:none!important}.pg-topbar{padding:0 8px;gap:4px}.pg-btn{padding:5px 8px;font-size:.7rem}}
 
     /* ── Calendar ── */
-    .cal-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px}
-    .cal-nav{display:flex;align-items:center;gap:6px}
-    .cal-label{font-size:1.05rem;font-weight:800;min-width:130px;text-align:center;font-family:var(--font-mono)}
     .cal-legend{display:flex;flex-wrap:wrap;gap:10px}
     .leg-item{display:flex;align-items:center;gap:5px;font-size:.74rem;font-weight:700;color:var(--text2)}
     .leg-dot{width:11px;height:11px;border-radius:3px;flex-shrink:0}
 
     /* ── 가로 스윔레인 간트 ── */
-    .gantt-scroll{position:relative;max-height:560px;overflow:auto;border:1px solid var(--border);border-radius:12px;background:#fff}
+    .gantt-scroll{position:relative;overflow:hidden;border:1px solid var(--border);border-radius:12px;background:#fff}
     .gantt-inner{position:relative}
     .gantt-grid{position:absolute;top:0;bottom:0;z-index:0;pointer-events:none}
     .gantt-mline{position:absolute;top:0;bottom:0;width:1px;background:rgba(15,23,42,.07)}
     .gantt-today{position:absolute;top:0;bottom:0;width:2px;background:var(--accent);opacity:.5}
-    .gantt-head{position:sticky;top:0;z-index:5;display:flex;background:var(--surface2);border-bottom:1px solid rgba(15,23,42,.10)}
+    .gantt-head{position:relative;z-index:5;display:flex;background:var(--surface2);border-bottom:1px solid rgba(15,23,42,.10)}
     .gantt-corner{position:sticky;left:0;z-index:6;background:var(--surface2);flex-shrink:0;border-right:1px solid rgba(15,23,42,.10);display:flex;align-items:center;padding:0 12px;font-size:.7rem;font-weight:800;color:var(--text2);letter-spacing:.04em}
     .gantt-axis{position:relative;flex-shrink:0;height:34px}
     .gantt-mlabel{position:absolute;top:8px;font-family:var(--font-mono);font-size:.74rem;font-weight:800;color:var(--text2);padding-left:6px;white-space:nowrap;border-left:1px solid rgba(15,23,42,.12);line-height:1}
@@ -112,7 +109,7 @@
     .gantt-edge-s{transform:translateX(-100%)}
 
     /* ── Schedule table ── */
-    .sc-table-wrap{border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-top:8px}
+    .sc-table-wrap{border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-top:8px;max-width:760px}
     table.sc-table{width:100%;border-collapse:collapse;font-size:.84rem}
     table.sc-table th{background:#eef2f6;padding:8px 12px;text-align:left;font-weight:800;font-size:.74rem;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap;letter-spacing:.02em}
     table.sc-table td{padding:3px 10px;border-bottom:1px solid #eef1f4;vertical-align:middle}
@@ -251,15 +248,7 @@
 
     <!-- ── Timeline (Gantt) ── -->
     <div class="section-title">일정 타임라인</div>
-    <div class="cal-toolbar">
-      <div class="cal-nav">
-        <button class="btn btn-muted" id="sc-prev">◀</button>
-        <span class="cal-label" id="sc-cal-label">--</span>
-        <button class="btn btn-muted" id="sc-next">▶</button>
-        <button class="btn btn-muted" id="sc-today" style="margin-left:6px">오늘</button>
-      </div>
-      <div class="cal-legend" id="sc-legend"></div>
-    </div>
+    <div class="cal-legend" id="sc-legend" style="margin-bottom:10px"></div>
     <div id="sc-cal"></div>
 
     <!-- ── Editable table ── -->
@@ -268,8 +257,8 @@
       <table class="sc-table">
         <thead>
           <tr>
-            <th style="width:44%">세부 작업</th>
-            <th style="width:170px">기간</th>
+            <th style="width:280px">세부 작업</th>
+            <th style="width:160px">기간</th>
             <th>비고</th>
           </tr>
         </thead>
@@ -328,10 +317,9 @@
   let items=[];
   let viewY, viewM;
   let selId=null;     // 현재 강조 중인 작업 id
-  let calScrollEl=null;
   let dpRowId=null,dpStart=null,dpView=null; // 기간 선택 팝업 상태
-  const PXD=12;       // 하루당 픽셀
-  const GLBL=200;     // 좌측 라벨 폭
+  let PXD=8;          // 하루당 픽셀(폭에 맞춰 동적 계산)
+  const GLBL=150;     // 좌측 라벨 폭
   let gMin=null,gDays=0; // 간트 표시 범위(시작일, 총 일수)
   let undoStack=[];
   const UNDO_MAX=80;
@@ -393,8 +381,6 @@
   }
   function renderCalendar(){
     const host=document.getElementById("sc-cal");
-    const prevL=calScrollEl?calScrollEl.scrollLeft:null;
-    const prevT=calScrollEl?calScrollEl.scrollTop:null;
     host.innerHTML="";
 
     const today=new Date();today.setHours(0,0,0,0);
@@ -408,6 +394,9 @@
       if(d>rangeEnd)rangeEnd=new Date(d.getFullYear(),d.getMonth()+1,0);
     });});
     gMin=rangeMin;gDays=dayDiff(rangeMin,rangeEnd)+1;
+    // 화면 폭에 맞춰 하루당 픽셀 계산 → 전체 기간이 가로 스크롤 없이 한눈에
+    const avail=(host.clientWidth||1000);
+    PXD=Math.max(4,Math.floor((avail-GLBL-2)/gDays));
     const trackW=gDays*PXD;
     const xOf=ds=>{const d=parseD(ds);return d?dayDiff(rangeMin,d)*PXD:0;};
 
@@ -469,17 +458,7 @@
       });
     });
 
-    scroll.appendChild(inner);host.appendChild(scroll);calScrollEl=scroll;
-
-    function updateLabel(){
-      const day=Math.max(0,Math.min(gDays-1,Math.floor(scroll.scrollLeft/PXD)));
-      const d=new Date(rangeMin);d.setDate(d.getDate()+day);
-      document.getElementById("sc-cal-label").textContent=d.getFullYear()+"년 "+(d.getMonth()+1)+"월";
-    }
-    scroll.addEventListener("scroll",updateLabel);
-    if(prevL!==null){scroll.scrollLeft=prevL;scroll.scrollTop=prevT;}
-    else{scroll.scrollLeft=Math.max(0,dayDiff(rangeMin,today)*PXD-30);}
-    updateLabel();
+    scroll.appendChild(inner);host.appendChild(scroll);
   }
 
   /* ── 기간 선택 팝업 (한 번 열어 두 날짜 클릭: 빠른날=시작, 늦은날=종료) ── */
@@ -747,13 +726,7 @@
       document.getElementById("navPanel").classList.remove("open");
     });
     document.getElementById("sc-saveNowBtn").addEventListener("click",saveNow);
-    document.getElementById("sc-prev").addEventListener("click",()=>{if(calScrollEl)calScrollEl.scrollBy({left:-calScrollEl.clientWidth*0.8,behavior:"smooth"});});
-    document.getElementById("sc-next").addEventListener("click",()=>{if(calScrollEl)calScrollEl.scrollBy({left:calScrollEl.clientWidth*0.8,behavior:"smooth"});});
-    document.getElementById("sc-today").addEventListener("click",()=>{
-      if(!calScrollEl||!gMin)return;
-      const t=new Date();t.setHours(0,0,0,0);
-      calScrollEl.scrollTo({left:Math.max(0,dayDiff(gMin,t)*PXD-30),behavior:"smooth"});
-    });
+    let _rsz;window.addEventListener("resize",()=>{clearTimeout(_rsz);_rsz=setTimeout(renderCalendar,150);});
 
     (async()=>{
       try{
