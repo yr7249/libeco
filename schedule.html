@@ -97,29 +97,35 @@
     .gantt-lbl{position:sticky;left:0;z-index:2;background:#fff;flex-shrink:0;border-right:1px solid rgba(15,23,42,.10);padding:0 10px 0 18px;display:flex;align-items:center;font-size:.8rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .gantt-track{position:relative;flex-shrink:0}
     .gantt-row.sel .gantt-lbl{background:var(--accent-wash);box-shadow:inset 3px 0 0 var(--accent);color:var(--accent-strong);font-weight:800}
-    #sc-cal.picking .gantt-track{cursor:crosshair}
     .gantt-catrow{display:flex;align-items:stretch;min-height:26px;border-top:1px solid rgba(15,23,42,.10)}
     .gantt-catlbl{position:sticky;left:0;z-index:2;background:#fafafa;flex-shrink:0;border-right:1px solid rgba(15,23,42,.10);display:flex;align-items:center;padding:0 10px;font-size:.8rem;font-weight:900;color:#111827}
     .gantt-cattrack{position:relative;flex-shrink:0;background:#fafafa}
-    .gantt-bar{position:absolute;display:flex;align-items:center;gap:3px;height:18px;top:5px;border-radius:5px;color:#fff;font-size:.7rem;font-weight:700;padding:0 7px;white-space:nowrap;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.18);cursor:pointer;transition:filter .12s}
+    .gantt-bar{position:absolute;display:flex;align-items:center;gap:3px;height:18px;top:5px;border-radius:5px;color:#fff;font-size:.7rem;font-weight:700;padding:0 7px;white-space:nowrap;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.18);cursor:default;transition:filter .12s}
     .gantt-bar:hover{filter:brightness(1.08)}
     .gantt-bar.sel{outline:2px solid #0f172a;outline-offset:1px;z-index:4}
     .gantt-bar .gantt-bar-txt{overflow:hidden;text-overflow:ellipsis}
-    .gantt-ms{position:absolute;top:6px;width:15px;height:15px;transform:rotate(45deg);border-radius:3px;box-shadow:0 1px 2px rgba(0,0,0,.2);cursor:pointer}
+    .gantt-ms{position:absolute;top:6px;width:15px;height:15px;transform:rotate(45deg);border-radius:3px;box-shadow:0 1px 2px rgba(0,0,0,.2);cursor:default}
     .gantt-ms:hover{filter:brightness(1.08)}
     .gantt-ms.sel{outline:2px solid #0f172a;outline-offset:1px;z-index:4}
     .gantt-mstag{position:absolute;top:3px;font-size:.66rem;font-weight:800;color:var(--text);white-space:nowrap;pointer-events:none}
 
     /* ── Schedule table ── */
     .sc-table-wrap{border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-top:8px}
-    table.sc-table{width:100%;border-collapse:collapse;font-size:.9rem}
-    table.sc-table th{background:var(--surface2);padding:10px 12px;text-align:left;font-weight:800;font-size:.8rem;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap}
-    table.sc-table td{padding:7px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
-    .sc-cat-row td{background:#f1f5f9;font-weight:900;font-size:.92rem;color:#111827;padding:9px 12px;letter-spacing:.02em}
-    .sc-inp{width:100%;border:1px solid transparent;background:var(--surface2);border-radius:6px;padding:6px 9px;font-size:.88rem;font-weight:600;font-family:var(--font-heading);color:var(--text);transition:border-color .12s,background .12s}
-    .sc-inp:hover{border-color:var(--border);background:#fff}
+    table.sc-table{width:100%;border-collapse:collapse;font-size:.84rem}
+    table.sc-table th{background:var(--surface2);padding:9px 12px;text-align:left;font-weight:800;font-size:.76rem;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap}
+    table.sc-table td{padding:5px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+    .sc-cat-row td{background:#fafafa;font-weight:900;font-size:.84rem;color:#111827;padding:7px 12px;letter-spacing:.02em}
+    .sc-inp{width:100%;border:1px solid transparent;background:transparent;border-radius:6px;padding:5px 7px;font-size:.83rem;font-weight:600;font-family:var(--font-heading);color:var(--text);transition:border-color .12s,background .12s}
+    .sc-inp:hover{border-color:var(--border)}
     .sc-inp:focus{outline:none;border-color:rgba(22,101,52,.55);background:#fff;box-shadow:0 0 0 3px rgba(22,101,52,.10)}
-    .sc-inp[type=date]{font-family:var(--font-mono);font-size:.82rem}
+    .sc-period{display:flex;align-items:center;gap:8px}
+    .sc-period-txt{font-family:var(--font-mono);font-size:.86rem;font-weight:700;color:var(--text)}
+    .sc-period-txt.empty{color:#94a3b8;font-weight:500}
+    .sc-date-pick{width:28px;flex-shrink:0;border:1px solid transparent;background:transparent;border-radius:6px;padding:3px;cursor:pointer;color:var(--text2)}
+    .sc-date-pick:hover{border-color:var(--border);background:#fff}
+    .sc-date-pick::-webkit-datetime-edit{display:none}
+    .sc-date-pick::-webkit-inner-spin-button{display:none}
+    .sc-date-pick::-webkit-calendar-picker-indicator{cursor:pointer;opacity:.65;margin:0}
     tr.sc-sel td{background:rgba(22,101,52,.10) !important;box-shadow:inset 2px 0 0 var(--accent)}
     tr.row-dragging td{opacity:.4;background:rgba(22,101,52,.06) !important}
     #sc-table-body tr.drag-over-top td{border-top:2px solid var(--accent) !important}
@@ -241,10 +247,6 @@
       </div>
       <div class="cal-legend" id="sc-legend"></div>
     </div>
-    <div id="sc-pick-hint" style="display:none;align-items:center;gap:10px;margin-bottom:10px;padding:9px 14px;border-radius:10px;background:var(--accent-wash);border:1px solid rgba(22,101,52,.3);font-size:.82rem;font-weight:700;color:var(--accent-strong)">
-      <span id="sc-pick-hint-txt"></span>
-      <button class="btn btn-muted" id="sc-pick-cancel" style="margin-left:auto;padding:4px 10px;font-size:.76rem">취소 (Esc)</button>
-    </div>
     <div id="sc-cal"></div>
 
     <!-- ── Editable table ── -->
@@ -253,16 +255,15 @@
       <table class="sc-table">
         <thead>
           <tr>
-            <th style="width:38%">세부 작업</th>
-            <th style="width:140px">시작일</th>
-            <th style="width:140px">종료일</th>
+            <th style="width:44%">세부 작업</th>
+            <th style="width:170px">기간</th>
             <th>비고</th>
           </tr>
         </thead>
         <tbody id="sc-table-body"></tbody>
       </table>
     </div>
-    <div class="sc-hint sc-noprint">※ 표의 행 또는 위 타임라인의 작업 줄을 클릭(처음=시작일, 다음=종료일)하면 기간이 지정됩니다 · 왼쪽 ⠿ 핸들 드래그로 순서 변경 · 행 우클릭 → 위/아래 추가·삭제 · Ctrl+Z 되돌리기</div>
+    <div class="sc-hint sc-noprint">※ '기간' 칸의 📅 달력을 눌러 시작일을 찍고, 한 번 더 눌러 종료일을 찍으면 기간이 지정됩니다 (위 타임라인은 보기 전용) · ⠿ 드래그로 순서 변경 · 행 우클릭 → 추가·삭제 · Ctrl+Z 되돌리기</div>
 
     <footer class="footer">© 2026 LIBECO E&amp;C · All Rights Reserved</footer>
   </div>
@@ -379,7 +380,6 @@
     const prevL=calScrollEl?calScrollEl.scrollLeft:null;
     const prevT=calScrollEl?calScrollEl.scrollTop:null;
     host.innerHTML="";
-    host.classList.toggle("picking",!!selId);
 
     const today=new Date();today.setHours(0,0,0,0);
 
@@ -425,7 +425,6 @@
         if(it.id===selId)row.classList.add("sel");
         const lbl=document.createElement("div");lbl.className="gantt-lbl";lbl.style.width=GLBL+"px";lbl.textContent=it.task||"(작업명 없음)";lbl.title=it.task||"";
         const track=document.createElement("div");track.className="gantt-track";track.style.width=trackW+"px";
-        track.addEventListener("click",e=>handleGanttPick(it.id,e.clientX,track));
 
         const s=parseD(it.start),e=parseD(it.end);
         if(s&&e&&e>=s){
@@ -464,15 +463,10 @@
     updateLabel();
   }
 
-  /* ── 타임라인 클릭으로 기간 지정 (처음=시작일, 다음=종료일) ── */
-  function handleGanttPick(taskId,clientX,trackEl){
-    const it=findItem(taskId);if(!it||!gMin)return;
-    const rect=trackEl.getBoundingClientRect();
-    let day=Math.floor((clientX-rect.left)/PXD);
-    day=Math.max(0,Math.min(gDays-1,day));
-    const d=new Date(gMin);d.setDate(d.getDate()+day);
-    const ds=fmt(d);
-    if(selId!==taskId){selId=taskId;firstPick=null;}
+  /* ── 세부일정표의 달력 하나로 기간 지정 (처음=시작일, 다음=종료일) ── */
+  function onPeriodPick(id,ds){
+    const it=findItem(id);if(!it||!ds)return;
+    if(selId!==id){selId=id;firstPick=null;}
     if(firstPick===null){
       pushUndo();
       firstPick=ds;it.start=ds;it.end=ds;
@@ -481,7 +475,7 @@
       it.end=firstPick<=ds?ds:firstPick;
       firstPick=null;
     }
-    renderTable();renderCalendar();updatePickHint();saveNow();
+    renderTable();renderCalendar();saveNow();
   }
   function armRow(id){
     if(selId===id)return;
@@ -489,22 +483,17 @@
     const body=document.getElementById("sc-table-body");
     body.querySelectorAll("tr.sc-sel").forEach(r=>r.classList.remove("sc-sel"));
     const tr=body.querySelector('tr[data-id="'+id+'"]');if(tr)tr.classList.add("sc-sel");
-    renderCalendar();updatePickHint();
+    renderCalendar();
   }
   function clearPick(){
     selId=null;firstPick=null;
-    renderTable();renderCalendar();updatePickHint();
+    renderTable();renderCalendar();
   }
-  function updatePickHint(){
-    const bar=document.getElementById("sc-pick-hint");
-    const txt=document.getElementById("sc-pick-hint-txt");
-    if(!selId){bar.style.display="none";return;}
-    const it=findItem(selId);
-    const nm=it&&it.task?("'"+it.task+"'"):"선택한 작업";
-    bar.style.display="flex";
-    txt.textContent=firstPick===null
-      ? "📅 "+nm+" 선택됨 — 타임라인의 작업 줄에서 시작일을 클릭하세요 (다음 클릭=종료일)"
-      : "📅 "+nm+" — 이제 종료일을 클릭하세요 (시작일: "+firstPick+")";
+  function md(ds){const d=parseD(ds);return d?(d.getMonth()+1)+"/"+d.getDate():"";}
+  function periodText(it){
+    if(!it.start)return "기간 미정";
+    if(!it.end||it.start===it.end)return md(it.start);
+    return md(it.start)+"~"+md(it.end);
   }
 
   /* ── table ── */
@@ -512,15 +501,17 @@
     const host=document.getElementById("sc-table-body");host.innerHTML="";
     CATS.forEach(cat=>{
       const hr=document.createElement("tr");hr.className="sc-cat-row";hr.dataset.cat=cat.key;
-      hr.innerHTML='<td colspan="4" style="border-left:4px solid '+cat.color+'">'+esc(cat.name)+'</td>';
+      hr.innerHTML='<td colspan="3" style="border-left:4px solid '+cat.color+'">'+esc(cat.name)+'</td>';
       host.appendChild(hr);
       items.filter(it=>it.cat===cat.key).forEach(it=>{
         const tr=document.createElement("tr");tr.dataset.id=it.id;
         if(it.id===selId)tr.className="sc-sel";
         tr.innerHTML=
           '<td><input class="sc-inp" type="text" data-f="task" value="'+esc(it.task)+'" placeholder="작업명"></td>'+
-          '<td><input class="sc-inp" type="date" data-f="start" value="'+esc(it.start)+'"></td>'+
-          '<td><input class="sc-inp" type="date" data-f="end" value="'+esc(it.end)+'"></td>'+
+          '<td><div class="sc-period">'+
+            '<span class="sc-period-txt'+(it.start?'':' empty')+'">'+esc(periodText(it))+'</span>'+
+            '<input class="sc-date-pick" type="date" value="" title="달력을 눌러 시작일 → 다시 눌러 종료일">'+
+          '</div></td>'+
           '<td><input class="sc-inp" type="text" data-f="note" value="'+esc(it.note)+'" placeholder="비고"></td>';
         host.appendChild(tr);
       });
@@ -569,8 +560,13 @@
       const tr=inp.closest("tr[data-id]");if(!tr)return;
       const it=findItem(tr.dataset.id);if(!it)return;
       it[inp.dataset.f]=inp.value;
-      if(inp.dataset.f==="start"||inp.dataset.f==="end"||inp.dataset.f==="task")renderCalendar();
+      if(inp.dataset.f==="task")renderCalendar();
       scheduleSave();
+    });
+    body.addEventListener("change",e=>{
+      const dp=e.target.closest(".sc-date-pick");if(!dp)return;
+      const tr=dp.closest("tr[data-id]");if(!tr||!dp.value)return;
+      onPeriodPick(tr.dataset.id,dp.value);
     });
     body.addEventListener("dragover",e=>{
       const tr=e.target.closest("tr[data-id]");if(!tr||dragSrcId===null)return;
@@ -602,8 +598,6 @@
       }
       if(e.key==="Escape"&&selId)clearPick();
     });
-    const pc=document.getElementById("sc-pick-cancel");
-    if(pc)pc.addEventListener("click",clearPick);
     bindDragHandle();
     bindContextMenu();
   }
