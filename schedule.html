@@ -125,8 +125,8 @@
     .sc-period{display:flex;align-items:center;gap:6px}
     .sc-period-txt{flex:0 0 auto;width:92px;font-family:var(--font-mono);font-size:.85rem;font-weight:700;color:var(--text)}
     .sc-period-txt.empty{color:#94a3b8;font-weight:500}
-    .sc-date-pick{flex:0 0 auto;width:26px;height:24px;border:1px solid var(--border);background:#fff;border-radius:6px;padding:0;cursor:pointer;font-size:.82rem;line-height:1;color:var(--text2);transition:border-color .12s,background .12s}
-    .sc-date-pick:hover{border-color:var(--accent);background:var(--accent-wash)}
+    .sc-date-pick{flex:0 0 auto;border:none;background:transparent;padding:0 2px;cursor:pointer;font-size:.72rem;line-height:1;opacity:.4;transition:opacity .12s}
+    .sc-date-pick:hover{opacity:.9}
     /* 기간 선택 팝업 */
     #sc-dp{position:fixed;display:none;z-index:9200;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.18);padding:10px;width:240px;font-family:var(--font-heading)}
     #sc-dp .dp-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
