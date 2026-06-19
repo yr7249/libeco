@@ -122,14 +122,23 @@
     .sc-inp{width:100%;border:1px solid transparent;background:transparent;border-radius:6px;padding:5px 7px;font-size:.83rem;font-weight:600;font-family:var(--font-heading);color:var(--text);transition:border-color .12s,background .12s}
     .sc-inp:hover{border-color:var(--border);background:#fff}
     .sc-inp:focus{outline:none;border-color:rgba(22,101,52,.55);background:#fff;box-shadow:0 0 0 3px rgba(22,101,52,.10)}
-    .sc-period{display:flex;align-items:center;justify-content:space-between;gap:8px}
-    .sc-period-txt{font-family:var(--font-mono);font-size:.85rem;font-weight:700;color:var(--text)}
+    .sc-period{display:flex;align-items:center;gap:6px}
+    .sc-period-txt{flex:0 0 auto;width:92px;font-family:var(--font-mono);font-size:.85rem;font-weight:700;color:var(--text)}
     .sc-period-txt.empty{color:#94a3b8;font-weight:500}
-    .sc-date-pick{width:26px;flex-shrink:0;border:1px solid transparent;background:transparent;border-radius:6px;padding:3px;cursor:pointer;color:var(--text2)}
-    .sc-date-pick:hover{border-color:var(--border);background:#fff}
-    .sc-date-pick::-webkit-datetime-edit{display:none}
-    .sc-date-pick::-webkit-inner-spin-button{display:none}
-    .sc-date-pick::-webkit-calendar-picker-indicator{cursor:pointer;opacity:.65;margin:0}
+    .sc-date-pick{flex:0 0 auto;width:26px;height:24px;border:1px solid var(--border);background:#fff;border-radius:6px;padding:0;cursor:pointer;font-size:.82rem;line-height:1;color:var(--text2);transition:border-color .12s,background .12s}
+    .sc-date-pick:hover{border-color:var(--accent);background:var(--accent-wash)}
+    /* 기간 선택 팝업 */
+    #sc-dp{position:fixed;display:none;z-index:9200;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.18);padding:10px;width:240px;font-family:var(--font-heading)}
+    #sc-dp .dp-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+    #sc-dp .dp-head b{font-size:.86rem;font-weight:800;color:var(--text)}
+    #sc-dp .dp-nav{width:26px;height:26px;border:1px solid var(--border);background:#fff;border-radius:7px;cursor:pointer;font-size:1rem;line-height:1;color:var(--text)}
+    #sc-dp .dp-nav:hover{background:var(--surface2)}
+    #sc-dp .dp-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+    #sc-dp .dp-dow{text-align:center;font-size:.66rem;font-weight:800;color:var(--text2);padding:3px 0}
+    #sc-dp .dp-day{height:28px;border:1px solid transparent;background:transparent;border-radius:7px;cursor:pointer;font-size:.78rem;font-weight:600;color:var(--text)}
+    #sc-dp .dp-day:hover{background:var(--accent-wash);border-color:var(--accent)}
+    #sc-dp .dp-day.sel{background:var(--accent);color:#fff;font-weight:800}
+    #sc-dp .dp-hint{margin-top:8px;font-size:.72rem;font-weight:700;color:var(--accent-strong);text-align:center}
     tr.sc-sel td{background:rgba(22,101,52,.10) !important;box-shadow:inset 2px 0 0 var(--accent)}
     tr.row-dragging td{opacity:.4;background:rgba(22,101,52,.06) !important}
     #sc-table-body tr.drag-over-top td{border-top:2px solid var(--accent) !important}
@@ -267,13 +276,16 @@
         <tbody id="sc-table-body"></tbody>
       </table>
     </div>
-    <div class="sc-hint sc-noprint">※ '기간' 칸의 📅 달력을 눌러 시작일을 찍고, 한 번 더 눌러 종료일을 찍으면 기간이 지정됩니다 (위 타임라인은 보기 전용) · ⠿ 드래그로 순서 변경 · 행 우클릭 → 추가·삭제 · Ctrl+Z 되돌리기</div>
+    <div class="sc-hint sc-noprint">※ '기간' 칸의 📅 를 눌러 달력에서 두 날짜를 클릭하면 기간이 지정됩니다 (빠른 날=시작, 늦은 날=종료 · 위 타임라인은 보기 전용) · ⠿ 드래그로 순서 변경 · 행 우클릭 → 추가·삭제 · Ctrl+Z 되돌리기</div>
 
     <footer class="footer">© 2026 LIBECO E&amp;C · All Rights Reserved</footer>
   </div>
 
   <!-- 행 드래그 핸들 -->
   <div id="sc-float-drag" title="드래그로 순서 변경" draggable="true">⠿</div>
+
+  <!-- 기간 선택 팝업 -->
+  <div id="sc-dp"></div>
 
   <!-- 우클릭 컨텍스트 메뉴 -->
   <div id="sc-ctx-menu">
@@ -315,9 +327,9 @@
 
   let items=[];
   let viewY, viewM;
-  let selId=null;     // 달력 기간 선택 대상 작업 id
-  let firstPick=null; // 첫 클릭 날짜(YYYY-MM-DD)
+  let selId=null;     // 현재 강조 중인 작업 id
   let calScrollEl=null;
+  let dpRowId=null,dpStart=null,dpView=null; // 기간 선택 팝업 상태
   const PXD=12;       // 하루당 픽셀
   const GLBL=200;     // 좌측 라벨 폭
   let gMin=null,gDays=0; // 간트 표시 범위(시작일, 총 일수)
@@ -470,30 +482,51 @@
     updateLabel();
   }
 
-  /* ── 세부일정표의 달력 하나로 기간 지정 (처음=시작일, 다음=종료일) ── */
-  function onPeriodPick(id,ds){
-    const it=findItem(id);if(!it||!ds)return;
-    if(selId!==id){selId=id;firstPick=null;}
-    if(firstPick===null){
-      pushUndo();
-      firstPick=ds;it.start=ds;it.end=ds;
-    }else{
-      it.start=firstPick<=ds?firstPick:ds;
-      it.end=firstPick<=ds?ds:firstPick;
-      firstPick=null;
+  /* ── 기간 선택 팝업 (한 번 열어 두 날짜 클릭: 빠른날=시작, 늦은날=종료) ── */
+  function openDatePicker(rowId,anchor){
+    const it=findItem(rowId);if(!it)return;
+    dpRowId=rowId;dpStart=null;selId=rowId;
+    const base=parseD(it.start)||new Date(2026,5,1);
+    dpView=new Date(base.getFullYear(),base.getMonth(),1);
+    document.querySelectorAll("#sc-table-body tr.sc-sel").forEach(r=>r.classList.remove("sc-sel"));
+    const tr=anchor.closest("tr[data-id]");if(tr)tr.classList.add("sc-sel");
+    renderDatePicker();
+    const p=document.getElementById("sc-dp");p.style.display="block";
+    const r=anchor.getBoundingClientRect();
+    let left=Math.min(r.left,window.innerWidth-p.offsetWidth-8);if(left<8)left=8;
+    let top=r.bottom+6;if(top+p.offsetHeight>window.innerHeight-8)top=Math.max(8,r.top-p.offsetHeight-6);
+    p.style.left=left+"px";p.style.top=top+"px";
+  }
+  function closeDatePicker(){
+    const p=document.getElementById("sc-dp");if(p)p.style.display="none";
+    dpRowId=null;dpStart=null;
+  }
+  function renderDatePicker(){
+    const p=document.getElementById("sc-dp");if(!p||!dpView)return;
+    const y=dpView.getFullYear(),m=dpView.getMonth();
+    const startDow=new Date(y,m,1).getDay(),days=new Date(y,m+1,0).getDate();
+    let h='<div class="dp-head"><button type="button" class="dp-nav" data-nav="-1">‹</button>'
+      +'<b>'+y+'년 '+(m+1)+'월</b>'
+      +'<button type="button" class="dp-nav" data-nav="1">›</button></div><div class="dp-grid">';
+    ["일","월","화","수","목","금","토"].forEach(d=>h+='<span class="dp-dow">'+d+'</span>');
+    for(let i=0;i<startDow;i++)h+="<span></span>";
+    for(let d=1;d<=days;d++){
+      const ds=fmt(new Date(y,m,d));
+      h+='<button type="button" class="dp-day'+(dpStart===ds?" sel":"")+'" data-d="'+ds+'">'+d+'</button>';
     }
-    renderTable();renderCalendar();saveNow();
+    h+='</div><div class="dp-hint">'+(dpStart?("시작 "+md(dpStart)+" · 종료일을 클릭"):"시작일을 클릭하세요")+'</div>';
+    p.innerHTML=h;
   }
   function armRow(id){
     if(selId===id)return;
-    selId=id;firstPick=null;
+    selId=id;
     const body=document.getElementById("sc-table-body");
     body.querySelectorAll("tr.sc-sel").forEach(r=>r.classList.remove("sc-sel"));
     const tr=body.querySelector('tr[data-id="'+id+'"]');if(tr)tr.classList.add("sc-sel");
     renderCalendar();
   }
   function clearPick(){
-    selId=null;firstPick=null;
+    selId=null;
     renderTable();renderCalendar();
   }
   function md(ds){const d=parseD(ds);return d?(d.getMonth()+1)+"/"+d.getDate():"";}
@@ -518,7 +551,7 @@
           '<td><input class="sc-inp" type="text" data-f="task" value="'+esc(it.task)+'" placeholder="작업명"></td>'+
           '<td><div class="sc-period">'+
             '<span class="sc-period-txt'+(it.start?'':' empty')+'">'+esc(periodText(it))+'</span>'+
-            '<input class="sc-date-pick" type="date" value="" title="달력을 눌러 시작일 → 다시 눌러 종료일">'+
+            '<button class="sc-date-pick" type="button" title="달력에서 시작일·종료일 두 날짜를 클릭">📅</button>'+
           '</div></td>'+
           '<td><input class="sc-inp" type="text" data-f="note" value="'+esc(it.note)+'" placeholder="비고"></td>';
         host.appendChild(tr);
@@ -571,10 +604,26 @@
       if(inp.dataset.f==="task")renderCalendar();
       scheduleSave();
     });
-    body.addEventListener("change",e=>{
+    body.addEventListener("click",e=>{
       const dp=e.target.closest(".sc-date-pick");if(!dp)return;
-      const tr=dp.closest("tr[data-id]");if(!tr||!dp.value)return;
-      onPeriodPick(tr.dataset.id,dp.value);
+      const tr=dp.closest("tr[data-id]");if(!tr)return;
+      openDatePicker(tr.dataset.id,dp);
+    });
+    const pop=document.getElementById("sc-dp");
+    pop.addEventListener("click",e=>{
+      const nav=e.target.closest("[data-nav]");
+      if(nav){dpView=new Date(dpView.getFullYear(),dpView.getMonth()+(+nav.dataset.nav),1);renderDatePicker();return;}
+      const day=e.target.closest("[data-d]");if(!day)return;
+      const ds=day.dataset.d;
+      if(dpStart===null){dpStart=ds;renderDatePicker();return;}
+      const it=findItem(dpRowId);
+      if(it){pushUndo();it.start=dpStart<=ds?dpStart:ds;it.end=dpStart<=ds?ds:dpStart;}
+      closeDatePicker();renderTable();renderCalendar();saveNow();
+    });
+    document.addEventListener("mousedown",e=>{
+      if(dpRowId===null)return;
+      if(e.target.closest("#sc-dp")||e.target.closest(".sc-date-pick"))return;
+      closeDatePicker();
     });
     body.addEventListener("dragover",e=>{
       const tr=e.target.closest("tr[data-id]");if(!tr||dragSrcId===null)return;
@@ -604,7 +653,7 @@
         if(t&&t.classList&&t.classList.contains("sc-inp")&&t.type==="text")return;
         e.preventDefault();doUndo();
       }
-      if(e.key==="Escape"&&selId)clearPick();
+      if(e.key==="Escape"){if(dpRowId!==null){closeDatePicker();return;}if(selId)clearPick();}
     });
     bindDragHandle();
     bindContextMenu();
