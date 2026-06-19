@@ -108,6 +108,8 @@
     .gantt-ms:hover{filter:brightness(1.08)}
     .gantt-ms.sel{outline:2px solid #0f172a;outline-offset:1px;z-index:4}
     .gantt-mstag{position:absolute;top:3px;font-size:.66rem;font-weight:800;color:var(--text);white-space:nowrap;pointer-events:none}
+    .gantt-edge{position:absolute;top:5px;height:18px;display:flex;align-items:center;font-size:.62rem;font-weight:700;color:#64748b;white-space:nowrap;pointer-events:none}
+    .gantt-edge-s{transform:translateX(-100%)}
 
     /* ── Schedule table ── */
     .sc-table-wrap{border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-top:8px}
@@ -434,16 +436,19 @@
             if(it.id===selId)ms.classList.add("sel");
             ms.title=cat.name+" · "+it.task+" ("+it.start+")";
             track.appendChild(ms);
-            const tag=document.createElement("div");tag.className="gantt-mstag";tag.style.left=(xOf(it.start)+PXD/2+9)+"px";tag.textContent=it.task;track.appendChild(tag);
+            const tag=document.createElement("div");tag.className="gantt-mstag";tag.style.left=(xOf(it.start)+PXD/2+9)+"px";tag.innerHTML=esc(it.task)+' <span style="color:#64748b;font-weight:700">'+md(it.start)+'</span>';track.appendChild(tag);
           }else{
+            const barLeft=xOf(it.start)+1,barW=(dayDiff(s,e)+1)*PXD-2;
             const bar=document.createElement("div");bar.className="gantt-bar";
-            bar.style.left=(xOf(it.start)+1)+"px";
-            bar.style.width=((dayDiff(s,e)+1)*PXD-2)+"px";
+            bar.style.left=barLeft+"px";
+            bar.style.width=barW+"px";
             bar.style.background=cat.color;
             if(it.id===selId)bar.classList.add("sel");
             bar.innerHTML='<span class="gantt-bar-txt">'+esc(it.task)+'</span>';
             bar.title=cat.name+" · "+it.task+" ("+it.start+" ~ "+it.end+")";
             track.appendChild(bar);
+            const st=document.createElement("div");st.className="gantt-edge gantt-edge-s";st.style.left=(barLeft-4)+"px";st.textContent=md(it.start);track.appendChild(st);
+            const en=document.createElement("div");en.className="gantt-edge gantt-edge-e";en.style.left=(barLeft+barW+5)+"px";en.textContent=md(it.end);track.appendChild(en);
           }
         }
         row.appendChild(lbl);row.appendChild(track);inner.appendChild(row);
