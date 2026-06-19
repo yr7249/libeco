@@ -82,30 +82,33 @@
     .leg-item{display:flex;align-items:center;gap:5px;font-size:.74rem;font-weight:700;color:var(--text2)}
     .leg-dot{width:11px;height:11px;border-radius:3px;flex-shrink:0}
 
-    /* 세로 스크롤 연속 달력 */
-    .cal-scroll{position:relative;max-height:640px;overflow-y:auto;border:1px solid var(--border);border-radius:12px;background:#fff}
-    .cal-chdr{position:sticky;top:0;z-index:4;display:grid;grid-template-columns:38px 1fr;background:var(--surface2);border-bottom:1px solid rgba(15,23,42,.08)}
-    .cal-chdr-gut{border-right:1px solid rgba(15,23,42,.06)}
-    .cal-wdrow{display:grid;grid-template-columns:repeat(7,1fr)}
-    .cal-wd{padding:6px 0;text-align:center;font-size:.74rem;font-weight:800;color:var(--text2)}
-    .cal-crow{display:grid;grid-template-columns:38px 1fr;border-top:1px solid rgba(15,23,42,.05)}
-    .cal-crow:first-of-type{border-top:none}
-    .cal-crow.monthstart{border-top:1px solid rgba(22,101,52,.30)}
-    .cal-gutter{border-right:1px solid rgba(15,23,42,.06);background:var(--surface2);font-family:var(--font-mono);font-weight:800;color:#cbd5e1;font-size:.82rem;text-align:center;padding-top:5px;line-height:1.1}
-    .cal-gutter.mark{color:var(--accent-strong)}
-    .cal-gutter .cal-gy{display:block;font-size:.56rem;color:var(--text2);font-weight:600}
-    .cal-weekbody{position:relative;background:repeating-linear-gradient(to right,transparent,transparent calc(100%/7 - 1px),rgba(15,23,42,.045) calc(100%/7 - 1px),rgba(15,23,42,.045) calc(100%/7))}
-    #sc-cal.picking .cal-weekbody{cursor:crosshair}
-    .cal-dayrow{display:grid;grid-template-columns:repeat(7,1fr)}
-    .cal-daycell{min-height:24px;padding:4px 7px 2px;font-size:.72rem;font-weight:700;color:var(--text);font-family:var(--font-mono)}
-    .cal-daycell.sun{color:#dc2626}.cal-daycell.sat{color:#2563eb}
-    .cal-daycell.first1>span{color:var(--accent-strong)}
-    .cal-daycell.today>span{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;border-radius:50%;background:var(--accent);color:#fff}
-    .cal-events{position:relative;padding:0 0 5px}
-    .cal-bar{position:absolute;display:flex;align-items:center;gap:3px;border-radius:6px;color:#fff;font-size:.72rem;font-weight:700;padding:0 8px;white-space:nowrap;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.16);cursor:default;transition:filter .12s,transform .12s}
-    .cal-bar:hover{filter:brightness(1.08);transform:translateY(-1px);z-index:5}
-    .cal-bar .cal-bar-txt{overflow:hidden;text-overflow:ellipsis}
-    .cal-bar .cal-arr{flex-shrink:0;font-weight:900;opacity:.85}
+    /* ── 가로 스윔레인 간트 ── */
+    .gantt-scroll{position:relative;max-height:560px;overflow:auto;border:1px solid var(--border);border-radius:12px;background:#fff}
+    .gantt-inner{position:relative}
+    .gantt-grid{position:absolute;top:0;bottom:0;z-index:0;pointer-events:none}
+    .gantt-mline{position:absolute;top:0;bottom:0;width:1px;background:rgba(15,23,42,.07)}
+    .gantt-today{position:absolute;top:0;bottom:0;width:2px;background:var(--accent);opacity:.5}
+    .gantt-head{position:sticky;top:0;z-index:5;display:flex;background:var(--surface2);border-bottom:1px solid rgba(15,23,42,.10)}
+    .gantt-corner{position:sticky;left:0;z-index:6;background:var(--surface2);flex-shrink:0;border-right:1px solid rgba(15,23,42,.10);display:flex;align-items:center;padding:0 12px;font-size:.7rem;font-weight:800;color:var(--text2);letter-spacing:.04em}
+    .gantt-axis{position:relative;flex-shrink:0;height:34px}
+    .gantt-mlabel{position:absolute;top:8px;font-family:var(--font-mono);font-size:.74rem;font-weight:800;color:var(--text2);padding-left:6px;white-space:nowrap;border-left:1px solid rgba(15,23,42,.12);line-height:1}
+    .gantt-mlabel .gantt-y{display:block;font-size:.55rem;color:#94a3b8;font-weight:700;margin-bottom:1px}
+    .gantt-row{display:flex;align-items:stretch;min-height:28px;border-top:1px solid rgba(15,23,42,.05)}
+    .gantt-lbl{position:sticky;left:0;z-index:2;background:#fff;flex-shrink:0;border-right:1px solid rgba(15,23,42,.10);padding:0 10px 0 18px;display:flex;align-items:center;font-size:.8rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .gantt-track{position:relative;flex-shrink:0}
+    .gantt-row.sel .gantt-lbl{background:var(--accent-wash);box-shadow:inset 3px 0 0 var(--accent);color:var(--accent-strong);font-weight:800}
+    #sc-cal.picking .gantt-track{cursor:crosshair}
+    .gantt-catrow{display:flex;align-items:stretch;min-height:26px;border-top:1px solid rgba(15,23,42,.10)}
+    .gantt-catlbl{position:sticky;left:0;z-index:2;background:#fafafa;flex-shrink:0;border-right:1px solid rgba(15,23,42,.10);display:flex;align-items:center;padding:0 10px;font-size:.8rem;font-weight:900;color:#111827}
+    .gantt-cattrack{position:relative;flex-shrink:0;background:#fafafa}
+    .gantt-bar{position:absolute;display:flex;align-items:center;gap:3px;height:18px;top:5px;border-radius:5px;color:#fff;font-size:.7rem;font-weight:700;padding:0 7px;white-space:nowrap;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.18);cursor:pointer;transition:filter .12s}
+    .gantt-bar:hover{filter:brightness(1.08)}
+    .gantt-bar.sel{outline:2px solid #0f172a;outline-offset:1px;z-index:4}
+    .gantt-bar .gantt-bar-txt{overflow:hidden;text-overflow:ellipsis}
+    .gantt-ms{position:absolute;top:6px;width:15px;height:15px;transform:rotate(45deg);border-radius:3px;box-shadow:0 1px 2px rgba(0,0,0,.2);cursor:pointer}
+    .gantt-ms:hover{filter:brightness(1.08)}
+    .gantt-ms.sel{outline:2px solid #0f172a;outline-offset:1px;z-index:4}
+    .gantt-mstag{position:absolute;top:3px;font-size:.66rem;font-weight:800;color:var(--text);white-space:nowrap;pointer-events:none}
 
     /* ── Schedule table ── */
     .sc-table-wrap{border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-top:8px}
@@ -222,13 +225,13 @@
         </svg>
         <div>
           <h1>USA POC <span>일정관리</span></h1>
-          <p class="header-sub">시험장비 셋업 스케줄 — 아래 표를 수정하면 달력에 반영됩니다</p>
+          <p class="header-sub">시험장비 셋업 스케줄 — 아래 표를 수정하면 타임라인에 반영됩니다</p>
         </div>
       </div>
     </div>
 
-    <!-- ── Calendar ── -->
-    <div class="section-title">일정 달력</div>
+    <!-- ── Timeline (Gantt) ── -->
+    <div class="section-title">일정 타임라인</div>
     <div class="cal-toolbar">
       <div class="cal-nav">
         <button class="btn btn-muted" id="sc-prev">◀</button>
@@ -259,7 +262,7 @@
         <tbody id="sc-table-body"></tbody>
       </table>
     </div>
-    <div class="sc-hint sc-noprint">※ 행을 클릭하면 그 작업이 선택됩니다 → 위 달력을 클릭(처음=시작일, 다음=종료일)하면 기간이 지정됩니다 · 왼쪽 ⠿ 핸들 드래그로 순서 변경 · 행 우클릭 → 위/아래 추가·삭제 · Ctrl+Z 되돌리기</div>
+    <div class="sc-hint sc-noprint">※ 표의 행 또는 위 타임라인의 작업 줄을 클릭(처음=시작일, 다음=종료일)하면 기간이 지정됩니다 · 왼쪽 ⠿ 핸들 드래그로 순서 변경 · 행 우클릭 → 위/아래 추가·삭제 · Ctrl+Z 되돌리기</div>
 
     <footer class="footer">© 2026 LIBECO E&amp;C · All Rights Reserved</footer>
   </div>
@@ -296,7 +299,6 @@
     {key:"shipping", name:"패킹&운송",     color:"#d97706"},
     {key:"llnl",     name:"LLNL시험",      color:"#dc2626"}
   ];
-  function catOf(k){ return CATS.find(c=>c.key===k)||{name:"",color:"#64748b"}; }
 
   const SEED=[
     ["tank","MLI 작업"],["tank","서스펜션+외조용접"],["tank","진공작업"],
@@ -311,6 +313,9 @@
   let selId=null;     // 달력 기간 선택 대상 작업 id
   let firstPick=null; // 첫 클릭 날짜(YYYY-MM-DD)
   let calScrollEl=null;
+  const PXD=14;       // 하루당 픽셀
+  const GLBL=200;     // 좌측 라벨 폭
+  let gMin=null,gDays=0; // 간트 표시 범위(시작일, 총 일수)
   let undoStack=[];
   const UNDO_MAX=80;
   let editSnap=null;
@@ -369,146 +374,112 @@
     const base=dated.length?dated[0]:new Date();
     viewY=base.getFullYear();viewM=base.getMonth();
   }
-  function buildWeekBody(weekStart,weekEnd,valid,todayStr){
-    const wsTime=weekStart.getTime();
-    const wbody=document.createElement("div");wbody.className="cal-weekbody";
-    wbody.addEventListener("click",e=>handleDayPick(wsTime,e.clientX,wbody));
-
-    const dayRow=document.createElement("div");dayRow.className="cal-dayrow";
-    for(let i=0;i<7;i++){
-      const d=new Date(weekStart);d.setDate(weekStart.getDate()+i);
-      const cell=document.createElement("div");cell.className="cal-daycell";
-      if(i===0)cell.classList.add("sun");if(i===6)cell.classList.add("sat");
-      if(d.getDate()===1)cell.classList.add("first1");
-      if(fmt(d)===todayStr)cell.classList.add("today");
-      cell.innerHTML="<span>"+d.getDate()+"</span>";
-      dayRow.appendChild(cell);
-    }
-    wbody.appendChild(dayRow);
-
-    const segs=[];
-    valid.forEach(it=>{
-      const s=parseD(it.start),e=parseD(it.end);
-      if(e<weekStart||s>weekEnd)return;
-      const segS=s<weekStart?weekStart:s;
-      const segE=e>weekEnd?weekEnd:e;
-      segs.push({it,col:dayDiff(weekStart,segS),span:dayDiff(segS,segE)+1,cont:s<weekStart,contR:e>weekEnd});
-    });
-    segs.sort((a,b)=>a.col-b.col||b.span-a.span);
-    const lanes=[];
-    segs.forEach(seg=>{
-      let lane=0;
-      while(true){
-        const occ=lanes[lane]||[];
-        const conflict=occ.some(o=>!(seg.col+seg.span-1<o.s||seg.col>o.e));
-        if(!conflict){if(!lanes[lane])lanes[lane]=[];lanes[lane].push({s:seg.col,e:seg.col+seg.span-1});seg.lane=lane;break;}
-        lane++;
-      }
-    });
-    const LANE=24,BARH=20;
-    const evWrap=document.createElement("div");evWrap.className="cal-events";
-    evWrap.style.height=(Math.max(lanes.length,1)*LANE)+"px";
-    segs.forEach(seg=>{
-      const cat=catOf(seg.it.cat);
-      const bar=document.createElement("div");bar.className="cal-bar";
-      bar.style.left="calc("+(seg.col/7*100)+"% + 3px)";
-      bar.style.width="calc("+(seg.span/7*100)+"% - 6px)";
-      bar.style.top=(seg.lane*LANE)+"px";
-      bar.style.height=BARH+"px";
-      bar.style.background=cat.color;
-      if(seg.it.id===selId){bar.style.outline="2px solid #0f172a";bar.style.outlineOffset="1px";}
-      if(seg.cont){bar.style.borderTopLeftRadius="0";bar.style.borderBottomLeftRadius="0";}
-      if(seg.contR){bar.style.borderTopRightRadius="0";bar.style.borderBottomRightRadius="0";}
-      bar.innerHTML=
-        (seg.cont?'<span class="cal-arr">‹</span>':'')+
-        '<span class="cal-bar-txt">'+esc(seg.it.task)+'</span>'+
-        (seg.contR?'<span class="cal-arr">›</span>':'');
-      bar.title=cat.name+" · "+seg.it.task+" ("+seg.it.start+" ~ "+seg.it.end+")";
-      evWrap.appendChild(bar);
-    });
-    wbody.appendChild(evWrap);
-    return wbody;
-  }
   function renderCalendar(){
     const host=document.getElementById("sc-cal");
-    const prevTop=calScrollEl?calScrollEl.scrollTop:null;
+    const prevL=calScrollEl?calScrollEl.scrollLeft:null;
+    const prevT=calScrollEl?calScrollEl.scrollTop:null;
     host.innerHTML="";
     host.classList.toggle("picking",!!selId);
-    const valid=items.filter(it=>parseD(it.start)&&parseD(it.end)&&parseD(it.end)>=parseD(it.start));
+
     const today=new Date();today.setHours(0,0,0,0);
-    const todayStr=fmt(today);
-    let minD=new Date(today),maxD=new Date(today);
-    items.forEach(it=>{const s=parseD(it.start),e=parseD(it.end);if(s){if(s<minD)minD=s;if(s>maxD)maxD=s;}if(e){if(e<minD)minD=e;if(e>maxD)maxD=e;}});
-    const baseFirst=new Date(minD.getFullYear(),minD.getMonth(),1);
-    const gridStart=new Date(baseFirst);gridStart.setDate(1-baseFirst.getDay());
-    let totalWeeks=Math.ceil((dayDiff(gridStart,maxD)+1)/7)+5;
-    totalWeeks=Math.max(10,Math.min(totalWeeks,90));
 
-    const scroll=document.createElement("div");scroll.className="cal-scroll";
-    const hdr=document.createElement("div");hdr.className="cal-chdr";
-    const gh=document.createElement("div");gh.className="cal-chdr-gut";hdr.appendChild(gh);
-    const wdrow=document.createElement("div");wdrow.className="cal-wdrow";
-    ["일","월","화","수","목","금","토"].forEach((w,i)=>{const c=document.createElement("div");c.className="cal-wd";c.textContent=w;if(i===0)c.style.color="#dc2626";if(i===6)c.style.color="#2563eb";wdrow.appendChild(c);});
-    hdr.appendChild(wdrow);
-    scroll.appendChild(hdr);
+    // 표시 범위(가장 이른 날 ~ 가장 늦은 날, 오늘 포함, 월 단위로 정렬)
+    let minD=null,maxD=null;
+    items.forEach(it=>{[parseD(it.start),parseD(it.end)].forEach(d=>{if(d){if(!minD||d<minD)minD=d;if(!maxD||d>maxD)maxD=d;}});});
+    if(!minD){minD=new Date(today);minD.setMonth(minD.getMonth()-1);}
+    if(!maxD){maxD=new Date(today);maxD.setMonth(maxD.getMonth()+2);}
+    if(today<minD)minD=new Date(today);
+    if(today>maxD)maxD=new Date(today);
+    const rangeMin=new Date(minD.getFullYear(),minD.getMonth(),1);
+    const rangeEnd=new Date(maxD.getFullYear(),maxD.getMonth()+1,0);
+    gMin=rangeMin;gDays=dayDiff(rangeMin,rangeEnd)+1;
+    const trackW=gDays*PXD;
+    const xOf=ds=>{const d=parseD(ds);return d?dayDiff(rangeMin,d)*PXD:0;};
 
-    let todayRow=null,firstMonthRow=null;
-    for(let wk=0;wk<totalWeeks;wk++){
-      const weekStart=new Date(gridStart);weekStart.setDate(gridStart.getDate()+wk*7);
-      const weekEnd=new Date(weekStart);weekEnd.setDate(weekStart.getDate()+6);
-      const row=document.createElement("div");row.className="cal-crow";
-      const midW=new Date(weekStart);midW.setDate(weekStart.getDate()+3);
-      row.dataset.ym=midW.getFullYear()+"."+pad(midW.getMonth()+1);
+    const scroll=document.createElement("div");scroll.className="gantt-scroll";
+    const inner=document.createElement("div");inner.className="gantt-inner";inner.style.width=(GLBL+trackW)+"px";
 
-      let lblM=null,lblY=null,hasFirst=false,isToday=false;
-      for(let i=0;i<7;i++){const d=new Date(weekStart);d.setDate(weekStart.getDate()+i);if(d.getDate()===1){lblM=d.getMonth();lblY=d.getFullYear();hasFirst=true;}if(fmt(d)===todayStr)isToday=true;}
-      if(wk===0&&lblM===null){lblM=weekEnd.getMonth();lblY=weekEnd.getFullYear();}
-      if(hasFirst)row.classList.add("monthstart");
-      if(isToday)row.dataset.today="1";
+    // 배경 그리드: 월 경계선 + 오늘선
+    const grid=document.createElement("div");grid.className="gantt-grid";grid.style.left=GLBL+"px";grid.style.width=trackW+"px";
+    const months=[];
+    {let m=new Date(rangeMin);while(m<=rangeEnd){months.push(new Date(m));m=new Date(m.getFullYear(),m.getMonth()+1,1);}}
+    months.forEach((m,i)=>{if(i===0)return;const ln=document.createElement("div");ln.className="gantt-mline";ln.style.left=(dayDiff(rangeMin,m)*PXD)+"px";grid.appendChild(ln);});
+    if(today>=rangeMin&&today<=rangeEnd){const tl=document.createElement("div");tl.className="gantt-today";tl.style.left=(dayDiff(rangeMin,today)*PXD)+"px";grid.appendChild(tl);}
+    inner.appendChild(grid);
 
-      const gut=document.createElement("div");gut.className="cal-gutter";
-      if(lblM!==null){gut.classList.add("mark");gut.innerHTML=(lblM===0?'<span class="cal-gy">'+lblY+'</span>':'')+(lblM+1);gut.title=lblY+"년 "+(lblM+1)+"월";if(!firstMonthRow)firstMonthRow=row;}
-      row.appendChild(gut);
+    // 헤더: 월 라벨
+    const head=document.createElement("div");head.className="gantt-head";
+    const corner=document.createElement("div");corner.className="gantt-corner";corner.style.width=GLBL+"px";corner.textContent="작업";
+    const axis=document.createElement("div");axis.className="gantt-axis";axis.style.width=trackW+"px";
+    months.forEach(m=>{const lb=document.createElement("div");lb.className="gantt-mlabel";lb.style.left=(dayDiff(rangeMin,m)*PXD)+"px";lb.innerHTML=(m.getMonth()===0?'<span class="gantt-y">'+m.getFullYear()+'</span>':'')+(m.getMonth()+1)+"월";axis.appendChild(lb);});
+    head.appendChild(corner);head.appendChild(axis);inner.appendChild(head);
 
-      row.appendChild(buildWeekBody(weekStart,weekEnd,valid,todayStr));
-      scroll.appendChild(row);
-      if(isToday)todayRow=row;
-    }
-    host.appendChild(scroll);
-    calScrollEl=scroll;
+    // 행: 큰 구분 → 세부작업(작업마다 한 줄)
+    CATS.forEach(cat=>{
+      const crow=document.createElement("div");crow.className="gantt-catrow";
+      const clbl=document.createElement("div");clbl.className="gantt-catlbl";clbl.style.width=GLBL+"px";clbl.style.borderLeft="4px solid "+cat.color;clbl.textContent=cat.name;
+      const ctrack=document.createElement("div");ctrack.className="gantt-cattrack";ctrack.style.width=trackW+"px";
+      crow.appendChild(clbl);crow.appendChild(ctrack);inner.appendChild(crow);
+
+      items.filter(it=>it.cat===cat.key).forEach(it=>{
+        const row=document.createElement("div");row.className="gantt-row";row.dataset.id=it.id;
+        if(it.id===selId)row.classList.add("sel");
+        const lbl=document.createElement("div");lbl.className="gantt-lbl";lbl.style.width=GLBL+"px";lbl.textContent=it.task||"(작업명 없음)";lbl.title=it.task||"";
+        const track=document.createElement("div");track.className="gantt-track";track.style.width=trackW+"px";
+        track.addEventListener("click",e=>handleGanttPick(it.id,e.clientX,track));
+
+        const s=parseD(it.start),e=parseD(it.end);
+        if(s&&e&&e>=s){
+          if(dayDiff(s,e)===0){
+            const ms=document.createElement("div");ms.className="gantt-ms";
+            ms.style.left=(xOf(it.start)+PXD/2-7.5)+"px";ms.style.background=cat.color;
+            if(it.id===selId)ms.classList.add("sel");
+            ms.title=cat.name+" · "+it.task+" ("+it.start+")";
+            track.appendChild(ms);
+            const tag=document.createElement("div");tag.className="gantt-mstag";tag.style.left=(xOf(it.start)+PXD/2+9)+"px";tag.textContent=it.task;track.appendChild(tag);
+          }else{
+            const bar=document.createElement("div");bar.className="gantt-bar";
+            bar.style.left=(xOf(it.start)+1)+"px";
+            bar.style.width=((dayDiff(s,e)+1)*PXD-2)+"px";
+            bar.style.background=cat.color;
+            if(it.id===selId)bar.classList.add("sel");
+            bar.innerHTML='<span class="gantt-bar-txt">'+esc(it.task)+'</span>';
+            bar.title=cat.name+" · "+it.task+" ("+it.start+" ~ "+it.end+")";
+            track.appendChild(bar);
+          }
+        }
+        row.appendChild(lbl);row.appendChild(track);inner.appendChild(row);
+      });
+    });
+
+    scroll.appendChild(inner);host.appendChild(scroll);calScrollEl=scroll;
 
     function updateLabel(){
-      const st=scroll.scrollTop,hh=hdr.offsetHeight;
-      const rows=scroll.querySelectorAll(".cal-crow");
-      let cur=rows[0];
-      for(const r of rows){if(r.offsetTop-hh<=st+2)cur=r;else break;}
-      if(cur){const p=cur.dataset.ym.split(".");document.getElementById("sc-cal-label").textContent=p[0]+"년 "+(+p[1])+"월";}
+      const day=Math.max(0,Math.min(gDays-1,Math.floor(scroll.scrollLeft/PXD)));
+      const d=new Date(rangeMin);d.setDate(d.getDate()+day);
+      document.getElementById("sc-cal-label").textContent=d.getFullYear()+"년 "+(d.getMonth()+1)+"월";
     }
     scroll.addEventListener("scroll",updateLabel);
-    if(prevTop!==null){
-      scroll.scrollTop=prevTop;
-    }else{
-      const tgt=todayRow||firstMonthRow;
-      if(tgt)scroll.scrollTop=Math.max(0,tgt.offsetTop-hdr.offsetHeight-2);
-    }
+    if(prevL!==null){scroll.scrollLeft=prevL;scroll.scrollTop=prevT;}
+    else{scroll.scrollLeft=Math.max(0,dayDiff(rangeMin,today)*PXD-30);}
     updateLabel();
   }
 
-  /* ── 달력 클릭으로 기간 지정 ── */
-  function handleDayPick(weekStartTime,clientX,weekEl){
-    if(!selId)return;
-    const it=findItem(selId);if(!it)return;
-    const rect=weekEl.getBoundingClientRect();
-    let col=Math.floor((clientX-rect.left)/rect.width*7);
-    col=Math.max(0,Math.min(6,col));
-    const d=new Date(weekStartTime);d.setDate(d.getDate()+col);
+  /* ── 타임라인 클릭으로 기간 지정 (처음=시작일, 다음=종료일) ── */
+  function handleGanttPick(taskId,clientX,trackEl){
+    const it=findItem(taskId);if(!it||!gMin)return;
+    const rect=trackEl.getBoundingClientRect();
+    let day=Math.floor((clientX-rect.left)/PXD);
+    day=Math.max(0,Math.min(gDays-1,day));
+    const d=new Date(gMin);d.setDate(d.getDate()+day);
     const ds=fmt(d);
+    if(selId!==taskId){selId=taskId;firstPick=null;}
     if(firstPick===null){
       pushUndo();
       firstPick=ds;it.start=ds;it.end=ds;
     }else{
-      const a=firstPick,b=ds;
-      it.start=a<=b?a:b;it.end=a<=b?b:a;
+      it.start=firstPick<=ds?firstPick:ds;
+      it.end=firstPick<=ds?ds:firstPick;
       firstPick=null;
     }
     renderTable();renderCalendar();updatePickHint();saveNow();
@@ -533,7 +504,7 @@
     const nm=it&&it.task?("'"+it.task+"'"):"선택한 작업";
     bar.style.display="flex";
     txt.textContent=firstPick===null
-      ? "📅 "+nm+" 선택됨 — 달력에서 시작일을 클릭하세요 (다음 클릭=종료일)"
+      ? "📅 "+nm+" 선택됨 — 타임라인의 작업 줄에서 시작일을 클릭하세요 (다음 클릭=종료일)"
       : "📅 "+nm+" — 이제 종료일을 클릭하세요 (시작일: "+firstPick+")";
   }
 
@@ -726,13 +697,12 @@
       document.getElementById("navPanel").classList.remove("open");
     });
     document.getElementById("sc-saveNowBtn").addEventListener("click",saveNow);
-    document.getElementById("sc-prev").addEventListener("click",()=>{if(calScrollEl)calScrollEl.scrollBy({top:-calScrollEl.clientHeight*0.82,behavior:"smooth"});});
-    document.getElementById("sc-next").addEventListener("click",()=>{if(calScrollEl)calScrollEl.scrollBy({top:calScrollEl.clientHeight*0.82,behavior:"smooth"});});
+    document.getElementById("sc-prev").addEventListener("click",()=>{if(calScrollEl)calScrollEl.scrollBy({left:-calScrollEl.clientWidth*0.8,behavior:"smooth"});});
+    document.getElementById("sc-next").addEventListener("click",()=>{if(calScrollEl)calScrollEl.scrollBy({left:calScrollEl.clientWidth*0.8,behavior:"smooth"});});
     document.getElementById("sc-today").addEventListener("click",()=>{
-      if(!calScrollEl)return;
-      const r=calScrollEl.querySelector(".cal-crow[data-today]");
-      const hh=calScrollEl.querySelector(".cal-chdr").offsetHeight;
-      if(r)calScrollEl.scrollTo({top:Math.max(0,r.offsetTop-hh-2),behavior:"smooth"});
+      if(!calScrollEl||!gMin)return;
+      const t=new Date();t.setHours(0,0,0,0);
+      calScrollEl.scrollTo({left:Math.max(0,dayDiff(gMin,t)*PXD-30),behavior:"smooth"});
     });
 
     (async()=>{
