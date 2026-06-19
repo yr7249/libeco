@@ -114,16 +114,18 @@
     /* ── Schedule table ── */
     .sc-table-wrap{border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-top:8px}
     table.sc-table{width:100%;border-collapse:collapse;font-size:.84rem}
-    table.sc-table th{background:var(--surface2);padding:9px 12px;text-align:left;font-weight:800;font-size:.76rem;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap}
-    table.sc-table td{padding:5px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
-    .sc-cat-row td{background:#fafafa;font-weight:900;font-size:.84rem;color:#111827;padding:7px 12px;letter-spacing:.02em}
+    table.sc-table th{background:#eef2f6;padding:8px 12px;text-align:left;font-weight:800;font-size:.74rem;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap;letter-spacing:.02em}
+    table.sc-table td{padding:3px 10px;border-bottom:1px solid #eef1f4;vertical-align:middle}
+    .sc-cat-row td{background:#e8edf3;font-weight:900;font-size:.8rem;color:#0f172a;padding:7px 12px;letter-spacing:.03em;border-top:1px solid #d4dbe4;border-bottom:1px solid #d4dbe4}
+    .sc-cat-dot{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:8px;vertical-align:middle;transform:rotate(45deg)}
+    .sc-table tr.alt td{background:#fafbfc}
     .sc-inp{width:100%;border:1px solid transparent;background:transparent;border-radius:6px;padding:5px 7px;font-size:.83rem;font-weight:600;font-family:var(--font-heading);color:var(--text);transition:border-color .12s,background .12s}
-    .sc-inp:hover{border-color:var(--border)}
+    .sc-inp:hover{border-color:var(--border);background:#fff}
     .sc-inp:focus{outline:none;border-color:rgba(22,101,52,.55);background:#fff;box-shadow:0 0 0 3px rgba(22,101,52,.10)}
-    .sc-period{display:flex;align-items:center;gap:8px}
-    .sc-period-txt{font-family:var(--font-mono);font-size:.86rem;font-weight:700;color:var(--text)}
+    .sc-period{display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .sc-period-txt{font-family:var(--font-mono);font-size:.85rem;font-weight:700;color:var(--text)}
     .sc-period-txt.empty{color:#94a3b8;font-weight:500}
-    .sc-date-pick{width:28px;flex-shrink:0;border:1px solid transparent;background:transparent;border-radius:6px;padding:3px;cursor:pointer;color:var(--text2)}
+    .sc-date-pick{width:26px;flex-shrink:0;border:1px solid transparent;background:transparent;border-radius:6px;padding:3px;cursor:pointer;color:var(--text2)}
     .sc-date-pick:hover{border-color:var(--border);background:#fff}
     .sc-date-pick::-webkit-datetime-edit{display:none}
     .sc-date-pick::-webkit-inner-spin-button{display:none}
@@ -506,11 +508,12 @@
     const host=document.getElementById("sc-table-body");host.innerHTML="";
     CATS.forEach(cat=>{
       const hr=document.createElement("tr");hr.className="sc-cat-row";hr.dataset.cat=cat.key;
-      hr.innerHTML='<td colspan="3" style="border-left:4px solid '+cat.color+'">'+esc(cat.name)+'</td>';
+      hr.innerHTML='<td colspan="3" style="border-left:5px solid '+cat.color+'"><span class="sc-cat-dot" style="background:'+cat.color+'"></span>'+esc(cat.name)+'</td>';
       host.appendChild(hr);
-      items.filter(it=>it.cat===cat.key).forEach(it=>{
+      items.filter(it=>it.cat===cat.key).forEach((it,i)=>{
         const tr=document.createElement("tr");tr.dataset.id=it.id;
-        if(it.id===selId)tr.className="sc-sel";
+        const cls=[];if(it.id===selId)cls.push("sc-sel");if(i%2)cls.push("alt");
+        if(cls.length)tr.className=cls.join(" ");
         tr.innerHTML=
           '<td><input class="sc-inp" type="text" data-f="task" value="'+esc(it.task)+'" placeholder="작업명"></td>'+
           '<td><div class="sc-period">'+
