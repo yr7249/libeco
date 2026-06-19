@@ -143,6 +143,11 @@
     .sc-hint{font-size:.72rem;color:var(--text2);font-weight:500;margin:8px 2px 0;font-family:var(--font-mono)}
     #sc-float-drag{position:fixed;display:none;z-index:9000;cursor:grab;color:rgba(100,116,139,.85);font-size:15px;user-select:none;padding:4px 7px;border-radius:6px;background:rgba(255,255,255,.96);border:1px solid rgba(15,23,42,.18);box-shadow:0 2px 8px rgba(0,0,0,.18);line-height:1;transform:translateY(-50%);align-items:center}
     #sc-float-drag:hover{color:var(--accent);border-color:rgba(22,101,52,.5)}
+    #sc-float-star{position:fixed;display:none;z-index:9000;cursor:pointer;font-size:14px;padding:4px 8px;border-radius:6px;background:rgba(255,255,255,.96);border:1px solid rgba(15,23,42,.18);box-shadow:0 2px 8px rgba(0,0,0,.18);line-height:1;transform:translateY(-50%);color:#94a3b8;align-items:center;transition:color .15s,border-color .15s}
+    #sc-float-star:hover{color:#f59e0b;border-color:rgba(245,158,11,.4)}
+    #sc-float-star.on{color:#f59e0b;border-color:rgba(245,158,11,.5);background:rgba(245,158,11,.06)}
+    .sc-table tr.sc-hl td{background:rgba(245,158,11,.10) !important;border-top:1px solid rgba(245,158,11,.28) !important;border-bottom:1px solid rgba(245,158,11,.28) !important}
+    .sc-table tr.sc-hl:hover td{background:rgba(245,158,11,.16) !important}
     #sc-ctx-menu{position:fixed;display:none;z-index:9100;background:#fff;border:1px solid var(--border);border-radius:9px;box-shadow:0 6px 24px rgba(0,0,0,.16);padding:5px;min-width:150px}
     #sc-ctx-menu button{display:block;width:100%;text-align:left;background:none;border:none;cursor:pointer;font-size:.8rem;font-weight:600;font-family:var(--font-heading);color:var(--text);padding:7px 12px;border-radius:6px}
     #sc-ctx-menu button:hover{background:var(--accent-wash2)}
@@ -272,6 +277,9 @@
 
   <!-- 행 드래그 핸들 -->
   <div id="sc-float-drag" title="드래그로 순서 변경" draggable="true">⠿</div>
+
+  <!-- 행 강조 토글 -->
+  <div id="sc-float-star" title="강조">☆</div>
 
   <!-- 기간 선택 팝업 -->
   <div id="sc-dp"></div>
@@ -524,7 +532,7 @@
       host.appendChild(hr);
       items.filter(it=>it.cat===cat.key).forEach((it,i)=>{
         const tr=document.createElement("tr");tr.dataset.id=it.id;
-        const cls=[];if(it.id===selId)cls.push("sc-sel");if(i%2)cls.push("alt");
+        const cls=[];if(it.id===selId)cls.push("sc-sel");if(i%2)cls.push("alt");if(it.highlight)cls.push("sc-hl");
         if(cls.length)tr.className=cls.join(" ");
         tr.innerHTML=
           '<td><input class="sc-inp" type="text" data-f="task" value="'+esc(it.task)+'" placeholder="작업명"></td>'+
@@ -642,25 +650,44 @@
   let dragSrcId=null,floatTargetTr=null;
   function bindDragHandle(){
     const handle=document.getElementById("sc-float-drag");
+    const star=document.getElementById("sc-float-star");
     const wrap=document.querySelector(".sc-table-wrap");
     const body=document.getElementById("sc-table-body");
     if(!handle||!wrap||!body)return;
     function position(tr){
       const rect=tr.getBoundingClientRect();
       const wr=wrap.getBoundingClientRect();
+      const midY=rect.top+rect.height/2;
       handle.style.left=Math.max(2,wr.left-30)+"px";
-      handle.style.top=(rect.top+rect.height/2)+"px";
+      handle.style.top=midY+"px";
       handle.style.display="flex";
+      if(star){
+        star.style.left=Math.min(window.innerWidth-40,wr.right+6)+"px";
+        star.style.top=midY+"px";
+        star.style.display="flex";
+        const it=findItem(tr.dataset.id),on=!!(it&&it.highlight);
+        star.classList.toggle("on",on);star.textContent=on?"★":"☆";
+      }
     }
-    function hide(){handle.style.display="none";floatTargetTr=null;}
+    function hide(){handle.style.display="none";if(star)star.style.display="none";floatTargetTr=null;}
+    function stayHover(){return (floatTargetTr&&floatTargetTr.matches(":hover"))||handle.matches(":hover")||(star&&star.matches(":hover"));}
     body.addEventListener("mouseover",e=>{
       const tr=e.target.closest("tr[data-id]");if(!tr)return;
       floatTargetTr=tr;position(tr);
     });
     body.addEventListener("mouseleave",()=>{
-      setTimeout(()=>{if(!handle.matches(":hover"))hide();},250);
+      setTimeout(()=>{if(!stayHover())hide();},250);
     });
-    handle.addEventListener("mouseleave",()=>{if(!floatTargetTr||!floatTargetTr.matches(":hover"))hide();});
+    handle.addEventListener("mouseleave",()=>{if(!stayHover())hide();});
+    if(star){
+      star.addEventListener("mouseleave",()=>{if(!stayHover())hide();});
+      star.addEventListener("click",()=>{
+        if(!floatTargetTr)return;
+        const id=floatTargetTr.dataset.id,it=findItem(id);if(!it)return;
+        pushUndo();it.highlight=!it.highlight;renderTable();saveNow();
+        setTimeout(()=>{const nt=body.querySelector('tr[data-id="'+id+'"]');if(nt){floatTargetTr=nt;position(nt);}},0);
+      });
+    }
     handle.addEventListener("dragstart",e=>{
       if(!floatTargetTr){e.preventDefault();return;}
       dragSrcId=floatTargetTr.dataset.id;
