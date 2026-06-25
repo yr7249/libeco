@@ -64,6 +64,7 @@
 
     /* 품의번호 (발주건 셀 윗줄) */
     .cell-onum{font-family:var(--font-mono);font-size:.76rem;color:var(--accent);min-height:22px;padding:5px 10px 0;font-weight:600}
+    .cell-onum:empty::before{content:"품의번호";color:#c4ccd6;font-weight:500;font-family:var(--font-heading)}
     .onum-wrap{display:flex;align-items:center;flex-wrap:wrap}
     .onum-wrap .cell-onum{padding-right:2px}
 
