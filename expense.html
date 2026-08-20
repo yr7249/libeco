@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>USA POC — 출장경비</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#ffffff;--surface:#ffffff;--surface2:#f1f5f9;
+      --border:rgba(15,23,42,.12);--text:#0f172a;--text2:#334155;
+      --accent:#166534;--accent-strong:#14532d;
+      --accent-wash:rgba(22,101,52,.12);--accent-wash2:rgba(22,101,52,.08);
+      --font-heading:'Outfit',sans-serif;--font-mono:'IBM Plex Mono',monospace;
+    }
+    body{font-family:var(--font-heading);color:var(--text);background:var(--bg);min-height:100vh;line-height:1.6;font-weight:600}
+    .container{max-width:1180px;margin:0 auto;padding:0 24px 48px}
+
+    .pg-topbar{display:flex;align-items:center;justify-content:space-between;padding:0 14px;height:50px;background:#fff;border-bottom:1px solid rgba(15,23,42,.12);box-shadow:0 1px 4px rgba(0,0,0,.08);gap:8px;position:sticky;top:0;z-index:100;width:100vw;margin-left:calc((100% - 100vw)/2)}
+    .pg-topbar-l,.pg-topbar-r{display:flex;align-items:center;gap:5px;flex-shrink:0}
+    .pg-topbar-l{flex:1;min-width:0;overflow:hidden}
+    .pg-vdiv{width:1px;height:22px;background:rgba(15,23,42,.12);margin:0 3px;flex-shrink:0}
+    .pg-title{font-size:.88rem;font-weight:800;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .pg-title span{color:#166534}
+    .pg-badge{font-family:var(--font-mono);font-size:.66rem;background:rgba(22,101,52,.1);color:#166534;padding:2px 7px;border-radius:5px;font-weight:600;flex-shrink:0}
+    .pg-btn{padding:5px 11px;border-radius:7px;border:1px solid rgba(15,23,42,.12);background:#fff;cursor:pointer;font-size:.75rem;font-weight:600;font-family:'Outfit',sans-serif;display:inline-flex;align-items:center;gap:4px;transition:background .12s,border-color .12s,color .12s;white-space:nowrap;flex-shrink:0}
+    .pg-btn:hover{background:rgba(22,101,52,.1);border-color:#166634}
+    .pg-btn-write{background:#166534;border-color:#14532d;color:#fff}
+    .pg-btn-write:hover{background:#14532d!important;color:#fff}
+
+    .nav-panel{position:fixed;top:54px;left:14px;z-index:9998;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:10px;box-shadow:0 8px 32px rgba(15,23,42,.14);min-width:240px;display:none}
+    .nav-panel.open{display:block}
+    .nav-panel-title{font-family:var(--font-mono);font-size:.65rem;color:var(--text2);font-weight:700;letter-spacing:.1em;padding:4px 10px 8px;text-transform:uppercase}
+    .nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;cursor:pointer;text-decoration:none;color:var(--text);transition:background .12s}
+    .nav-item:hover{background:var(--accent-wash2)}
+    .nav-item.active{background:var(--accent-wash);color:var(--accent-strong)}
+    .nav-item.disabled{opacity:.45;cursor:default;pointer-events:none}
+    .nav-icon{font-size:.9rem;width:22px;text-align:center;flex-shrink:0}
+    .nav-label{font-size:.83rem;font-weight:700}
+    .nav-sub{font-size:.67rem;color:var(--text2);font-weight:500;margin-top:1px;font-family:var(--font-mono)}
+    .nav-soon-tag{font-family:var(--font-mono);font-size:.6rem;color:#94a3b8;background:rgba(148,163,184,.12);border:1px solid rgba(148,163,184,.2);padding:1px 6px;border-radius:4px;margin-left:auto}
+    .nav-sep{height:1px;background:var(--border);margin:6px 2px}
+
+    .user-panel{position:fixed;top:54px;right:12px;z-index:9999;width:200px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 32px rgba(15,23,42,.14);padding:8px 0;display:none;flex-direction:column}
+    .user-panel.open{display:flex}
+    .user-panel-info{padding:8px 14px 6px}
+    .user-panel-name{font-size:.82rem;font-weight:700}
+    .user-panel-sub{font-size:.68rem;color:var(--text2);margin-top:2px}
+    .user-panel-sep{height:1px;background:var(--border);margin:6px 0}
+    .user-panel-item{display:flex;align-items:center;width:100%;padding:7px 14px;background:none;border:none;cursor:pointer;font-size:.78rem;font-weight:600;font-family:var(--font-heading);color:var(--text);text-align:left}
+    .user-panel-item:hover{background:var(--accent-wash2)}
+    .user-panel-logout{color:#dc2626}
+    .user-panel-logout:hover{background:#fee2e2!important}
+
+    .header{padding:28px 0 18px;border-bottom:1px solid var(--border)}
+    .header h1{font-size:clamp(1.4rem,2.6vw,2.1rem);font-weight:800;letter-spacing:-.02em}
+    .header h1 span{color:var(--accent)}
+    .header-sub{font-size:.88rem;color:var(--text2);margin-top:4px;font-weight:400}
+
+    .et-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:20px 0 22px}
+    @media(max-width:760px){.et-cards{grid-template-columns:repeat(2,1fr)}}
+    .et-card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:16px;border-top:4px solid var(--accent)}
+    .et-card .lbl{font-size:.72rem;color:var(--text2);margin-bottom:6px;font-family:var(--font-mono)}
+    .et-card .val{font-size:1.15rem;font-weight:800;color:var(--accent-strong)}
+    .et-card.diff .val.neg{color:#dc2626}
+    .et-card.diff .val.pos{color:#166534}
+
+    .et-panel{background:#fff;border:1px solid var(--border);border-radius:16px;padding:20px;margin-bottom:18px}
+    .et-panel h2{font-size:.95rem;color:var(--text);margin:0 0 14px;display:flex;align-items:center;gap:10px}
+    .et-panel h2::before{content:'';width:3px;height:16px;background:var(--accent);border-radius:2px}
+
+    .et-form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+    @media(max-width:760px){.et-form-grid{grid-template-columns:repeat(2,1fr)}}
+    .et-field{display:flex;flex-direction:column;gap:4px}
+    .et-field label{font-size:.72rem;color:var(--text2);font-weight:700}
+    .et-field input,.et-field select{border:1px solid var(--border);border-radius:8px;padding:8px 9px;font-size:.82rem;font-family:inherit;width:100%}
+    .et-field input:focus,.et-field select:focus{outline:none;border-color:rgba(22,101,52,.55);box-shadow:0 0 0 3px rgba(22,101,52,.1)}
+    .et-field.span2{grid-column:span 2}
+    .et-field.span4{grid-column:1/-1}
+    .et-attach-chip{display:inline-flex;align-items:center;gap:6px;background:var(--accent-wash2);border-radius:14px;padding:3px 10px;font-size:.7rem;margin:3px 4px 0 0}
+    .et-attach-chip button{border:none;background:none;color:#dc2626;cursor:pointer;font-weight:700}
+    .et-btn-row{display:flex;gap:8px;margin-top:14px}
+    .et-hint{font-size:.72rem;color:#94a3b8;margin-top:8px;font-weight:400}
+    .et-file-input-wrap{border:1px dashed var(--border);border-radius:8px;padding:8px;font-size:.75rem;color:var(--text2)}
+    .et-note{background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:9px 12px;font-size:.75rem;color:#92400e;margin:16px 0 0;font-weight:500}
+
+    table.et-table{width:100%;border-collapse:collapse;font-size:.78rem}
+    table.et-table th{background:#14532d;color:#fff;padding:8px 6px;text-align:center;font-size:.72rem}
+    table.et-table td{padding:7px 6px;border-bottom:1px solid #eee;text-align:center;vertical-align:middle;font-weight:500}
+    table.et-table tbody tr:nth-child(even){background:#f8fafc}
+    table.et-table td.num{text-align:right;padding-right:10px;font-family:var(--font-mono)}
+    table.et-table td.left{text-align:left}
+    .et-bar-bg{background:#e2e8f0;border-radius:6px;height:8px;width:100%;overflow:hidden}
+    .et-bar-fill{background:#166534;height:100%}
+    .et-linkbtn{color:var(--accent);text-decoration:none;font-weight:700;font-size:.72rem}
+    .et-file-list{display:flex;flex-wrap:wrap;gap:4px;justify-content:center}
+    .et-file-tag{background:var(--accent-wash2);border-radius:5px;padding:2px 6px;font-size:.68rem;text-decoration:none;color:var(--accent)}
+    .et-row-actions button{border:none;background:none;cursor:pointer;font-size:.75rem;margin:0 3px;font-weight:700;font-family:inherit}
+    .et-row-actions .edit{color:var(--accent)}
+    .et-row-actions .del{color:#dc2626}
+    .et-empty{text-align:center;padding:30px;color:#94a3b8;font-size:.85rem}
+    .et-toast{position:fixed;bottom:20px;right:20px;background:#0f172a;color:#fff;padding:10px 18px;border-radius:10px;font-size:.8rem;opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none;z-index:999}
+    .et-toast.show{opacity:1;transform:translateY(0)}
+    .footer{margin-top:28px;padding-top:16px;border-top:1px solid var(--border);font-family:var(--font-mono);font-size:.68rem;color:var(--text2)}
+    @media(max-width:640px){.no-mobile{display:none!important}}
+  </style>
+</head>
+<body>
+<script>(function(){
+  const token=localStorage.getItem("supa_token")||"";
+  if(!token){location.href="login.html";return;}
+  const _ta=sessionStorage.getItem("libeco_tab_active");
+  if(_ta&&Date.now()>Number(_ta)){localStorage.removeItem("supa_token");location.href="login.html";return;}
+  if(!_ta) sessionStorage.setItem("libeco_tab_active",String(Date.now()+7200000));
+})()</script>
+
+<script>window._exUserReady=(async function(){
+  const SU="https://ikfjpzdzrgsmhaobqnai.supabase.co",SK="sb_publishable_fbbdwjCZCL9AFD-eUIs0bg_XwdlhxFN";
+  const token=localStorage.getItem("supa_token")||"";
+  let isAdmin=false;
+  try{
+    const ur=await fetch(SU+"/auth/v1/user",{headers:{"apikey":SK,"Authorization":"Bearer "+token}});
+    if(ur.ok){
+      const u=await ur.json();
+      const pr=await fetch(SU+"/rest/v1/profiles?id=eq."+u.id+"&select=role,name,department,position",{headers:{"apikey":SK,"Authorization":"Bearer "+token}});
+      const profiles=await pr.json();
+      const p=profiles?.[0]||{};
+      if((p.role==="admin")||u.email==="yr@libeco.kr") isAdmin=true;
+      const dname=p.name||(u.email||"").split("@")[0];
+      const dsub=[p.department,p.position].filter(Boolean).join(" · ");
+      window._exUser={id:u.id,email:u.email,...p,displayName:dname,isAdmin};
+      const dispEl=document.getElementById("ex-user-display");
+      const upN=document.getElementById("ex-upanel-name");
+      const upS=document.getElementById("ex-upanel-sub");
+      if(dispEl)dispEl.textContent=dname;
+      if(upN)upN.textContent=dname;
+      if(upS)upS.textContent=dsub;
+    }
+  }catch(e){}
+  window._isAdmin=isAdmin;
+  if(!isAdmin){
+    ["nav-purchase","nav-equipment"].forEach(function(id){
+      const el=document.getElementById(id);if(!el)return;
+      el.removeAttribute("href");el.classList.add("disabled");
+      const t=document.createElement("span");t.className="nav-soon-tag";t.textContent="비공개";el.appendChild(t);
+    });
+  }
+})()</script>
+
+<div class="user-panel" id="exUserPanel">
+  <div class="user-panel-info">
+    <div class="user-panel-name" id="ex-upanel-name">--</div>
+    <div class="user-panel-sub" id="ex-upanel-sub"></div>
+  </div>
+  <div class="user-panel-sep"></div>
+  <button class="user-panel-item user-panel-logout" onclick="(function(){localStorage.removeItem('supa_token');localStorage.removeItem('supa_refresh');sessionStorage.removeItem('libeco_tab_active');location.href='login.html';})()">로그아웃</button>
+</div>
+
+<div class="nav-panel" id="exNavPanel">
+  <div class="nav-panel-title">페이지 이동</div>
+  <a class="nav-item" href="index.html"><span class="nav-icon">🏠</span><div><div class="nav-label">홈</div><div class="nav-sub">메인 화면</div></div></a>
+  <div class="nav-sep"></div>
+  <a class="nav-item" href="diagram.html"><span class="nav-icon">📐</span><div><div class="nav-label">구성도</div><div class="nav-sub">P&amp;ID Schematic</div></div></a>
+  <a id="nav-equipment" class="nav-item" href="equipment.html"><span class="nav-icon">🔬</span><div><div class="nav-label">시험장비</div><div class="nav-sub">계측/제어 장비 목록</div></div></a>
+  <a id="nav-purchase" class="nav-item" href="purchase.html"><span class="nav-icon">📋</span><div><div class="nav-label">구매리스트</div><div class="nav-sub">구매 필요내역</div></div></a>
+  <a class="nav-item" href="fund.html"><span class="nav-icon">💰</span><div><div class="nav-label">자금계획</div><div class="nav-sub">발주 · 자금 계획</div></div></a>
+  <div class="nav-item active"><span class="nav-icon">🧾</span><div><div class="nav-label">출장경비</div><div class="nav-sub">미국 출장 예상·실제 경비</div></div></div>
+  <div class="nav-sep"></div>
+  <a class="nav-item" href="incoming.html"><span class="nav-icon">📦</span><div><div class="nav-label">입고관리</div><div class="nav-sub">장비 일정관리</div></div></a>
+  <a class="nav-item" href="schedule.html"><span class="nav-icon">📅</span><div><div class="nav-label">일정관리</div><div class="nav-sub">시험장비 셋업 스케줄</div></div></a>
+  <div class="nav-item disabled"><span class="nav-icon">📖</span><div><div class="nav-label">시험절차서</div><div class="nav-sub">준비중</div></div><span class="nav-soon-tag">SOON</span></div>
+  <a class="nav-item" href="share.html"><span class="nav-icon">💬</span><div><div class="nav-label">기타 공유사항</div><div class="nav-sub">팀 공지 · 공유 자료</div></div></a>
+</div>
+
+<div class="pg-topbar">
+  <div class="pg-topbar-l">
+    <a href="index.html" style="color:#16a34a;font-weight:800;font-size:.95rem;letter-spacing:-.02em;font-family:inherit;text-decoration:none;flex-shrink:0">LIBECO E&amp;C</a>
+    <div class="pg-vdiv"></div>
+    <button class="pg-btn" id="ex-nav-btn">이동 ▾</button>
+    <div class="pg-vdiv no-mobile"></div>
+    <span class="pg-title no-mobile">USA POC <span>출장경비</span></span>
+    <span class="pg-badge no-mobile">EXPENSE</span>
+  </div>
+  <div class="pg-topbar-r">
+    <span id="ex-session-display" style="font-family:var(--font-mono);font-size:.68rem;color:var(--text2);padding:0 4px">⏱ --</span>
+    <button class="pg-btn" id="ex-extend-topbar">연장하기</button>
+    <div class="pg-vdiv"></div>
+    <button class="pg-btn" id="btn-export">백업</button>
+    <label class="pg-btn" style="margin:0;cursor:pointer">불러오기<input type="file" id="f-import" accept="application/json" style="display:none"></label>
+    <div class="pg-vdiv no-mobile"></div>
+    <span id="ex-user-display" class="no-mobile" style="font-size:.75rem;font-weight:600;color:var(--text)"></span>
+    <button class="pg-btn" id="ex-user-btn">👤</button>
+  </div>
+</div>
+
+<div class="container">
+  <div class="header">
+    <h1>미국 출장 <span>경비</span></h1>
+    <p class="header-sub">예상 경비와 실제 집행 경비를 함께 관리하고, 항목별로 자동 집계합니다.</p>
+    <div class="et-note">지금은 이 브라우저에만 저장됩니다. 팀 공유용 수파베이스 연동은 다음에 연결합니다.</div>
+  </div>
+  <div id="app-root"><div class="et-empty">불러오는 중...</div></div>
+  <footer class="footer">© 2026 LIBECO E&amp;C · All Rights Reserved</footer>
+</div>
+
+<div id="ex-session-banner" style="display:none;position:fixed;bottom:20px;right:20px;z-index:9000;background:#0f172a;color:#fff;border-radius:12px;padding:12px 16px;gap:10px;font-size:.84rem;box-shadow:0 4px 24px rgba(0,0,0,.3);align-items:center">
+  ⏰ 세션이 <strong id="ex-session-rem">--</strong> 후 만료됩니다&nbsp;
+  <button id="ex-extend-btn" style="background:#16a34a;color:#fff;border:none;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:.8rem;font-weight:700">연장하기</button>
+  <button onclick="(function(){localStorage.removeItem('supa_token');localStorage.removeItem('supa_refresh');sessionStorage.removeItem('libeco_tab_active');location.href='login.html';})()" style="background:#dc2626;color:#fff;border:none;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:.8rem;font-weight:700">로그아웃</button>
+</div>
+<div class="et-toast" id="et-toast"></div>
+
+<script>
+(function(){
+  const SU="https://ikfjpzdzrgsmhaobqnai.supabase.co", SK="sb_publishable_fbbdwjCZCL9AFD-eUIs0bg_XwdlhxFN";
+  const SESSION_MS=7200000;
+  const STORAGE_KEY="libeco_expense_data";
+  const CATEGORIES=["항공","숙소","차량","식대","연구재료비","운송비","시설이용료","보험","비자·행정","통신비","소프트웨어","기타"];
+  const MAX_FILE_BYTES=2.5*1024*1024;
+  const SEED=[
+    {id:"mt12vimbu95mp1",category:"항공",item:"항공권 구입 - 이재승 연구소장 ($360)",note:"왕복 (PHX–OAK / SFO–PHX)",estAmount:502560,actualAmount:null,link:"",attachments:[],createdAt:"2026-08-20T05:26:33.731Z"},
+    {id:"mt12vimbzi8lgh",category:"항공",item:"항공권 구입 - 최동해 책임",note:"왕복 (ICN-SFO / SFO-ICN)",estAmount:955100,actualAmount:null,link:"",attachments:[],createdAt:"2026-08-20T05:26:33.731Z"},
+    {id:"mt12vimbxi1zdo",category:"항공",item:"항공권 구입 - 이영록 선임",note:"왕복 (ICN-SFO / SFO-ICN)",estAmount:932800,actualAmount:null,link:"",attachments:[],createdAt:"2026-08-20T05:26:33.731Z"},
+    {id:"mt12vimbzbkrmy",category:"항공",item:"항공권 구입 - 이요한 연구원",note:"왕복 (ICN-SFO / SFO-ICN)",estAmount:932800,actualAmount:null,link:"",attachments:[],createdAt:"2026-08-20T05:26:33.731Z"},
+    {id:"mt12vimbu2excz",category:"숙소",item:"미국 현지 숙소 - 에어비앤비 1개월",note:"기간: 2026-09-12 ~ 2026-10-11",estAmount:9555256,actualAmount:9555256,link:"",attachments:[],createdAt:"2026-08-20T05:26:33.731Z"},
+    {id:"mt12vimbjg25uq",category:"차량",item:"렌트 + 차량보험 $3,000 (렌트 $2,300 , 차량보험 $700)",note:"기간: 2026-09-08 ~ 2026-10-11",estAmount:4200000,actualAmount:null,link:"",attachments:[],createdAt:"2026-08-20T05:26:33.731Z"},
+    {id:"mt12vimbw629lz",category:"식대",item:"미국 출장 직원 식사 $4,000",note:"4명 / 1개월",estAmount:5577200,actualAmount:null,link:"",attachments:[],createdAt:"2026-08-20T05:26:33.731Z"},
+    {id:"mt12vimbn1qfpb",category:"연구재료비",item:"소모품 구입",note:"현지 실험용",estAmount:3000000,actualAmount:null,link:"",attachments:[],createdAt:"2026-08-20T05:26:33.731Z"},
+    {id:"mt12vimbt2zwkd",category:"운송비",item:"장비 국제 운송",note:"진행중",estAmount:45000000,actualAmount:null,link:"",attachments:[],createdAt:"2026-08-20T05:26:33.731Z"},
+    {id:"mt12vimb0jz34m",category:"시설이용료",item:"LLNL 실험비용 - 안전테스트 $40K",note:"송금금액 4,000USD * 1,416.40원 + 이체수수료 43,495원",estAmount:56699495,actualAmount:56699495,link:"",attachments:[],createdAt:"2026-08-20T05:26:33.731Z"},
+    {id:"mt12vimbh2my5a",category:"보험",item:"해외여행자보험",note:"연구원 3명",estAmount:600000,actualAmount:null,link:"",attachments:[],createdAt:"2026-08-20T05:26:33.731Z"},
+    {id:"mt12vimbc3gvm0",category:"통신비",item:"현지 데이터·통신 요금",note:"4명, 1개월",estAmount:500000,actualAmount:null,link:"",attachments:[],createdAt:"2026-08-20T05:26:33.731Z"},
+    {id:"mt12zmqj77fqt0",category:"시설이용료",item:"LLNL 실험비용 - 단열성능 $45K",note:"송금금액 4,500USD * 1,416.40원 + 이체수수료 43,495원",estAmount:63781495,actualAmount:63781495,link:"",attachments:[],createdAt:"2026-08-20T05:29:45.691Z"},
+    {id:"mt12zy43pxdnkq",category:"시설이용료",item:"LLNL 실험비용 - 상하충전 $55K",note:"송금금액 5,500USD * 1,416.40원 + 이체수수료 43,495원",estAmount:77902000,actualAmount:77902000,link:"",attachments:[],createdAt:"2026-08-20T05:30:00.435Z"}
+  ];
+
+  let entries=[], editingId=null, pendingAttachments=[], loaded=false;
+  const root=document.getElementById("app-root");
+
+  function fmt(n){ if(n===null||n===undefined||isNaN(n)) return "0"; return Math.round(n).toLocaleString("en-US"); }
+  function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
+  function toast(msg){
+    const t=document.getElementById("et-toast");
+    t.textContent=msg; t.classList.add("show");
+    clearTimeout(t._timer); t._timer=setTimeout(()=>t.classList.remove("show"),2400);
+  }
+  function escapeHtml(s){ return (s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+  function escapeAttr(s){ return escapeHtml(s); }
+  function shortenName(n){ if(!n) return "파일"; return n.length>12?n.slice(0,10)+"…":n; }
+
+  function loadData(){
+    try{
+      const raw=localStorage.getItem(STORAGE_KEY);
+      if(raw){ const p=JSON.parse(raw); entries=Array.isArray(p.entries)?p.entries:SEED; }
+      else { entries=SEED.map(e=>({...e})); saveData(true); }
+    }catch(e){ entries=SEED.map(e=>({...e})); }
+    loaded=true; render();
+  }
+  function saveData(silent){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify({entries, updatedAt:new Date().toISOString()})); }
+    catch(e){ if(!silent) toast("저장에 실패했습니다. 첨부 용량을 줄여 주세요."); }
+  }
+
+  function computeAgg(){
+    const map={}; CATEGORIES.forEach(c=>map[c]={est:0,act:0});
+    entries.forEach(e=>{
+      if(!map[e.category]) map[e.category]={est:0,act:0};
+      map[e.category].est+=Number(e.estAmount)||0;
+      map[e.category].act+=Number(e.actualAmount)||0;
+    });
+    let totalEst=0,totalAct=0;
+    CATEGORIES.forEach(c=>{ totalEst+=map[c].est; totalAct+=map[c].act; });
+    return {map,totalEst,totalAct};
+  }
+
+  function renderAttachChips(){
+    if(!pendingAttachments.length) return "";
+    return pendingAttachments.map((a,idx)=>`<span class="et-attach-chip">${escapeHtml(shortenName(a.name))} <button data-idx="${idx}" class="rm-attach">×</button></span>`).join("");
+  }
+
+  function render(){
+    if(!loaded){ root.innerHTML='<div class="et-empty">불러오는 중...</div>'; return; }
+    const {map,totalEst,totalAct}=computeAgg();
+    const diff=totalAct-totalEst;
+    const rate=totalEst>0?(totalAct/totalEst*100):0;
+    let html="";
+    html+='<div class="et-cards">';
+    html+=`<div class="et-card"><div class="lbl">총 예상금액</div><div class="val">${fmt(totalEst)}원</div></div>`;
+    html+=`<div class="et-card"><div class="lbl">총 실제금액</div><div class="val">${fmt(totalAct)}원</div></div>`;
+    html+=`<div class="et-card diff"><div class="lbl">차이(실제-예상)</div><div class="val ${diff>0?"neg":"pos"}">${diff>=0?"+":""}${fmt(diff)}원</div></div>`;
+    html+=`<div class="et-card"><div class="lbl">집행률</div><div class="val">${totalEst>0?rate.toFixed(1)+"%":"-"}</div></div></div>`;
+
+    html+='<div class="et-panel"><h2>항목별 자동 집계</h2><table class="et-table"><thead><tr><th>구분</th><th>예상금액</th><th>실제금액</th><th>차이</th><th>집행률</th><th>진행</th></tr></thead><tbody>';
+    CATEGORIES.forEach(c=>{
+      const est=map[c].est, act=map[c].act, d=act-est, r=est>0?(act/est*100):0;
+      html+=`<tr><td class="left">${c}</td><td class="num">${fmt(est)}</td><td class="num">${fmt(act)}</td><td class="num" style="color:${d>0?"#dc2626":"#166534"}">${d>=0?"+":""}${fmt(d)}</td><td>${est>0?r.toFixed(0)+"%":"-"}</td><td><div class="et-bar-bg"><div class="et-bar-fill" style="width:${Math.min(100,r)}%"></div></div></td></tr>`;
+    });
+    html+=`<tr style="background:#dcfce7;font-weight:800"><td class="left">총 합계</td><td class="num">${fmt(totalEst)}</td><td class="num">${fmt(totalAct)}</td><td class="num" style="color:${diff>0?"#dc2626":"#166534"}">${diff>=0?"+":""}${fmt(diff)}</td><td>${totalEst>0?rate.toFixed(0)+"%":"-"}</td><td></td></tr></tbody></table></div>`;
+
+    const isEdit=!!editingId;
+    const cur=isEdit?entries.find(e=>e.id===editingId):null;
+    html+=`<div class="et-panel"><h2>${isEdit?"내역 수정":"세부내역 입력"}</h2><div class="et-form-grid">`;
+    html+=`<div class="et-field"><label>구분</label><select id="f-cat">${CATEGORIES.map(c=>`<option value="${c}" ${cur&&cur.category===c?"selected":""}>${c}</option>`).join("")}</select></div>`;
+    html+=`<div class="et-field span2"><label>항목</label><input id="f-item" type="text" value="${cur?escapeAttr(cur.item):""}"></div>`;
+    html+=`<div class="et-field"><label>비고</label><input id="f-note" type="text" value="${cur?escapeAttr(cur.note):""}"></div>`;
+    html+=`<div class="et-field"><label>예상금액(원)</label><input id="f-est" type="number" value="${cur&&cur.estAmount!=null?cur.estAmount:""}"></div>`;
+    html+=`<div class="et-field"><label>실제금액(원)</label><input id="f-act" type="number" placeholder="없으면 비움" value="${cur&&cur.actualAmount!=null?cur.actualAmount:""}"></div>`;
+    html+=`<div class="et-field span2"><label>예약/구매 링크</label><input id="f-link" type="text" value="${cur?escapeAttr(cur.link||""):""}"></div>`;
+    html+=`<div class="et-field span4"><label>증빙자료 (파일당 2.5MB)</label><div class="et-file-input-wrap"><input id="f-files" type="file" multiple accept="image/*,.pdf"></div><div id="f-attach-list">${renderAttachChips()}</div></div></div>`;
+    html+=`<div class="et-btn-row"><button class="pg-btn pg-btn-write" id="btn-save">${isEdit?"저장":"추가"}</button>`;
+    if(isEdit) html+=`<button class="pg-btn" id="btn-cancel">취소</button>`;
+    html+="</div><div class=\"et-hint\">첨부파일은 이 브라우저에 저장됩니다. 사진은 용량을 줄여 올려 주세요.</div></div>";
+
+    html+='<div class="et-panel"><h2>세부내역 목록 ('+entries.length+'건)</h2>';
+    if(!entries.length) html+='<div class="et-empty">아직 입력된 내역이 없습니다.</div>';
+    else {
+      html+='<table class="et-table"><thead><tr><th>구분</th><th>항목</th><th>비고</th><th>예상금액</th><th>실제금액</th><th>차이</th><th>링크</th><th>증빙</th><th>관리</th></tr></thead><tbody>';
+      entries.slice().sort((a,b)=>a.category>b.category?1:-1).forEach(e=>{
+        const d=(Number(e.actualAmount)||0)-(Number(e.estAmount)||0);
+        const has=e.actualAmount!==null&&e.actualAmount!==undefined&&e.actualAmount!=="";
+        html+="<tr>";
+        html+=`<td>${escapeHtml(e.category)}</td><td class="left">${escapeHtml(e.item)}</td><td class="left" style="color:#64748b;font-size:.72rem">${escapeHtml(e.note||"")}</td>`;
+        html+=`<td class="num">${fmt(e.estAmount)}</td><td class="num">${has?fmt(e.actualAmount):'<span style="color:#94a3b8">미정</span>'}</td>`;
+        html+=`<td class="num" style="color:${d>0?"#dc2626":(has?"#166534":"#94a3b8")}">${has?(d>=0?"+":"")+fmt(d):"-"}</td>`;
+        html+=`<td>${e.link?`<a class="et-linkbtn" href="${escapeAttr(e.link)}" target="_blank" rel="noopener">바로가기</a>`:"-"}</td>`;
+        html+=`<td><div class="et-file-list">${(e.attachments||[]).map(a=>`<a class="et-file-tag" href="${a.dataUrl||"#"}" download="${escapeAttr(a.name)}" target="_blank">${escapeHtml(shortenName(a.name))}</a>`).join("")||'<span style="color:#cbd5e1">-</span>'}</div></td>`;
+        html+=`<td class="et-row-actions"><button class="edit" data-id="${e.id}">수정</button><button class="del" data-id="${e.id}">삭제</button></td></tr>`;
+      });
+      html+="</tbody></table>";
+    }
+    html+="</div>";
+    root.innerHTML=html;
+    bindEvents();
+  }
+
+  function bindRmAttach(){
+    root.querySelectorAll(".rm-attach").forEach(btn=>{
+      btn.addEventListener("click",ev=>{
+        pendingAttachments.splice(Number(ev.target.getAttribute("data-idx")),1);
+        const list=document.getElementById("f-attach-list");
+        if(list) list.innerHTML=renderAttachChips();
+        bindRmAttach();
+      });
+    });
+  }
+  function bindEvents(){
+    const btnSave=document.getElementById("btn-save");
+    if(btnSave) btnSave.addEventListener("click",onSave);
+    const btnCancel=document.getElementById("btn-cancel");
+    if(btnCancel) btnCancel.addEventListener("click",()=>{ editingId=null; pendingAttachments=[]; render(); });
+    const fFiles=document.getElementById("f-files");
+    if(fFiles) fFiles.addEventListener("change",onFilesChosen);
+    bindRmAttach();
+    root.querySelectorAll(".edit").forEach(btn=>{
+      btn.addEventListener("click",ev=>{
+        const id=ev.target.getAttribute("data-id");
+        const e=entries.find(x=>x.id===id);
+        editingId=id;
+        pendingAttachments=e?(e.attachments||[]).slice():[];
+        render(); window.scrollTo({top:0,behavior:"smooth"});
+      });
+    });
+    root.querySelectorAll(".del").forEach(btn=>{
+      btn.addEventListener("click",ev=>{
+        const id=ev.target.getAttribute("data-id");
+        entries=entries.filter(x=>x.id!==id);
+        if(editingId===id){ editingId=null; pendingAttachments=[]; }
+        saveData(); render(); toast("삭제되었습니다.");
+      });
+    });
+  }
+  function onFilesChosen(ev){
+    const files=Array.from(ev.target.files||[]);
+    let rejected=0, pending=files.length;
+    if(!pending) return;
+    files.forEach(file=>{
+      if(file.size>MAX_FILE_BYTES){ rejected++; pending--; if(!pending) afterFiles(rejected); return; }
+      const reader=new FileReader();
+      reader.onload=()=>{ pendingAttachments.push({name:file.name,type:file.type,size:file.size,dataUrl:reader.result}); pending--; if(!pending) afterFiles(rejected); };
+      reader.onerror=()=>{ rejected++; pending--; if(!pending) afterFiles(rejected); };
+      reader.readAsDataURL(file);
+    });
+  }
+  function afterFiles(rejected){
+    const list=document.getElementById("f-attach-list");
+    if(list) list.innerHTML=renderAttachChips();
+    bindRmAttach();
+    if(rejected) toast(rejected+"개 파일이 2.5MB를 초과해 제외되었습니다.");
+  }
+  function onSave(){
+    const item=document.getElementById("f-item").value.trim();
+    if(!item){ toast("항목을 입력해 주세요."); return; }
+    const estRaw=document.getElementById("f-est").value;
+    const actRaw=document.getElementById("f-act").value;
+    const row={
+      category:document.getElementById("f-cat").value, item,
+      note:document.getElementById("f-note").value.trim(),
+      estAmount:estRaw===""?0:Number(estRaw),
+      actualAmount:actRaw===""?null:Number(actRaw),
+      link:document.getElementById("f-link").value.trim(),
+      attachments:pendingAttachments
+    };
+    if(editingId){
+      const idx=entries.findIndex(e=>e.id===editingId);
+      if(idx>=0) entries[idx]={...entries[idx],...row};
+      editingId=null;
+    } else {
+      entries.push({id:uid(),...row,createdAt:new Date().toISOString()});
+    }
+    pendingAttachments=[]; saveData(); render(); toast("저장되었습니다.");
+  }
+
+  document.getElementById("btn-export").addEventListener("click",()=>{
+    const blob=new Blob([JSON.stringify({entries,exportedAt:new Date().toISOString()},null,2)],{type:"application/json"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a"); a.href=url; a.download="경비내역_백업_"+new Date().toISOString().slice(0,10)+".json";
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    toast("백업 파일을 다운로드했습니다.");
+  });
+  document.getElementById("f-import").addEventListener("change",ev=>{
+    const file=ev.target.files&&ev.target.files[0]; if(!file) return;
+    const reader=new FileReader();
+    reader.onload=()=>{
+      try{
+        const parsed=JSON.parse(reader.result);
+        if(!Array.isArray(parsed.entries)) throw new Error("형식 오류");
+        entries=parsed.entries; editingId=null; pendingAttachments=[];
+        saveData(); render(); toast("백업 파일을 불러왔습니다.");
+      }catch(e){ toast("이 프로그램에서 내보낸 JSON인지 확인해 주세요."); }
+    };
+    reader.readAsText(file);
+  });
+
+  document.getElementById("ex-nav-btn").addEventListener("click",e=>{
+    e.stopPropagation(); document.getElementById("exNavPanel").classList.toggle("open");
+    document.getElementById("exUserPanel").classList.remove("open");
+  });
+  document.getElementById("ex-user-btn").addEventListener("click",e=>{
+    e.stopPropagation(); document.getElementById("exUserPanel").classList.toggle("open");
+    document.getElementById("exNavPanel").classList.remove("open");
+  });
+  document.addEventListener("click",()=>{
+    document.getElementById("exNavPanel").classList.remove("open");
+    document.getElementById("exUserPanel").classList.remove("open");
+  });
+  document.getElementById("exNavPanel").addEventListener("click",e=>e.stopPropagation());
+  document.getElementById("exUserPanel").addEventListener("click",e=>e.stopPropagation());
+
+  async function extendSession(){
+    const refresh=localStorage.getItem("supa_refresh");
+    if(refresh){
+      try{
+        const r=await fetch(SU+"/auth/v1/token?grant_type=refresh_token",{method:"POST",headers:{"apikey":SK,"Content-Type":"application/json"},body:JSON.stringify({refresh_token:refresh})});
+        if(r.ok){const d=await r.json(); if(d.access_token){localStorage.setItem("supa_token",d.access_token); if(d.refresh_token) localStorage.setItem("supa_refresh",d.refresh_token);}}
+      }catch(e){}
+    }
+    sessionStorage.setItem("libeco_tab_active",String(Date.now()+SESSION_MS));
+    const b=document.getElementById("ex-session-banner"); if(b) b.style.display="none";
+    tick();
+  }
+  function tick(){
+    const exp=Number(sessionStorage.getItem("libeco_tab_active")||0);
+    if(!exp||Date.now()>exp){ location.href="login.html"; return; }
+    const rem=exp-Date.now();
+    const disp=document.getElementById("ex-session-display");
+    if(disp){
+      const h=Math.floor(rem/3600000), m=Math.floor((rem%3600000)/60000);
+      disp.textContent="⏱ "+(h>0?h+"h ":"")+m+"분";
+      disp.style.color=rem<=600000?"#dc2626":"";
+    }
+    const banner=document.getElementById("ex-session-banner");
+    if(banner){
+      if(rem<=600000){ document.getElementById("ex-session-rem").textContent=Math.ceil(rem/60000)+"분"; banner.style.display="flex"; }
+      else banner.style.display="none";
+    }
+  }
+  document.getElementById("ex-extend-topbar").addEventListener("click",extendSession);
+  document.getElementById("ex-extend-btn").addEventListener("click",extendSession);
+  setInterval(tick,30000); tick();
+  loadData();
+})();
+</script>
+</body>
+</html>

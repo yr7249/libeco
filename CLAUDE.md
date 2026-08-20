@@ -22,6 +22,7 @@
 | `incoming.html` | 입고 현황 |
 | `diagram.html` | 다이어그램 |
 | `share.html` | 기타 공유사항 |
+| `expense.html` | 미국 출장 경비 (지금은 localStorage, Supabase 미연동) |
 
 ## 인증 & 권한
 - 홈(index.html)은 **로그인 필수**
@@ -66,6 +67,7 @@ ALTER TABLE 테이블명 ADD COLUMN 컬럼명 타입 DEFAULT 기본값;
 ## 작업 히스토리 (최근순)
 | 날짜 | 파일 | 작업 내용 |
 |------|------|-----------|
+| 2026-08-20 | `expense.html` | 미국 출장 경비 페이지 추가. 기존 libeco 상단바/이동메뉴 양식. 데이터는 localStorage(`libeco_expense_data`). Supabase 테이블은 다음 작업. 홈 카드 및 각 페이지 이동 메뉴에 링크 추가. |
 | 2026-05-18 | `fund.html` | 지급시기 저장 수정 — `scheduled_period`(TEXT) 컬럼 사용, 선택 즉시 flushSave, 연도 포함 표시 |
 | 2026-05-18 | `fund.html` | 셀 키보드 UX — 선택 상태에서 타이핑 즉시 편집, Tab=오른쪽, Enter=아래 이동, 화살표 이동 |
 | 2026-05-18 | `purchase.html` / `incoming.html` / `equipment.html` | 선택 상태 타이핑 즉시 편집 (구매리스트는 Tab/Enter 이동 기존 적용, 입고/장비 동일) |
